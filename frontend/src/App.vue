@@ -81,6 +81,7 @@
         @create-template="createTemplate"
         @update-template="updateTemplate"
         @delete-template="deleteTemplate"
+        @notify="handleEditorNotify"
       />
 
       <VersionHistory
@@ -317,6 +318,13 @@ function showToast(message, type = 'info') {
   toastTimer = setTimeout(() => {
     toast.value.show = false
   }, 2200)
+}
+
+function handleEditorNotify(payload) {
+  if (!payload || !payload.message) {
+    return
+  }
+  showToast(payload.message, payload.type || 'info')
 }
 
 function emptyDoc() {

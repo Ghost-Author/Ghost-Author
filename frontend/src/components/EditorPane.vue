@@ -405,7 +405,8 @@ const emit = defineEmits([
   'regenerate-share',
   'create-template',
   'update-template',
-  'delete-template'
+  'delete-template',
+  'notify'
 ])
 
 const toolbars = [
@@ -589,11 +590,11 @@ function runMenuAction(action) {
 
 function toggleEditMode() {
   if (!props.canEdit) {
-    alert('当前用户无编辑权限')
+    emit('notify', { type: 'error', message: '当前用户无编辑权限' })
     return
   }
   if (isLocked.value && !isEditing.value) {
-    alert('当前页面已锁定，请先解除锁定再编辑')
+    emit('notify', { type: 'error', message: '当前页面已锁定，请先解除锁定再编辑' })
     return
   }
   isEditing.value = !isEditing.value
@@ -605,9 +606,9 @@ async function copyShareLink() {
   }
   try {
     await navigator.clipboard.writeText(props.shareLink)
-    alert('分享链接已复制')
+    emit('notify', { type: 'success', message: '分享链接已复制' })
   } catch {
-    alert('复制失败，请手动复制')
+    emit('notify', { type: 'error', message: '复制失败，请手动复制' })
   }
 }
 
