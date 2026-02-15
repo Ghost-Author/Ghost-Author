@@ -229,11 +229,20 @@
                 <strong>页面目录（{{ outline.length }}）</strong>
                 <span>{{ readOutlineOpen ? '收起 ▾' : '展开 ▸' }}</span>
               </button>
+              <div class="read-outline-progress" v-if="readOutlineOpen && outline.length">
+                <div class="read-outline-progress-head">
+                  <span>阅读进度</span>
+                  <strong>{{ readProgressPercent }}%</strong>
+                </div>
+                <div class="read-outline-progress-track">
+                  <div class="read-outline-progress-fill" :style="{ width: `${readProgressPercent}%` }"></div>
+                </div>
+              </div>
               <ul class="read-outline-list" v-if="readOutlineOpen && outline.length">
                 <li
                   v-for="item in outline"
                   :key="item.id"
-                  :class="{ active: activeOutlineText === item.text }"
+                  :class="{ active: isOutlineActive(item), done: isOutlineDone(item) }"
                   :style="{ '--outline-indent': `${(item.level - 1) * 14}px` }"
                   @click="jumpToOutline(item)"
                 >
@@ -493,6 +502,26 @@ const readInfoOpen = ref(false)
 const readPanelDock = ref('right')
 const READ_PANEL_DOCK_KEY = 'ga-read-panel-dock'
 let readScrollRaf = null
+
+const activeOutlineIndex = computed(() => {
+  const activeKey = normalizeText(activeOutlineText.value)
+  if (!activeKey) {
+    return -1
+  }
+  return props.outline.findIndex((item) => normalizeText(item.text) === activeKey)
+})
+
+const readProgressPercent = computed(() => {
+  const total = props.outline.length
+  if (!total) {
+    return 0
+  }
+  if (activeOutlineIndex.value < 0) {
+    return 0
+  }
+  const ratio = (activeOutlineIndex.value + 1) / total
+  return Math.max(0, Math.min(100, Math.round(ratio * 100)))
+})
 const newTemplate = ref({
   name: '',
   description: '',
@@ -738,6 +767,15 @@ function updateActiveOutlineByScroll() {
     }
   }
   activeOutlineText.value = (current.textContent || '').trim()
+}
+
+function isOutlineActive(item) {
+  return normalizeText(item?.text) === normalizeText(activeOutlineText.value)
+}
+
+function isOutlineDone(item) {
+  const index = props.outline.findIndex((node) => node.id === item.id)
+  return activeOutlineIndex.value >= 0 && index >= 0 && index < activeOutlineIndex.value
 }
 
 watch(
