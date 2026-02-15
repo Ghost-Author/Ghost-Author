@@ -71,9 +71,11 @@ docker compose up -d --build backend elasticsearch
 在 Vercel 新建项目时使用以下配置：
 
 - Framework Preset: `Vite`
-- Root Directory: `frontend`
+- Root Directory: `frontend`（推荐）
 - Build Command: `npm run build`
 - Output Directory: `dist`
+
+> 如果你直接把仓库根目录作为 Root Directory，也可以。仓库根目录已提供 `vercel.json`，会自动构建 `frontend` 并做 SPA 路由回退。
 
 ### 3) 配置前端环境变量（Vercel Project Settings -> Environment Variables）
 
@@ -82,6 +84,19 @@ docker compose up -d --build backend elasticsearch
 ### 4) 重新部署
 
 触发一次 Redeploy 后即可访问 Vercel 域名。
+
+### 常见问题：`404: NOT_FOUND`
+
+出现 `Code: NOT_FOUND` 时，通常是项目根目录或输出目录配置不匹配。按下面检查：
+
+1. Vercel Project Settings -> General -> Root Directory  
+`frontend`（推荐）或仓库根目录（已支持）
+2. Build & Output Settings  
+`Build Command = npm run build`，`Output Directory = dist`（当 Root Directory 为 `frontend`）
+3. 环境变量  
+确认 `VITE_API_BASE_URL` 已设置并重新部署
+4. 触发 Redeploy  
+配置修改后需要重新部署，旧部署仍可能返回 404
 
 ## 本地开发
 
