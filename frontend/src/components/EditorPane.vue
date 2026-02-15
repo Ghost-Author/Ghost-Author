@@ -28,11 +28,18 @@
         <button class="secondary small" :class="{ active: isFavorite }" @click="$emit('toggle-favorite', model.slug)">
           {{ isFavorite ? '取消收藏' : '收藏页面' }}
         </button>
-        <button class="secondary small" @click="$emit('create-child')" :disabled="!canEdit">新建子页面</button>
-        <button class="secondary small" @click="runMenuAction('toggle-share')" :disabled="!canEdit">
-          {{ model.shareEnabled ? '关闭分享' : '开启分享' }}
-        </button>
-        <button class="secondary small" v-if="model.shareEnabled && shareLink" @click="copyShareLink">复制分享链接</button>
+        <div class="page-action-more" ref="pageActionMenuRef">
+          <button class="secondary small" :class="{ active: pageActionMenuOpen }" @click.stop="pageActionMenuOpen = !pageActionMenuOpen">
+            更多 {{ pageActionMenuOpen ? '▴' : '▾' }}
+          </button>
+          <div class="action-menu" v-if="pageActionMenuOpen" @click.stop>
+            <button class="secondary small" @click="$emit('create-child')" :disabled="!canEdit">新建子页面</button>
+            <button class="secondary small" @click="runMenuAction('toggle-share')" :disabled="!canEdit">
+              {{ model.shareEnabled ? '关闭分享' : '开启分享' }}
+            </button>
+            <button class="secondary small" v-if="model.shareEnabled && shareLink" @click="copyShareLink">复制分享链接</button>
+          </div>
+        </div>
       </div>
       <div class="page-action-right">
         <span class="page-status-pill" :class="(model.status || 'DRAFT').toLowerCase()">
@@ -674,6 +681,8 @@ const templateCenterOpen = ref(false)
 const editingTemplateId = ref(null)
 const actionMenuOpen = ref(false)
 const actionMenuRef = ref(null)
+const pageActionMenuOpen = ref(false)
+const pageActionMenuRef = ref(null)
 const attachmentsOpen = ref(true)
 const commentsOpen = ref(true)
 const basicMetaOpen = ref(true)
@@ -872,6 +881,7 @@ watch(
     // Existing docs default to preview-only view; new docs default to edit.
     isEditing.value = !id
     actionMenuOpen.value = false
+    pageActionMenuOpen.value = false
     readInfoOpen.value = false
     readPermOpen.value = false
     readChildrenOpen.value = true
@@ -993,6 +1003,9 @@ function onGlobalClick(event) {
   }
   if (!actionMenuRef.value.contains(event.target)) {
     actionMenuOpen.value = false
+  }
+  if (pageActionMenuRef.value && !pageActionMenuRef.value.contains(event.target)) {
+    pageActionMenuOpen.value = false
   }
 }
 
@@ -1139,6 +1152,7 @@ function setStatusAndSave(nextStatus) {
 
 function runMenuAction(action) {
   actionMenuOpen.value = false
+  pageActionMenuOpen.value = false
   if (action === 'toggle-lock') {
     setLockedAndSave(!model.value.locked)
     return

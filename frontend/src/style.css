@@ -438,6 +438,10 @@ body {
   color: #9a6a07;
 }
 
+.page-action-more {
+  position: relative;
+}
+
 .page-status-pill {
   border: 1px solid #d4e1fb;
   border-radius: 999px;
