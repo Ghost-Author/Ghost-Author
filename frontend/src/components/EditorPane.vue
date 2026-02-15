@@ -45,6 +45,7 @@
         <button class="secondary small" v-if="model.parentSlug" @click="$emit('open-parent', model.parentSlug)">
           返回父页面
         </button>
+        <button class="secondary small" @click="openCurrentPageInNewTab">新标签打开</button>
         <button class="secondary small" @click="copyPageLink">复制页面链接</button>
         <button class="secondary small" @click="copyPageMarkdownLink">复制 Markdown 链接</button>
         <button class="secondary small" :class="{ active: isFavorite }" @click="$emit('toggle-favorite', model.slug)">
@@ -79,7 +80,7 @@
         <span class="page-dirty-tip" :class="{ dirty: hasUnsavedChanges }">
           {{ hasUnsavedChanges ? '有改动待保存' : '内容已同步' }}
         </span>
-        <span class="page-action-shortcuts">Alt+[ / Alt+] 同级 · Alt+P 父级 · Alt+F 收藏 · Alt+L 链接 · Alt+M Markdown · Alt+H 分享 · Alt+S 保存</span>
+        <span class="page-action-shortcuts">Alt+[ / Alt+] 同级 · Alt+P 父级 · Alt+O 新标签 · Alt+F 收藏 · Alt+L 链接 · Alt+M Markdown · Alt+H 分享 · Alt+S 保存</span>
         <span class="page-leave-tip" v-if="hasUnsavedChanges">关闭页面前会提示保存</span>
         <button v-if="isEditingSafe" :disabled="!hasUnsavedChanges" @click="$emit('save', model)">保存</button>
         <button
@@ -1435,6 +1436,11 @@ function handlePageActionShortcuts(event) {
     copyPageLink()
     return true
   }
+  if (key === 'o') {
+    event.preventDefault()
+    openCurrentPageInNewTab()
+    return true
+  }
   if (key === 'm') {
     event.preventDefault()
     copyPageMarkdownLink()
@@ -2174,6 +2180,14 @@ async function copyPageLink() {
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
   }
+}
+
+function openCurrentPageInNewTab() {
+  if (!model.value.slug || typeof window === 'undefined') {
+    return
+  }
+  const link = `${window.location.origin}?page=${encodeURIComponent(model.value.slug)}`
+  window.open(link, '_blank', 'noopener')
 }
 
 async function copyPageMarkdownLink() {
