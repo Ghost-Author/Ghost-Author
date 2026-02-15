@@ -92,6 +92,7 @@
           @insert-attachment="insertAttachment"
           @create-child="createChildPage"
           @select-child="loadDoc"
+          @open-parent="loadDoc"
           @toggle-favorite="toggleFavorite"
           @toggle-share="toggleShare"
           @regenerate-share="regenerateShare"

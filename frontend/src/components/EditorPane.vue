@@ -24,6 +24,9 @@
     </div>
     <div class="page-action-bar" v-if="!isCreateMode">
       <div class="page-action-left">
+        <button class="secondary small" v-if="model.parentSlug" @click="$emit('open-parent', model.parentSlug)">
+          返回父页面
+        </button>
         <button class="secondary small" @click="copyPageLink">复制页面链接</button>
         <button class="secondary small" :class="{ active: isFavorite }" @click="$emit('toggle-favorite', model.slug)">
           {{ isFavorite ? '取消收藏' : '收藏页面' }}
@@ -637,6 +640,7 @@ const emit = defineEmits([
   'insert-attachment',
   'create-child',
   'select-child',
+  'open-parent',
   'toggle-favorite',
   'toggle-share',
   'regenerate-share',
