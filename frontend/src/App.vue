@@ -75,6 +75,30 @@
         @diff="buildDiff"
       />
     </div>
+
+    <div class="command-overlay" v-if="commandOpen" @click.self="closeCommand">
+      <div class="command-panel">
+        <div class="command-head">
+          <input
+            v-model="commandQuery"
+            placeholder="搜索页面标题或 slug，回车快速打开"
+            @keydown.esc.prevent="closeCommand"
+            @keydown.enter.prevent="openFirstCommandResult"
+          />
+        </div>
+        <ul class="command-list">
+          <li
+            v-for="item in commandResults"
+            :key="item.slug"
+            @click="selectCommandDoc(item.slug)"
+          >
+            <strong>{{ item.title }}</strong>
+            <span>{{ item.slug }}</span>
+          </li>
+          <li v-if="commandResults.length === 0" class="command-empty">没有匹配页面</li>
+        </ul>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -93,6 +117,8 @@ const attachments = ref([])
 const activeSlug = ref('')
 const currentDoc = ref(emptyDoc())
 const showHome = ref(true)
+const commandOpen = ref(false)
+const commandQuery = ref('')
 const diffFrom = ref(null)
 const diffTo = ref(null)
 const diffText = ref('')
@@ -142,6 +168,15 @@ const homeRecentDocs = computed(() => {
 const homeFavoriteDocs = computed(() => {
   const bySlug = new Map(docs.value.map((d) => [d.slug, d]))
   return favorites.value.map((slug) => bySlug.get(slug)).filter(Boolean).slice(0, 8)
+})
+const commandResults = computed(() => {
+  const q = commandQuery.value.trim().toLowerCase()
+  if (!q) {
+    return docs.value.slice(0, 12)
+  }
+  return docs.value
+    .filter((d) => (d.title || '').toLowerCase().includes(q) || (d.slug || '').toLowerCase().includes(q))
+    .slice(0, 12)
 })
 const pageOutline = computed(() => {
   const content = currentDoc.value?.content || ''
@@ -466,12 +501,35 @@ function loadCollections() {
 }
 
 function handleKeydown(event) {
+  const isCommand = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k'
+  if (isCommand) {
+    event.preventDefault()
+    commandOpen.value = true
+    return
+  }
   const isSave = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's'
   if (!isSave) {
     return
   }
   event.preventDefault()
   saveDoc(currentDoc.value)
+}
+
+function closeCommand() {
+  commandOpen.value = false
+  commandQuery.value = ''
+}
+
+function openFirstCommandResult() {
+  if (commandResults.value.length === 0) {
+    return
+  }
+  selectCommandDoc(commandResults.value[0].slug)
+}
+
+async function selectCommandDoc(slug) {
+  closeCommand()
+  await loadDoc(slug)
 }
 
 onMounted(async () => {

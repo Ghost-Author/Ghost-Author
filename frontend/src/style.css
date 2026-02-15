@@ -1065,6 +1065,70 @@ button.small {
   cursor: default;
 }
 
+.command-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0f1c3366;
+  display: grid;
+  place-items: start center;
+  padding-top: 12vh;
+  z-index: 20;
+}
+
+.command-panel {
+  width: min(680px, calc(100vw - 24px));
+  border: 1px solid #c7d8f8;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 46px #132f5a40;
+  overflow: hidden;
+}
+
+.command-head {
+  border-bottom: 1px solid #d8e3fb;
+  padding: 8px;
+}
+
+.command-head input {
+  margin: 0;
+}
+
+.command-list {
+  max-height: 340px;
+  overflow: auto;
+  padding: 8px;
+}
+
+.command-list li {
+  border: 1px solid #e2eafc;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
+.command-list li:hover {
+  border-color: #9dbaf8;
+  background: #ebf3ff;
+}
+
+.command-list li strong {
+  display: block;
+  color: #2f4f83;
+  font-size: 13px;
+}
+
+.command-list li span {
+  color: #7184a8;
+  font-size: 11px;
+}
+
+.command-empty {
+  color: #91a3c1;
+  cursor: default;
+}
+
 @media (max-width: 1180px) {
   .layout {
     grid-template-columns: 1fr;
