@@ -55,6 +55,7 @@
         :child-pages="childPages"
         :current-user="currentUser"
         :can-edit="currentCanEdit"
+        :share-link="currentShareLink"
         @save="saveDoc"
         @delete="deleteDoc"
         @add-comment="addComment"
@@ -64,6 +65,8 @@
         @insert-attachment="insertAttachment"
         @create-child="createChildPage"
         @select-child="loadDoc"
+        @toggle-share="toggleShare"
+        @regenerate-share="regenerateShare"
       />
 
       <VersionHistory
@@ -130,6 +133,7 @@ const diffText = ref('')
 const favorites = ref([])
 const recent = ref([])
 const currentUser = ref('admin')
+const shareTokenFromUrl = ref('')
 const breadcrumbTitle = computed(() => currentDoc.value.title || 'Untitled Page')
 const breadcrumbPath = computed(() => {
   if (showHome.value) {
@@ -207,6 +211,12 @@ const pageOutline = computed(() => {
   return result
 })
 const currentCanEdit = computed(() => !currentDoc.value?.id || canEditDoc(currentDoc.value))
+const currentShareLink = computed(() => {
+  if (!activeSlug.value || !currentDoc.value?.shareEnabled || !currentDoc.value?.shareToken) {
+    return ''
+  }
+  return `${window.location.origin}?page=${encodeURIComponent(activeSlug.value)}&token=${encodeURIComponent(currentDoc.value.shareToken)}`
+})
 
 const FAVORITES_KEY = 'ga-favorites'
 const RECENT_KEY = 'ga-recent'
@@ -227,6 +237,8 @@ function emptyDoc() {
     visibility: 'SPACE',
     locked: false,
     sortOrder: 0,
+    shareEnabled: false,
+    shareToken: '',
     content: '# 新文档\n\n开始编辑...'
   }
 }
@@ -257,6 +269,12 @@ async function loadDoc(slug) {
   }
   if (currentDoc.value.locked === undefined || currentDoc.value.locked === null) {
     currentDoc.value.locked = false
+  }
+  if (currentDoc.value.shareEnabled === undefined || currentDoc.value.shareEnabled === null) {
+    currentDoc.value.shareEnabled = false
+  }
+  if (!currentDoc.value.shareToken) {
+    currentDoc.value.shareToken = ''
   }
   if (!Array.isArray(currentDoc.value.editors)) {
     currentDoc.value.editors = []
@@ -334,7 +352,9 @@ async function saveDoc(doc) {
       viewers: doc.viewers || [],
       status: doc.status || 'DRAFT',
       visibility: doc.visibility || 'SPACE',
-      locked: !!doc.locked
+      locked: !!doc.locked,
+      shareEnabled: !!doc.shareEnabled,
+      shareToken: doc.shareToken || null
     })
   } else {
     await api.post('/documents', {
@@ -349,7 +369,9 @@ async function saveDoc(doc) {
       viewers: doc.viewers || [],
       status: doc.status || 'DRAFT',
       visibility: doc.visibility || 'SPACE',
-      locked: !!doc.locked
+      locked: !!doc.locked,
+      shareEnabled: !!doc.shareEnabled,
+      shareToken: doc.shareToken || null
     })
   }
 
@@ -562,6 +584,36 @@ async function reorderDoc(payload) {
   }
 }
 
+async function toggleShare(enabled) {
+  if (!activeSlug.value || !currentCanEdit.value) {
+    return
+  }
+  const { data } = await api.patch(`/documents/${activeSlug.value}/share`, {
+    enabled,
+    regenerate: false
+  })
+  currentDoc.value = {
+    ...currentDoc.value,
+    ...data
+  }
+  await fetchDocs()
+}
+
+async function regenerateShare() {
+  if (!activeSlug.value || !currentCanEdit.value) {
+    return
+  }
+  const { data } = await api.patch(`/documents/${activeSlug.value}/share`, {
+    enabled: true,
+    regenerate: true
+  })
+  currentDoc.value = {
+    ...currentDoc.value,
+    ...data
+  }
+  await fetchDocs()
+}
+
 function toggleFavorite(slug) {
   if (favorites.value.includes(slug)) {
     favorites.value = favorites.value.filter((s) => s !== slug)
@@ -634,8 +686,14 @@ async function selectCommandDoc(slug) {
 }
 
 onMounted(async () => {
+  const params = new URLSearchParams(window.location.search)
+  shareTokenFromUrl.value = params.get('token') || ''
+  const initialPage = params.get('page') || ''
   loadCollections()
   await fetchDocs()
+  if (initialPage) {
+    await loadDoc(initialPage)
+  }
   window.addEventListener('keydown', handleKeydown)
 })
 
@@ -679,6 +737,9 @@ function canEditDoc(doc) {
 function canViewDoc(doc) {
   if (!doc) {
     return false
+  }
+  if (doc.shareEnabled === true && doc.shareToken && shareTokenFromUrl.value === doc.shareToken) {
+    return true
   }
   if (canEditDoc(doc)) {
     return true

@@ -7,6 +7,7 @@ import com.ghostauthor.knowledge.dto.DocumentVersionDiffResponse;
 import com.ghostauthor.knowledge.dto.DocumentVersionResponse;
 import com.ghostauthor.knowledge.dto.DocumentMoveRequest;
 import com.ghostauthor.knowledge.dto.DocumentReorderRequest;
+import com.ghostauthor.knowledge.dto.DocumentShareRequest;
 import com.ghostauthor.knowledge.dto.CommentCreateRequest;
 import com.ghostauthor.knowledge.dto.CommentResponse;
 import com.ghostauthor.knowledge.dto.AttachmentResponse;
@@ -80,6 +81,11 @@ public class DocumentController {
     @PatchMapping("/{slug}/reorder")
     public DocumentResponse reorder(@PathVariable String slug, @Valid @RequestBody DocumentReorderRequest request) {
         return documentService.reorder(slug, request);
+    }
+
+    @PatchMapping("/{slug}/share")
+    public DocumentResponse updateShare(@PathVariable String slug, @RequestBody DocumentShareRequest request) {
+        return documentService.updateShare(slug, request);
     }
 
     @GetMapping("/{slug}/versions/diff")

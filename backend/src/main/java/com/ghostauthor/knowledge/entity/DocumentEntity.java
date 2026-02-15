@@ -43,6 +43,12 @@ public class DocumentEntity {
     @Column(nullable = false)
     private Integer sortOrder;
 
+    @Column(nullable = false)
+    private Boolean shareEnabled;
+
+    @Column(length = 128)
+    private String shareToken;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(length = 16)
@@ -78,6 +84,9 @@ public class DocumentEntity {
         }
         if (sortOrder == null) {
             sortOrder = 0;
+        }
+        if (shareEnabled == null) {
+            shareEnabled = false;
         }
     }
 
@@ -204,5 +213,21 @@ public class DocumentEntity {
 
     public void setSortOrder(Integer sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    public Boolean getShareEnabled() {
+        return shareEnabled;
+    }
+
+    public void setShareEnabled(Boolean shareEnabled) {
+        this.shareEnabled = shareEnabled;
+    }
+
+    public String getShareToken() {
+        return shareToken;
+    }
+
+    public void setShareToken(String shareToken) {
+        this.shareToken = shareToken;
     }
 }

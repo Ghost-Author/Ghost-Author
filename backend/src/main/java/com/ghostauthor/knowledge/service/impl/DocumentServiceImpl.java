@@ -7,6 +7,7 @@ import com.ghostauthor.knowledge.dto.DocumentVersionDiffResponse;
 import com.ghostauthor.knowledge.dto.DocumentVersionResponse;
 import com.ghostauthor.knowledge.dto.DocumentMoveRequest;
 import com.ghostauthor.knowledge.dto.DocumentReorderRequest;
+import com.ghostauthor.knowledge.dto.DocumentShareRequest;
 import com.ghostauthor.knowledge.dto.CommentCreateRequest;
 import com.ghostauthor.knowledge.dto.CommentResponse;
 import com.ghostauthor.knowledge.dto.AttachmentResponse;
@@ -37,6 +38,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -241,6 +243,28 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
+    @Transactional
+    public DocumentResponse updateShare(String slug, DocumentShareRequest request) {
+        DocumentEntity entity = documentRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+
+        boolean enabled = request != null && request.enabled() != null
+                ? request.enabled()
+                : Boolean.TRUE.equals(entity.getShareEnabled());
+        boolean regenerate = request != null && Boolean.TRUE.equals(request.regenerate());
+
+        entity.setShareEnabled(enabled);
+        if (!enabled) {
+            entity.setShareToken(null);
+        } else if (regenerate || !StringUtils.hasText(entity.getShareToken())) {
+            entity.setShareToken(generateShareToken());
+        }
+        DocumentEntity saved = documentRepository.save(entity);
+        String content = fileStorageService.readMarkdown(saved.getFilePath());
+        return toResponse(saved, content);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public DocumentVersionDiffResponse diffVersions(String slug, Integer fromVersion, Integer toVersion) {
         DocumentEntity entity = documentRepository.findBySlug(slug)
@@ -394,6 +418,8 @@ public class DocumentServiceImpl implements DocumentService {
                 entity.getVisibility() == null ? DocumentVisibility.SPACE : entity.getVisibility(),
                 Boolean.TRUE.equals(entity.getLocked()),
                 entity.getSortOrder() == null ? 0 : entity.getSortOrder(),
+                Boolean.TRUE.equals(entity.getShareEnabled()),
+                entity.getShareToken(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
@@ -546,5 +572,9 @@ public class DocumentServiceImpl implements DocumentService {
         if (changed) {
             documentRepository.saveAll(siblings);
         }
+    }
+
+    private String generateShareToken() {
+        return UUID.randomUUID().toString().replace("-", "");
     }
 }

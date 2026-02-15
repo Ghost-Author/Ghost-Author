@@ -74,6 +74,8 @@ public class SearchServiceImpl implements SearchService {
                         null,
                         false,
                         0,
+                        false,
+                        null,
                         null,
                         null
                 ))

@@ -125,6 +125,11 @@
           <span class="perm-chip">Editors: {{ (model.editors || []).join(', ') || '-' }}</span>
           <span class="perm-chip">Viewers: {{ (model.viewers || []).join(', ') || '-' }}</span>
           <span class="perm-chip current">当前用户: {{ currentUser || '-' }}</span>
+          <span class="perm-chip share">{{ model.shareEnabled ? '分享已开启' : '未开启分享' }}</span>
+        </div>
+        <div class="share-bar" v-if="model.shareEnabled && shareLink">
+          <input :value="shareLink" readonly />
+          <button class="secondary small" @click="copyShareLink">复制链接</button>
         </div>
         <div class="child-pages" v-if="childPages.length">
           <p>子页面</p>
@@ -176,6 +181,22 @@
         @click="setLockedAndSave(!model.locked)"
       >
         {{ model.locked ? '解除锁定' : '锁定页面' }}
+      </button>
+      <button
+        v-if="!isCreateMode"
+        class="secondary"
+        :disabled="!canEdit"
+        @click="$emit('toggle-share', !model.shareEnabled)"
+      >
+        {{ model.shareEnabled ? '关闭分享' : '开启分享' }}
+      </button>
+      <button
+        v-if="!isCreateMode && model.shareEnabled"
+        class="secondary"
+        :disabled="!canEdit"
+        @click="$emit('regenerate-share')"
+      >
+        重置分享链接
       </button>
       <button v-if="!isCreateMode" class="secondary" :disabled="!canEdit" @click="$emit('create-child')">新建子页面</button>
       <button class="danger" :disabled="isCreateMode || !canEdit" @click="$emit('delete', model.slug)">删除</button>
@@ -250,6 +271,10 @@ const props = defineProps({
   canEdit: {
     type: Boolean,
     default: true
+  },
+  shareLink: {
+    type: String,
+    default: ''
   }
 })
 
@@ -260,7 +285,9 @@ const emit = defineEmits([
   'delete-attachment',
   'insert-attachment',
   'create-child',
-  'select-child'
+  'select-child',
+  'toggle-share',
+  'regenerate-share'
 ])
 
 const toolbars = [
@@ -438,6 +465,18 @@ function toggleEditMode() {
     return
   }
   isEditing.value = !isEditing.value
+}
+
+async function copyShareLink() {
+  if (!props.shareLink) {
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(props.shareLink)
+    alert('分享链接已复制')
+  } catch {
+    alert('复制失败，请手动复制')
+  }
 }
 
 function onSelectFile(event) {

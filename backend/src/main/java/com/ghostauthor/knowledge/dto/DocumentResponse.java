@@ -20,6 +20,8 @@ public record DocumentResponse(
         DocumentVisibility visibility,
         Boolean locked,
         Integer sortOrder,
+        Boolean shareEnabled,
+        String shareToken,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
