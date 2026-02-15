@@ -102,6 +102,11 @@ docker compose up -d --build backend elasticsearch
 4. 触发 Redeploy  
 配置修改后需要重新部署，旧部署仍可能返回 404
 
+### 常见问题：页面白屏（HTML 能打开但无内容）
+
+通常是 SPA 重写规则把 `/assets/*.js` 也重写到了 `index.html`。  
+本仓库已使用 Vercel `routes` 配置（先 `handle: filesystem`，再回退到 `/index.html`）。如果你自定义过 `vercel.json`，请确认仍保留这一规则顺序。
+
 ## 本地开发
 
 ### 1) 启动 Elasticsearch（可选）
