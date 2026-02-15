@@ -71,17 +71,24 @@
             <span>对比: v{{ diffFrom || '-' }} -> v{{ diffTo || '-' }}</span>
             <button :disabled="!diffFrom || !diffTo" @click="$emit('diff')">生成 Diff</button>
           </div>
-          <input
-            class="diff-search"
-            v-model="diffKeyword"
-            placeholder="高亮 Diff 关键字"
-          />
+          <div class="diff-search-row">
+            <input
+              class="diff-search"
+              v-model="diffKeyword"
+              placeholder="高亮 Diff 关键字"
+            />
+            <span class="diff-hit-count" v-if="diffKeyword.trim()">
+              {{ diffMatchIndexes.length ? `${currentHitOrder + 1}/${diffMatchIndexes.length}` : '0/0' }}
+            </span>
+            <button class="secondary tiny" :disabled="!diffMatchIndexes.length" @click="jumpDiffHit(-1)">上一个</button>
+            <button class="secondary tiny" :disabled="!diffMatchIndexes.length" @click="jumpDiffHit(1)">下一个</button>
+          </div>
           <div class="diff-box" v-if="diffText">
             <div
               v-for="(line, idx) in highlightedDiffLines"
               :key="idx"
               class="diff-line"
-              :class="lineClass(line.raw)"
+              :class="[lineClass(line.raw), { hit: diffMatchIndexes.includes(idx), 'current-hit': currentHitIndex === idx }]"
               v-html="line.html"
             >
             </div>
@@ -129,6 +136,7 @@ const diffOpen = ref(true)
 const activeOutlineText = ref('')
 const versionKeyword = ref('')
 const diffKeyword = ref('')
+const currentHitOrder = ref(0)
 const diffLines = computed(() => props.diffText.split('\n'))
 const highlightedDiffLines = computed(() => {
   const query = diffKeyword.value.trim()
@@ -136,6 +144,26 @@ const highlightedDiffLines = computed(() => {
     raw: line,
     html: highlightLine(line || ' ', query)
   }))
+})
+const diffMatchIndexes = computed(() => {
+  const query = diffKeyword.value.trim().toLowerCase()
+  if (!query) {
+    return []
+  }
+  return diffLines.value.reduce((acc, line, idx) => {
+    if ((line || '').toLowerCase().includes(query)) {
+      acc.push(idx)
+    }
+    return acc
+  }, [])
+})
+const currentHitIndex = computed(() => {
+  const matches = diffMatchIndexes.value
+  if (!matches.length) {
+    return -1
+  }
+  const normalized = ((currentHitOrder.value % matches.length) + matches.length) % matches.length
+  return matches[normalized]
 })
 const filteredVersions = computed(() => {
   const keyword = versionKeyword.value.trim().toLowerCase()
@@ -229,6 +257,25 @@ function highlightLine(text, keyword) {
   return escaped.replace(regex, (matched) => `<mark>${matched}</mark>`) || ' '
 }
 
+function scrollCurrentHitIntoView() {
+  const box = document.querySelector('.diff-box')
+  if (!box) {
+    return
+  }
+  const line = box.querySelector('.diff-line.current-hit')
+  if (line && typeof line.scrollIntoView === 'function') {
+    line.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }
+}
+
+function jumpDiffHit(direction) {
+  if (!diffMatchIndexes.value.length) {
+    return
+  }
+  currentHitOrder.value += direction
+  nextTick(() => scrollCurrentHitIntoView())
+}
+
 function scrollToHeading(text) {
   const container = document.querySelector('.preview-only')
   if (!container) {
@@ -251,6 +298,13 @@ watch(() => props.slug, () => {
 watch(() => props.outline, () => {
   nextTick(() => bindPreviewScroll())
 }, { deep: true })
+
+watch([diffKeyword, () => props.diffText], () => {
+  currentHitOrder.value = 0
+  if (diffKeyword.value.trim()) {
+    nextTick(() => scrollCurrentHitIntoView())
+  }
+})
 
 onMounted(() => {
   nextTick(() => bindPreviewScroll())

@@ -212,6 +212,9 @@
                 <div class="node-more">
                   <button class="node-more-btn" @click.stop="toggleQuickMenu(node.slug)">⋯</button>
                   <div v-if="quickMenuSlug === node.slug" class="node-menu" @click.stop>
+                    <button class="node-menu-item" @click="emitQuickAction('OPEN_PAGE', node.slug)">
+                      打开页面
+                    </button>
                     <button class="node-menu-item" @click="emitQuickAction('RENAME', node.slug)">
                       重命名标题
                     </button>
@@ -226,6 +229,12 @@
                     </button>
                     <button class="node-menu-item" @click="emitQuickAction('COPY_LINK', node.slug)">
                       复制页面链接
+                    </button>
+                    <button class="node-menu-item" @click="emitQuickAction('COPY_SLUG', node.slug)">
+                      复制 slug
+                    </button>
+                    <button class="node-menu-item" @click="emitQuickAction('TOGGLE_FAVORITE', node.slug)">
+                      {{ favorites.includes(node.slug) ? '取消收藏' : '加入收藏' }}
                     </button>
                   </div>
                 </div>

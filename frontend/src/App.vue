@@ -697,6 +697,26 @@ async function handleDocQuickAction(payload) {
     return
   }
 
+  if (payload.action === 'COPY_SLUG') {
+    try {
+      await navigator.clipboard.writeText(payload.slug)
+      alert('slug 已复制')
+    } catch {
+      alert('复制失败，请手动复制')
+    }
+    return
+  }
+
+  if (payload.action === 'TOGGLE_FAVORITE') {
+    toggleFavorite(payload.slug)
+    return
+  }
+
+  if (payload.action === 'OPEN_PAGE') {
+    await loadDoc(payload.slug)
+    return
+  }
+
   if (!canEditDoc(target)) {
     alert('当前用户无编辑权限')
     return
