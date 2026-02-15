@@ -108,7 +108,7 @@ backend 环境变量建议：
 说明：
 
 - 前端构建期会读取 `VITE_API_BASE_URL`
-- 若未配置，前端会默认请求同域 `/api`
+- 若未配置，会回退到 `http://localhost:8080/api`（仅适合本地）
 
 ### 3) （可选）部署 Elasticsearch 服务
 
