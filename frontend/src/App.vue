@@ -140,6 +140,24 @@
         </div>
       </div>
     </div>
+
+    <div v-if="promptDialog.open" class="confirm-overlay" @click.self="resolvePrompt(null)">
+      <div class="confirm-panel">
+        <h4>{{ promptDialog.title }}</h4>
+        <p>{{ promptDialog.message }}</p>
+        <input
+          ref="promptInputRef"
+          v-model="promptDialog.value"
+          :placeholder="promptDialog.placeholder"
+          @keydown.enter.prevent="resolvePrompt(promptDialog.value)"
+          @keydown.esc.prevent="resolvePrompt(null)"
+        />
+        <div class="confirm-actions">
+          <button class="secondary" @click="resolvePrompt(null)">{{ promptDialog.cancelText }}</button>
+          <button @click="resolvePrompt(promptDialog.value)">{{ promptDialog.confirmText }}</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -176,6 +194,16 @@ const confirmDialog = ref({
   cancelText: '取消',
   danger: false
 })
+const promptDialog = ref({
+  open: false,
+  title: '请输入',
+  message: '',
+  value: '',
+  placeholder: '',
+  confirmText: '确认',
+  cancelText: '取消'
+})
+const promptInputRef = ref(null)
 const diffFrom = ref(null)
 const diffTo = ref(null)
 const diffText = ref('')
@@ -185,6 +213,7 @@ const currentUser = ref('admin')
 const shareTokenFromUrl = ref('')
 let toastTimer = null
 let confirmResolver = null
+let promptResolver = null
 const breadcrumbTitle = computed(() => currentDoc.value.title || 'Untitled Page')
 const breadcrumbPath = computed(() => {
   if (showHome.value) {
@@ -361,6 +390,36 @@ function resolveConfirm(accepted) {
   if (confirmResolver) {
     confirmResolver(accepted)
     confirmResolver = null
+  }
+}
+
+function askPrompt(message, options = {}) {
+  return new Promise((resolve) => {
+    promptDialog.value = {
+      open: true,
+      title: options.title || '请输入',
+      message,
+      value: options.initialValue || '',
+      placeholder: options.placeholder || '',
+      confirmText: options.confirmText || '确认',
+      cancelText: options.cancelText || '取消'
+    }
+    promptResolver = resolve
+    setTimeout(() => {
+      if (promptInputRef.value && typeof promptInputRef.value.focus === 'function') {
+        promptInputRef.value.focus()
+        promptInputRef.value.select?.()
+      }
+    }, 0)
+  })
+}
+
+function resolvePrompt(value) {
+  promptDialog.value.open = false
+  if (promptResolver) {
+    const next = typeof value === 'string' ? value.trim() : ''
+    promptResolver(next || null)
+    promptResolver = null
   }
 }
 
@@ -828,12 +887,17 @@ async function handleDocQuickAction(payload) {
 
   if (payload.action === 'RENAME') {
     const { data } = await api.get(`/documents/${payload.slug}`)
-    const nextTitle = prompt('请输入新的页面标题', data.title || payload.slug)
-    if (!nextTitle || !nextTitle.trim()) {
+    const nextTitle = await askPrompt('请输入新的页面标题', {
+      title: '重命名页面',
+      placeholder: '输入新标题',
+      initialValue: data.title || payload.slug,
+      confirmText: '保存'
+    })
+    if (!nextTitle) {
       return
     }
     await api.put(`/documents/${payload.slug}`, {
-      title: nextTitle.trim(),
+      title: nextTitle,
       summary: data.summary,
       content: data.content,
       parentSlug: data.parentSlug || null,
@@ -1204,6 +1268,10 @@ onBeforeUnmount(() => {
   if (confirmResolver) {
     confirmResolver(false)
     confirmResolver = null
+  }
+  if (promptResolver) {
+    promptResolver(null)
+    promptResolver = null
   }
 })
 

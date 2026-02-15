@@ -2164,6 +2164,10 @@ button.small {
   font-size: 13px;
 }
 
+.confirm-panel input {
+  margin: 10px 0 0;
+}
+
 .confirm-actions {
   margin-top: 12px;
   display: flex;
