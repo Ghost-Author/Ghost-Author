@@ -84,9 +84,16 @@
         <span class="page-dirty-tip" :class="{ dirty: hasUnsavedChanges }">
           {{ hasUnsavedChanges ? '有改动待保存' : '内容已同步' }}
         </span>
-        <span class="page-action-shortcuts">Alt+[ / Alt+] 同级 · Alt+P 父级 · Alt+V 版本栏 · Alt+D 复制 · Alt+O 新标签 · Alt+F 收藏 · Alt+L 链接 · Alt+M Markdown · Alt+H 分享 · Alt+S 保存</span>
+        <span class="page-action-shortcuts">Alt+[ / Alt+] 同级 · Alt+P 父级 · Alt+V 版本栏 · Alt+D 复制 · Alt+A 归档/恢复 · Alt+O 新标签 · Alt+F 收藏 · Alt+L 链接 · Alt+M Markdown · Alt+H 分享 · Alt+S 保存</span>
         <span class="page-leave-tip" v-if="hasUnsavedChanges">关闭页面前会提示保存</span>
         <button v-if="isEditingSafe" :disabled="!hasUnsavedChanges" @click="$emit('save', model)">保存</button>
+        <button
+          v-if="isEditingSafe"
+          class="secondary"
+          @click="setStatusAndSave(model.status === 'ARCHIVED' ? 'DRAFT' : 'ARCHIVED')"
+        >
+          {{ model.status === 'ARCHIVED' ? '恢复草稿' : '归档保存' }}
+        </button>
         <button
           v-if="isEditingSafe && model.status !== 'ARCHIVED'"
           class="secondary"
@@ -1440,6 +1447,14 @@ function handlePageActionShortcuts(event) {
   if (key === 'd') {
     event.preventDefault()
     emit('duplicate-page')
+    return true
+  }
+  if (key === 'a') {
+    if (!isEditingSafe.value) {
+      return false
+    }
+    event.preventDefault()
+    setStatusAndSave(model.value.status === 'ARCHIVED' ? 'DRAFT' : 'ARCHIVED')
     return true
   }
   if (key === 'f') {
