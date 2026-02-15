@@ -233,6 +233,8 @@
               @dragleave="onDragLeave(node.slug)"
               @drop.prevent="onDropNode(node.slug)"
               @click="onNodeClick(node.slug)"
+              tabindex="0"
+              @keydown="onNodeKeydown($event, node.slug)"
             >
               <div class="node-title-row">
                 <div class="node-title-main">
@@ -581,6 +583,45 @@ const visibilitySections = computed(() => {
   }]
 })
 
+const visibleRows = computed(() => {
+  const rows = []
+  visibilitySections.value.forEach((section) => {
+    if (!isSectionOpen(section.key)) {
+      return
+    }
+    section.groups.forEach((group) => {
+      if (!opened.value[group.id]) {
+        return
+      }
+      group.items.forEach((item) => {
+        rows.push({
+          slug: item.slug,
+          groupId: group.id,
+          sectionKey: section.key,
+          item
+        })
+      })
+    })
+  })
+  return rows
+})
+
+const visibleRowIndex = computed(() => {
+  const map = new Map()
+  visibleRows.value.forEach((row, index) => {
+    map.set(row.slug, index)
+  })
+  return map
+})
+
+const visibleRowBySlug = computed(() => {
+  const map = new Map()
+  visibleRows.value.forEach((row) => {
+    map.set(row.slug, row)
+  })
+  return map
+})
+
 watch(() => props.activeSlug, async (slug) => {
   if (!slug) {
     return
@@ -735,6 +776,87 @@ function onNodeClick(slug) {
     return
   }
   emit('select', slug)
+}
+
+function onNodeKeydown(event, slug) {
+  const key = event.key
+  if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(key)) {
+    return
+  }
+  event.preventDefault()
+
+  if (key === 'Enter') {
+    onNodeClick(slug)
+    return
+  }
+  if (key === ' ') {
+    if (batchMode.value) {
+      toggleSelected(slug)
+    } else {
+      onNodeClick(slug)
+    }
+    return
+  }
+  if (batchMode.value) {
+    return
+  }
+
+  const index = visibleRowIndex.value.get(slug)
+  if (index === undefined) {
+    return
+  }
+
+  if (key === 'ArrowDown') {
+    const next = visibleRows.value[index + 1]
+    if (next) {
+      emit('select', next.slug)
+    }
+    return
+  }
+
+  if (key === 'ArrowUp') {
+    const prev = visibleRows.value[index - 1]
+    if (prev) {
+      emit('select', prev.slug)
+    }
+    return
+  }
+
+  const row = visibleRows.value[index]
+  if (!row) {
+    return
+  }
+
+  if (key === 'ArrowRight') {
+    if (!isSectionOpen(row.sectionKey)) {
+      sectionOpened.value[row.sectionKey] = true
+      return
+    }
+    if (!opened.value[row.groupId]) {
+      opened.value[row.groupId] = true
+      return
+    }
+    const child = visibleRows.value.find((candidate) => candidate.item.parentSlug === slug)
+    if (child) {
+      emit('select', child.slug)
+    }
+    return
+  }
+
+  if (key === 'ArrowLeft') {
+    const parentSlug = row.item.parentSlug
+    if (parentSlug && visibleRowBySlug.value.has(parentSlug)) {
+      emit('select', parentSlug)
+      return
+    }
+    if (opened.value[row.groupId]) {
+      opened.value[row.groupId] = false
+      return
+    }
+    if (isSectionOpen(row.sectionKey)) {
+      sectionOpened.value[row.sectionKey] = false
+    }
+  }
 }
 
 function emitBulkAction(action) {

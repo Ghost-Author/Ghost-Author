@@ -846,6 +846,11 @@ ul {
   background: #fff9fc;
 }
 
+.tree-node:focus-visible {
+  outline: 2px solid #76a6ff;
+  outline-offset: 1px;
+}
+
 .fav-toggle {
   border: 1px solid #cbdcf8;
   background: #fff;
