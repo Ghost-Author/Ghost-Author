@@ -94,6 +94,10 @@ backend 环境变量建议：
 
 - `https://ghost-backend-production.up.railway.app`
 
+可用下面地址快速检查后端状态：
+
+- `https://<your-backend-domain>/actuator/health`
+
 ### 2) 部署 frontend 服务（无需改 Root Directory）
 
 - New Service -> Deploy from GitHub Repo
@@ -123,6 +127,7 @@ backend 环境变量建议：
 
 1. 后端启动成功但外网 502/无法访问  
 确认后端监听端口使用了 `PORT`（本仓库已支持 `server.port=${PORT:8080}`）。
+同时访问 `https://<your-backend-domain>/actuator/health`，确认返回 `{"status":"UP"}`。
 
 2. 前端可打开但请求后端失败  
 检查 `VITE_API_BASE_URL` 是否带 `/api`，并在 frontend 服务重新部署。
