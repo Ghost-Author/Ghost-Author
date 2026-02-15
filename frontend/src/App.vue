@@ -101,6 +101,7 @@
           @open-parent="loadDoc"
           @open-sibling="loadDoc"
           @toggle-right-panel="toggleRightPanel"
+          @duplicate-page="duplicateCurrentPage"
           @toggle-favorite="toggleFavorite"
           @toggle-share="toggleShare"
           @regenerate-share="regenerateShare"
@@ -764,6 +765,43 @@ function createNewDoc() {
   diffFrom.value = null
   diffTo.value = null
   diffText.value = ''
+}
+
+function duplicateCurrentPage() {
+  if (!activeSlug.value) {
+    return
+  }
+  if (!canViewDoc(currentDoc.value)) {
+    showToast('当前页面不可复制', 'error')
+    return
+  }
+  const source = currentDoc.value
+  const suffix = Date.now().toString().slice(-6)
+  const baseSlug = (source.slug || 'page').replace(/-copy-\d+$/, '')
+  activeSlug.value = ''
+  currentDoc.value = {
+    ...emptyDoc(),
+    parentSlug: source.parentSlug || null,
+    title: `${source.title || source.slug}（副本）`,
+    slug: `${baseSlug}-copy-${suffix}`,
+    summary: source.summary || '',
+    labels: Array.isArray(source.labels) ? [...source.labels] : [],
+    owner: source.owner || currentUser.value || 'admin',
+    editors: Array.isArray(source.editors) ? [...source.editors] : [],
+    viewers: Array.isArray(source.viewers) ? [...source.viewers] : [],
+    priority: source.priority || 'MEDIUM',
+    dueDate: source.dueDate || '',
+    assignee: source.assignee || '',
+    visibility: source.visibility || 'SPACE',
+    content: source.content || ''
+  }
+  versions.value = []
+  comments.value = []
+  attachments.value = []
+  diffFrom.value = null
+  diffTo.value = null
+  diffText.value = ''
+  showToast('已生成页面副本草稿', 'success')
 }
 
 function createChildPage() {
