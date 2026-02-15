@@ -1,5 +1,34 @@
 <template>
   <div class="app-shell">
+    <div v-if="!isAuthenticated" class="login-shell">
+      <div class="login-card">
+        <div class="login-brand">
+          <span class="brand-mark">GA</span>
+          <div>
+            <strong>Ghost Author</strong>
+            <p>请先登录后再访问知识库</p>
+          </div>
+        </div>
+        <form class="login-form" @submit.prevent="submitLogin">
+          <label>
+            用户名
+            <input v-model.trim="loginForm.username" placeholder="例如：liupeng" autocomplete="username" />
+          </label>
+          <label>
+            密码
+            <input
+              v-model="loginForm.password"
+              type="password"
+              placeholder="请输入密码"
+              autocomplete="current-password"
+            />
+          </label>
+          <p v-if="loginError" class="login-error">{{ loginError }}</p>
+          <button type="submit">登录并进入</button>
+        </form>
+      </div>
+    </div>
+    <template v-else>
     <header class="topbar">
       <div class="brand">
         <span class="brand-mark">GA</span>
@@ -8,7 +37,7 @@
         </div>
       </div>
       <div class="topbar-right">
-        <input v-model="currentUser" class="user-input" placeholder="当前用户（如 liupeng）" />
+        <span class="topbar-user">当前用户：{{ currentUser }}</span>
         <span class="shortcut-hint">⌘/Ctrl+K 搜索 · ⌘/Ctrl+S 保存 · Alt+1/2/3/4/5/6</span>
         <button class="secondary tiny" @click="openHome">空间首页</button>
         <button class="secondary tiny" @click="toggleRightPanel">
@@ -17,6 +46,7 @@
         <button class="secondary tiny" :class="{ active: focusMode }" @click="toggleFocusMode">
           {{ focusMode ? '退出专注' : '专注模式' }}
         </button>
+        <button class="secondary tiny" @click="logout">退出登录</button>
         <div class="topbar-badge">{{ visibleDocs.length }} pages</div>
       </div>
     </header>
@@ -217,6 +247,7 @@
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
@@ -231,6 +262,7 @@ import VersionHistory from './components/VersionHistory.vue'
 const FAVORITES_KEY = 'ga-favorites'
 const RECENT_KEY = 'ga-recent'
 const CURRENT_USER_KEY = 'ga-current-user'
+const AUTH_SESSION_KEY = 'ga-auth-session'
 const RIGHT_PANEL_KEY = 'ga-right-panel-open'
 const LEFT_PANE_KEY = 'ga-left-pane-width'
 const FOCUS_MODE_KEY = 'ga-focus-mode'
@@ -243,6 +275,13 @@ const templates = ref([])
 const docListRef = ref(null)
 const activeSlug = ref('')
 const currentUser = ref('admin')
+const isAuthenticated = ref(false)
+const pendingPageSlug = ref('')
+const loginForm = ref({
+  username: '',
+  password: ''
+})
+const loginError = ref('')
 const currentDoc = ref(emptyDoc())
 const showHome = ref(true)
 const commandOpen = ref(false)
@@ -1508,7 +1547,85 @@ function loadCollections() {
   }
 }
 
+function loadAuthSessionUser() {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+  try {
+    const raw = window.localStorage.getItem(AUTH_SESSION_KEY)
+    if (!raw) {
+      return ''
+    }
+    const parsed = JSON.parse(raw)
+    const username = (parsed?.username || '').trim()
+    return username
+  } catch {
+    return ''
+  }
+}
+
+function persistAuthSession(username) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  const clean = (username || '').trim()
+  if (!clean) {
+    window.localStorage.removeItem(AUTH_SESSION_KEY)
+    return
+  }
+  window.localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({
+    username: clean,
+    loginAt: Date.now()
+  }))
+}
+
+async function bootstrapWorkspace(initialPage = '') {
+  await fetchDocs()
+  await fetchTemplates()
+  if (initialPage) {
+    await loadDoc(initialPage)
+  }
+}
+
+async function submitLogin() {
+  const username = (loginForm.value.username || '').trim()
+  const password = String(loginForm.value.password || '')
+  if (!username || !password) {
+    loginError.value = '请输入用户名和密码'
+    return
+  }
+  currentUser.value = username
+  persistCollections()
+  persistAuthSession(username)
+  isAuthenticated.value = true
+  loginForm.value.password = ''
+  loginError.value = ''
+  await bootstrapWorkspace(pendingPageSlug.value)
+  pendingPageSlug.value = ''
+  showToast(`欢迎回来，${username}`, 'success')
+}
+
+function logout() {
+  persistAuthSession('')
+  isAuthenticated.value = false
+  pendingPageSlug.value = ''
+  loginForm.value = {
+    username: currentUser.value || '',
+    password: ''
+  }
+  loginError.value = ''
+  docs.value = []
+  versions.value = []
+  comments.value = []
+  attachments.value = []
+  templates.value = []
+  openHome()
+}
+
 function handleKeydown(event) {
+  if (!isAuthenticated.value) {
+    return
+  }
   const target = event.target
   const tagName = (target?.tagName || '').toUpperCase()
   const typingElement = target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(tagName)
@@ -1630,10 +1747,17 @@ onMounted(async () => {
   shareTokenFromUrl.value = params.get('token') || ''
   const initialPage = params.get('page') || ''
   loadCollections()
-  await fetchDocs()
-  await fetchTemplates()
-  if (initialPage) {
-    await loadDoc(initialPage)
+  pendingPageSlug.value = initialPage
+  const sessionUser = loadAuthSessionUser()
+  if (sessionUser) {
+    currentUser.value = sessionUser
+    loginForm.value.username = sessionUser
+    isAuthenticated.value = true
+    await bootstrapWorkspace(initialPage)
+    pendingPageSlug.value = ''
+  } else {
+    isAuthenticated.value = false
+    loginForm.value.username = currentUser.value || ''
   }
   window.addEventListener('keydown', handleKeydown)
 })

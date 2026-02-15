@@ -41,6 +41,66 @@ body {
   overflow: hidden;
 }
 
+.login-shell {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+.login-card {
+  width: min(460px, 92vw);
+  border: 1px solid #cfe0ff;
+  border-radius: 20px;
+  background: #ffffffde;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 16px 42px #1f4d9322;
+  padding: 24px;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.login-brand strong {
+  font-size: 20px;
+  color: #2a4f90;
+}
+
+.login-brand p {
+  margin: 2px 0 0;
+  color: #6780a8;
+  font-size: 13px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.login-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: #4d6389;
+  font-weight: 700;
+}
+
+.login-form input {
+  margin: 0;
+}
+
+.login-error {
+  margin: 0;
+  color: #b04367;
+  font-size: 12px;
+}
+
 .app-shell::before,
 .app-shell::after {
   content: "";
@@ -159,6 +219,17 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.topbar-user {
+  border: 1px solid #d2e1fb;
+  background: #f7faff;
+  color: #3f5f8f;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .shortcut-hint {

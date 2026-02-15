@@ -138,6 +138,9 @@ backend 环境变量建议：
 4. 构建日志提示 `Dockerfile does not exist`  
 在服务 Variables 里设置 `RAILWAY_DOCKERFILE_PATH`：前端为 `Dockerfile`，后端为 `Dockerfile.backend`。
 
+5. 重启或重新部署后数据丢失  
+确认 backend 服务已挂载 Volume 到 `/app/data`（H2 数据库）和 `/app/storage/docs`（Markdown 文件）。未挂载时实例重建会丢数据。
+
 ## 本地开发
 
 ### 1) 启动 Elasticsearch（可选）
