@@ -430,6 +430,17 @@ function handleEditorNotify(payload) {
   showToast(payload.message, payload.type || 'info')
 }
 
+function firstAccessibleSlug(slugs) {
+  const list = Array.isArray(slugs) ? slugs : []
+  for (const slug of list) {
+    const doc = docs.value.find((d) => d.slug === slug)
+    if (doc && canViewDoc(doc)) {
+      return slug
+    }
+  }
+  return ''
+}
+
 function emptyDoc() {
   return {
     id: null,
@@ -972,6 +983,7 @@ async function handleDocBulkAction(payload) {
   if (payload.action === 'BULK_MOVE_ROOT') {
     let updated = 0
     let skipped = 0
+    const updatedSlugs = []
     for (const slug of slugs) {
       const target = docs.value.find((d) => d.slug === slug)
       if (!target || !canEditDoc(target)) {
@@ -982,10 +994,16 @@ async function handleDocBulkAction(payload) {
         parentSlug: null
       })
       updated += 1
+      updatedSlugs.push(slug)
     }
     await fetchDocs()
     if (activeSlug.value && slugs.includes(activeSlug.value)) {
       await loadDoc(activeSlug.value)
+    } else {
+      const fallback = firstAccessibleSlug(updatedSlugs)
+      if (fallback) {
+        await loadDoc(fallback)
+      }
     }
     showToast(`批量移到顶级完成：成功 ${updated}，跳过 ${skipped}`, updated > 0 ? 'success' : 'info')
     docListRef.value?.clearBatchSelection()
@@ -1003,6 +1021,7 @@ async function handleDocBulkAction(payload) {
 
   let updated = 0
   let skipped = 0
+  const updatedSlugs = []
   for (const slug of slugs) {
     const target = docs.value.find((d) => d.slug === slug)
     if (!target || !canEditDoc(target)) {
@@ -1027,11 +1046,17 @@ async function handleDocBulkAction(payload) {
       locked: !!data.locked
     })
     updated += 1
+    updatedSlugs.push(slug)
   }
 
   await fetchDocs()
   if (activeSlug.value && slugs.includes(activeSlug.value)) {
     await loadDoc(activeSlug.value)
+  } else {
+    const fallback = firstAccessibleSlug(updatedSlugs)
+    if (fallback) {
+      await loadDoc(fallback)
+    }
   }
   showToast(`批量操作完成：成功 ${updated}，跳过 ${skipped}`, updated > 0 ? 'success' : 'info')
   docListRef.value?.clearBatchSelection()

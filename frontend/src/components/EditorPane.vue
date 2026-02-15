@@ -77,7 +77,7 @@
             </label>
             <label>
               标题
-              <input v-model="model.title" :disabled="!isEditingSafe" />
+              <input ref="titleInputRef" v-model="model.title" :disabled="!isEditingSafe" />
             </label>
           </div>
 
@@ -355,7 +355,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { MdEditor, MdPreview } from 'md-editor-v3'
 
 const props = defineProps({
@@ -427,6 +427,7 @@ const isEditingSafe = computed(() => (isCreateMode.value || (isEditing.value && 
 const commentAuthor = ref('')
 const commentContent = ref('')
 const fileInput = ref(null)
+const titleInputRef = ref(null)
 const selectedTemplate = ref('')
 const templateCenterOpen = ref(false)
 const editingTemplateId = ref(null)
@@ -465,6 +466,17 @@ watch(
   },
   { immediate: true }
 )
+
+watch([isCreateMode, isEditingSafe], async ([createMode, editable]) => {
+  if (!createMode || !editable) {
+    return
+  }
+  await nextTick()
+  if (titleInputRef.value && typeof titleInputRef.value.focus === 'function') {
+    titleInputRef.value.focus()
+    titleInputRef.value.select?.()
+  }
+}, { immediate: true })
 
 function onGlobalClick(event) {
   if (!actionMenuRef.value) {
