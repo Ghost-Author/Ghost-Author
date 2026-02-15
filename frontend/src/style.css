@@ -944,6 +944,16 @@ button.tiny {
   box-shadow: inset 0 1px 0 #ffffff;
 }
 
+.tree-section.space .tree-group {
+  border-color: #cfe0ff;
+  background: linear-gradient(180deg, #f8fbff, #f2f7ff);
+}
+
+.tree-section.private .tree-group {
+  border-color: #f1d0de;
+  background: linear-gradient(180deg, #fff9fc, #fff4f8);
+}
+
 .tree-group-head {
   width: 100%;
   display: flex;
@@ -997,12 +1007,13 @@ ul {
 
 .doc-items li.active {
   border-color: var(--primary);
-  background: var(--primary-soft);
+  background: linear-gradient(180deg, #f2f7ff, var(--primary-soft));
+  box-shadow: 0 0 0 2px #d8e7ff;
 }
 
 .doc-items li.ancestor {
   border-color: #b8cdf7;
-  background: #f4f8ff;
+  background: linear-gradient(180deg, #fbfdff, #f4f8ff);
 }
 
 .doc-items li.drag-target {
@@ -1198,18 +1209,26 @@ ul {
 
 .tree-node.depth-1 {
   border-left-color: #9cbdf8;
-  background: #f9fbff;
+  background: linear-gradient(180deg, #fbfdff, #f6faff);
 }
 
 .tree-node.depth-2 {
   border-left-color: #93cdd6;
-  background: #f6fcff;
+  background: linear-gradient(180deg, #fbfeff, #f3fbff);
 }
 
 .tree-node.depth-3,
 .tree-node.depth-4 {
   border-left-color: #f3bfd0;
-  background: #fff9fc;
+  background: linear-gradient(180deg, #fffdfd, #fff8fb);
+}
+
+.tree-node.depth-0 .node-title-main strong {
+  color: #284f93;
+}
+
+.tree-node.depth-1 .node-title-main strong {
+  color: #2f5e95;
 }
 
 .tree-node:focus-visible {

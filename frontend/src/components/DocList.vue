@@ -209,7 +209,7 @@
         </div>
       </div>
 
-      <div class="tree-scroll-region">
+      <div class="tree-scroll-region" ref="treeScrollRef" @scroll="onTreeScroll">
         <div class="tree-nav">
         <button class="tree-nav-head" @click="treeOpen = !treeOpen">
           <span>{{ treeOpen ? '▾' : '▸' }} 页面树</span>
@@ -226,7 +226,11 @@
             拖拽到这里设为顶级页面
           </div>
 
-          <div v-for="section in visibilitySections" :key="section.key" class="tree-section">
+          <div
+            v-for="section in visibilitySections"
+            :key="section.key"
+            :class="['tree-section', section.key === 'PRIVATE' ? 'private' : 'space']"
+          >
             <button class="tree-section-head" @click="toggleSection(section.key)">
               <span>{{ isSectionOpen(section.key) ? '▾' : '▸' }} {{ section.title }}</span>
               <em>{{ section.groups.reduce((sum, group) => sum + group.items.length, 0) }}</em>
@@ -369,7 +373,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 
 const QUICK_PANEL_KEY = 'ga-sidebar-quick-panels'
 const FILTER_PANEL_KEY = 'ga-sidebar-filter-panel'
@@ -378,6 +382,7 @@ const SECTION_OPEN_KEY = 'ga-sidebar-open-sections'
 const DENSITY_KEY = 'ga-sidebar-density'
 const TREE_PANEL_KEY = 'ga-sidebar-tree-panel'
 const NODE_OPEN_KEY = 'ga-sidebar-open-nodes'
+const TREE_SCROLL_KEY = 'ga-sidebar-tree-scroll'
 
 function loadQuickPanelsState() {
   if (typeof window === 'undefined') {
@@ -536,6 +541,25 @@ function persistNodeOpenState(state) {
   window.localStorage.setItem(NODE_OPEN_KEY, JSON.stringify(state))
 }
 
+function loadTreeScrollPosition() {
+  if (typeof window === 'undefined') {
+    return 0
+  }
+  const raw = Number(window.localStorage.getItem(TREE_SCROLL_KEY) || '')
+  if (!Number.isFinite(raw) || raw < 0) {
+    return 0
+  }
+  return raw
+}
+
+function persistTreeScrollPosition(top) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  const next = Math.max(0, Math.round(top))
+  window.localStorage.setItem(TREE_SCROLL_KEY, String(next))
+}
+
 const keyword = ref('')
 const opened = ref(loadGroupOpenState())
 const sectionOpened = ref(loadSectionOpenState())
@@ -560,6 +584,7 @@ const compactMode = ref(loadCompactMode())
 const batchQuickOpen = ref(false)
 const treeOpen = ref(loadTreePanelState())
 const nodeOpened = ref(loadNodeOpenState())
+const treeScrollRef = ref(null)
 
 const props = defineProps({
   docs: {
@@ -613,6 +638,14 @@ watch(treeOpen, (open) => {
 watch(nodeOpened, (state) => {
   persistNodeOpenState(state)
 }, { deep: true })
+
+onMounted(() => {
+  const node = treeScrollRef.value
+  if (!node) {
+    return
+  }
+  node.scrollTop = loadTreeScrollPosition()
+})
 
 watch(() => props.docs, () => {
   const valid = new Set(props.docs.map((doc) => doc.slug))
@@ -1346,6 +1379,10 @@ function onDropRoot() {
     parentSlug: null
   })
   onDragEnd()
+}
+
+function onTreeScroll(event) {
+  persistTreeScrollPosition(event?.target?.scrollTop || 0)
 }
 
 defineExpose({
