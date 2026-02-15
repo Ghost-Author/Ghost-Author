@@ -23,6 +23,10 @@
               autocomplete="current-password"
             />
           </label>
+          <label class="login-check">
+            <input v-model="loginForm.rememberMe" type="checkbox" />
+            <span>记住我（更长登录有效期）</span>
+          </label>
           <p v-if="loginError" class="login-error">{{ loginError }}</p>
           <button type="submit">登录并进入</button>
         </form>
@@ -279,7 +283,8 @@ const isAuthenticated = ref(false)
 const pendingPageSlug = ref('')
 const loginForm = ref({
   username: '',
-  password: ''
+  password: '',
+  rememberMe: true
 })
 const loginError = ref('')
 const loggingOut = ref(false)
@@ -1606,7 +1611,8 @@ async function submitLogin() {
   try {
     const { data } = await api.post('/auth/login', {
       username,
-      password
+      password,
+      rememberMe: !!loginForm.value.rememberMe
     })
     const authUser = (data?.username || username).trim()
     const token = (data?.token || '').trim()
@@ -1636,7 +1642,8 @@ function clearWorkspaceAfterLogout() {
   pendingPageSlug.value = ''
   loginForm.value = {
     username: currentUser.value || '',
-    password: ''
+    password: '',
+    rememberMe: true
   }
   loginError.value = ''
   docs.value = []

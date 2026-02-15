@@ -95,6 +95,20 @@ body {
   margin: 0;
 }
 
+.login-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #5b7197;
+}
+
+.login-check input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+
 .login-error {
   margin: 0;
   color: #b04367;

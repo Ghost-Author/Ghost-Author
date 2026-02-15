@@ -26,6 +26,9 @@ public class AuthServiceImpl implements AuthService {
     @Value("${knowledge.auth.token-ttl-hours:168}")
     private long tokenTtlHours;
 
+    @Value("${knowledge.auth.remember-token-ttl-hours:720}")
+    private long rememberTokenTtlHours;
+
     @Value("${knowledge.auth.max-failures:8}")
     private int maxFailures;
 
@@ -62,7 +65,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public AuthLoginResponse login(String username, String password) {
+    public AuthLoginResponse login(String username, String password, boolean rememberMe) {
         String cleanUser = username == null ? "" : username.trim();
         String cleanPass = password == null ? "" : password;
         ensureLoginNotLocked(cleanUser);
@@ -75,7 +78,8 @@ public class AuthServiceImpl implements AuthService {
 
         cleanupExpiredSessions();
         String token = UUID.randomUUID().toString().replace("-", "");
-        long expiresAt = Instant.now().plusSeconds(Math.max(1, tokenTtlHours) * 3600).toEpochMilli();
+        long ttlHours = rememberMe ? Math.max(1, rememberTokenTtlHours) : Math.max(1, tokenTtlHours);
+        long expiresAt = Instant.now().plusSeconds(ttlHours * 3600).toEpochMilli();
         sessions.put(token, new Session(cleanUser, expiresAt));
         return new AuthLoginResponse(token, cleanUser, expiresAt);
     }

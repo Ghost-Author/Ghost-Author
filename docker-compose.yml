@@ -27,6 +27,7 @@ services:
       - DOCS_BASE_DIR=/app/storage/docs
       - CORS_ALLOWED_ORIGIN=http://localhost:5173
       - AUTH_USERS=admin:admin123
+      - AUTH_REMEMBER_TOKEN_TTL_HOURS=720
       - AUTH_MAX_FAILURES=8
       - AUTH_LOCK_MINUTES=10
     volumes:
