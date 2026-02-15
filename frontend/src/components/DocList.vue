@@ -212,6 +212,9 @@
                 <div class="node-more">
                   <button class="node-more-btn" @click.stop="toggleQuickMenu(node.slug)">⋯</button>
                   <div v-if="quickMenuSlug === node.slug" class="node-menu" @click.stop>
+                    <button class="node-menu-item" @click="emitQuickAction('RENAME', node.slug)">
+                      重命名标题
+                    </button>
                     <button class="node-menu-item" @click="emitQuickAction('MOVE_ROOT', node.slug)">
                       设为顶级页面
                     </button>

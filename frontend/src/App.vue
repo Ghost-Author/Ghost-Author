@@ -710,6 +710,35 @@ async function handleDocQuickAction(payload) {
     return
   }
 
+  if (payload.action === 'RENAME') {
+    const { data } = await api.get(`/documents/${payload.slug}`)
+    const nextTitle = prompt('请输入新的页面标题', data.title || payload.slug)
+    if (!nextTitle || !nextTitle.trim()) {
+      return
+    }
+    await api.put(`/documents/${payload.slug}`, {
+      title: nextTitle.trim(),
+      summary: data.summary,
+      content: data.content,
+      parentSlug: data.parentSlug || null,
+      labels: data.labels || [],
+      owner: data.owner || null,
+      editors: data.editors || [],
+      viewers: data.viewers || [],
+      priority: data.priority || 'MEDIUM',
+      dueDate: data.dueDate || null,
+      assignee: data.assignee || null,
+      status: data.status || 'DRAFT',
+      visibility: data.visibility || 'SPACE',
+      locked: !!data.locked
+    })
+    await fetchDocs()
+    if (activeSlug.value === payload.slug) {
+      await loadDoc(payload.slug)
+    }
+    return
+  }
+
   if (payload.action === 'ARCHIVE' || payload.action === 'UNARCHIVE') {
     const nextStatus = payload.action === 'ARCHIVE' ? 'ARCHIVED' : 'DRAFT'
     const { data } = await api.get(`/documents/${payload.slug}`)

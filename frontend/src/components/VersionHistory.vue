@@ -71,14 +71,19 @@
             <span>对比: v{{ diffFrom || '-' }} -> v{{ diffTo || '-' }}</span>
             <button :disabled="!diffFrom || !diffTo" @click="$emit('diff')">生成 Diff</button>
           </div>
+          <input
+            class="diff-search"
+            v-model="diffKeyword"
+            placeholder="高亮 Diff 关键字"
+          />
           <div class="diff-box" v-if="diffText">
             <div
-              v-for="(line, idx) in diffLines"
+              v-for="(line, idx) in highlightedDiffLines"
               :key="idx"
               class="diff-line"
-              :class="lineClass(line)"
+              :class="lineClass(line.raw)"
+              v-html="line.html"
             >
-              {{ line || ' ' }}
             </div>
           </div>
           <pre class="diff-box placeholder" v-else>请选择两个版本并点击“生成 Diff”</pre>
@@ -123,7 +128,15 @@ const historyOpen = ref(true)
 const diffOpen = ref(true)
 const activeOutlineText = ref('')
 const versionKeyword = ref('')
+const diffKeyword = ref('')
 const diffLines = computed(() => props.diffText.split('\n'))
+const highlightedDiffLines = computed(() => {
+  const query = diffKeyword.value.trim()
+  return diffLines.value.map((line) => ({
+    raw: line,
+    html: highlightLine(line || ' ', query)
+  }))
+})
 const filteredVersions = computed(() => {
   const keyword = versionKeyword.value.trim().toLowerCase()
   if (!keyword) {
@@ -197,6 +210,23 @@ function lineClass(line) {
 
 function normalizeText(value) {
   return (value || '').replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+function escapeHtml(value) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+}
+
+function highlightLine(text, keyword) {
+  const escaped = escapeHtml(text)
+  if (!keyword) {
+    return escaped || ' '
+  }
+  const safeKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(safeKeyword, 'gi')
+  return escaped.replace(regex, (matched) => `<mark>${matched}</mark>`) || ' '
 }
 
 function scrollToHeading(text) {

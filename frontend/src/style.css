@@ -1190,6 +1190,10 @@ label {
   color: #4b5f84;
 }
 
+.diff-search {
+  margin: 0 0 8px;
+}
+
 .diff-box {
   margin: 0;
   background: #0d1a2d;
@@ -1212,6 +1216,13 @@ label {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   white-space: pre-wrap;
   padding: 1px 10px;
+}
+
+.diff-line mark {
+  background: #ffd75d;
+  color: #1e2638;
+  border-radius: 3px;
+  padding: 0 1px;
 }
 
 .diff-line.add {
