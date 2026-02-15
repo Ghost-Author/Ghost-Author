@@ -34,10 +34,14 @@
       <EditorPane
         :doc="currentDoc"
         :comments="comments"
+        :attachments="attachments"
         @save="saveDoc"
         @delete="deleteDoc"
         @add-comment="addComment"
         @delete-comment="deleteComment"
+        @upload-attachment="uploadAttachment"
+        @delete-attachment="deleteAttachment"
+        @insert-attachment="insertAttachment"
       />
 
       <VersionHistory
@@ -67,6 +71,7 @@ import VersionHistory from './components/VersionHistory.vue'
 const docs = ref([])
 const versions = ref([])
 const comments = ref([])
+const attachments = ref([])
 const activeSlug = ref('')
 const currentDoc = ref(emptyDoc())
 const diffFrom = ref(null)
@@ -128,6 +133,7 @@ async function loadDoc(slug) {
   }
   activeSlug.value = slug
   await loadComments(slug)
+  await loadAttachments(slug)
   touchRecent(slug)
   await loadVersions(slug)
   diffFrom.value = null
@@ -140,6 +146,7 @@ function createNewDoc() {
   currentDoc.value = emptyDoc()
   versions.value = []
   comments.value = []
+  attachments.value = []
   diffFrom.value = null
   diffTo.value = null
   diffText.value = ''
@@ -190,6 +197,7 @@ async function deleteDoc(slug) {
   favorites.value = favorites.value.filter((s) => s !== slug)
   recent.value = recent.value.filter((s) => s !== slug)
   comments.value = []
+  attachments.value = []
   persistCollections()
   createNewDoc()
 }
@@ -202,6 +210,15 @@ async function loadVersions(slug) {
 async function loadComments(slug) {
   const { data } = await api.get(`/documents/${slug}/comments`)
   comments.value = data
+}
+
+async function loadAttachments(slug) {
+  const { data } = await api.get(`/documents/${slug}/attachments`)
+  const base = (api.defaults.baseURL || '').replace(/\/$/, '')
+  attachments.value = data.map((item) => ({
+    ...item,
+    fullUrl: `${base}${item.contentUrl}`
+  }))
 }
 
 async function refreshVersions() {
@@ -221,6 +238,7 @@ async function restoreVersion(versionNo) {
   const { data } = await api.post(`/documents/${activeSlug.value}/versions/${versionNo}/restore`)
   currentDoc.value = data
   await fetchDocs()
+  await loadAttachments(activeSlug.value)
   await refreshVersions()
   diffText.value = ''
 }
@@ -269,6 +287,35 @@ async function deleteComment(commentId) {
   }
   await api.delete(`/documents/${activeSlug.value}/comments/${commentId}`)
   await loadComments(activeSlug.value)
+}
+
+async function uploadAttachment(file) {
+  if (!activeSlug.value || !file) {
+    return
+  }
+  const form = new FormData()
+  form.append('file', file)
+  await api.post(`/documents/${activeSlug.value}/attachments`, form)
+  await loadAttachments(activeSlug.value)
+}
+
+async function deleteAttachment(attachmentId) {
+  if (!activeSlug.value) {
+    return
+  }
+  await api.delete(`/documents/${activeSlug.value}/attachments/${attachmentId}`)
+  await loadAttachments(activeSlug.value)
+}
+
+function insertAttachment(attachment) {
+  if (!attachment?.fullUrl) {
+    return
+  }
+  const isImage = (attachment.contentType || '').startsWith('image/')
+  const markdown = isImage
+    ? `\n![${attachment.fileName}](${attachment.fullUrl})\n`
+    : `\n[${attachment.fileName}](${attachment.fullUrl})\n`
+  currentDoc.value.content = (currentDoc.value.content || '') + markdown
 }
 
 async function moveDoc(payload) {

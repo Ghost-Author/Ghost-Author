@@ -8,6 +8,9 @@ import com.ghostauthor.knowledge.dto.DocumentVersionResponse;
 import com.ghostauthor.knowledge.dto.CommentCreateRequest;
 import com.ghostauthor.knowledge.dto.CommentResponse;
 import com.ghostauthor.knowledge.dto.DocumentMoveRequest;
+import com.ghostauthor.knowledge.dto.AttachmentResponse;
+import com.ghostauthor.knowledge.dto.AttachmentContentResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -24,4 +27,8 @@ public interface DocumentService {
     List<CommentResponse> listComments(String slug);
     CommentResponse addComment(String slug, CommentCreateRequest request);
     void deleteComment(String slug, Long commentId);
+    List<AttachmentResponse> listAttachments(String slug);
+    AttachmentResponse uploadAttachment(String slug, MultipartFile file);
+    AttachmentContentResponse getAttachmentContent(String slug, Long attachmentId);
+    void deleteAttachment(String slug, Long attachmentId);
 }

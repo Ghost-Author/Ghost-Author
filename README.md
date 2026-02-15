@@ -19,6 +19,8 @@
 - 页面状态（草稿 / 已发布）
 - 页面可见性（空间可见 / 私有）
 - 页面评论（按页面保存）
+- 页面附件（上传/引用/下载）
+- 页面模板（会议纪要/评审/变更）
 - 全文搜索（标题/摘要/正文）
 
 ## 项目结构
@@ -164,6 +166,13 @@ curl -X POST http://localhost:8080/api/documents/spring-guide/comments \
     "author":"liupeng",
     "content":"这篇文档很清晰，继续补充部署细节"
   }'
+```
+
+### 页面附件上传
+
+```bash
+curl -X POST http://localhost:8080/api/documents/spring-guide/attachments \
+  -F "file=@./demo.png"
 ```
 
 ### 搜索

@@ -11,6 +11,14 @@
     </div>
 
     <template v-if="isEditingSafe">
+      <div class="template-bar">
+        <select v-model="selectedTemplate">
+          <option value="">套用模板（可选）</option>
+          <option v-for="tpl in templates" :key="tpl.key" :value="tpl.key">{{ tpl.name }}</option>
+        </select>
+        <button class="secondary small" :disabled="!selectedTemplate" @click="applyTemplate">应用模板</button>
+      </div>
+
       <div class="meta-grid">
         <label>
           Slug
@@ -99,6 +107,24 @@
     </div>
 
     <section class="comment-panel" v-if="!isCreateMode">
+      <h3>附件（{{ attachments.length }}）</h3>
+      <div class="attachment-actions">
+        <input ref="fileInput" type="file" @change="onSelectFile" />
+      </div>
+      <ul class="attachment-list">
+        <li v-for="item in attachments" :key="item.id">
+          <div class="attachment-main">
+            <a :href="item.fullUrl" target="_blank" rel="noreferrer">{{ item.fileName }}</a>
+            <span>{{ prettySize(item.fileSize) }}</span>
+          </div>
+          <div class="attachment-btns">
+            <button class="secondary small" @click="$emit('insert-attachment', item)">插入正文</button>
+            <button class="danger small" @click="$emit('delete-attachment', item.id)">删除</button>
+          </div>
+        </li>
+        <li v-if="attachments.length === 0" class="comment-empty">还没有附件。</li>
+      </ul>
+
       <h3>评论（{{ comments.length }}）</h3>
       <div class="comment-inputs">
         <input v-model="commentAuthor" placeholder="昵称（可选）" />
@@ -133,10 +159,14 @@ const props = defineProps({
   comments: {
     type: Array,
     default: () => []
+  },
+  attachments: {
+    type: Array,
+    default: () => []
   }
 })
 
-const emit = defineEmits(['add-comment', 'delete-comment'])
+const emit = defineEmits(['add-comment', 'delete-comment', 'upload-attachment', 'delete-attachment', 'insert-attachment'])
 
 const toolbars = [
   'bold', 'underline', 'italic', '-',
@@ -154,6 +184,62 @@ const isEditing = ref(false)
 const isEditingSafe = computed(() => isCreateMode.value || isEditing.value)
 const commentAuthor = ref('')
 const commentContent = ref('')
+const fileInput = ref(null)
+const selectedTemplate = ref('')
+const templates = [
+  {
+    key: 'meeting',
+    name: '会议纪要',
+    content: `# 会议纪要
+
+## 会议主题
+
+## 时间与参会人
+- 时间：
+- 参会人：
+
+## 议题
+1. 
+2. 
+
+## 结论
+
+## 待办事项
+- [ ] 负责人：
+`
+  },
+  {
+    key: 'review',
+    name: '需求评审',
+    content: `# 需求评审
+
+## 背景
+
+## 目标
+
+## 方案说明
+
+## 风险与边界
+
+## 验收标准
+- [ ] 
+`
+  },
+  {
+    key: 'change',
+    name: '变更记录',
+    content: `# 变更记录
+
+## 变更摘要
+
+## 影响范围
+
+## 回滚方案
+
+## 验证结果
+`
+  }
+]
 
 watch(
   () => props.doc.id,
@@ -201,5 +287,34 @@ function formatTime(value) {
 function quickToggleStatus() {
   model.value.status = model.value.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED'
   emit('save', model.value)
+}
+
+function onSelectFile(event) {
+  const file = event.target.files?.[0]
+  if (!file) {
+    return
+  }
+  emit('upload-attachment', file)
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+}
+
+function prettySize(size) {
+  if (!size || size < 1024) {
+    return `${size || 0} B`
+  }
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`
+  }
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function applyTemplate() {
+  const item = templates.find((tpl) => tpl.key === selectedTemplate.value)
+  if (!item) {
+    return
+  }
+  model.value.content = item.content
 }
 </script>

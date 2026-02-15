@@ -8,11 +8,17 @@ import com.ghostauthor.knowledge.dto.DocumentVersionResponse;
 import com.ghostauthor.knowledge.dto.DocumentMoveRequest;
 import com.ghostauthor.knowledge.dto.CommentCreateRequest;
 import com.ghostauthor.knowledge.dto.CommentResponse;
+import com.ghostauthor.knowledge.dto.AttachmentResponse;
+import com.ghostauthor.knowledge.dto.AttachmentContentResponse;
 import com.ghostauthor.knowledge.service.DocumentService;
 import com.ghostauthor.knowledge.service.SearchService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -92,6 +98,37 @@ public class DocumentController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteComment(@PathVariable String slug, @PathVariable Long commentId) {
         documentService.deleteComment(slug, commentId);
+    }
+
+    @GetMapping("/{slug}/attachments")
+    public List<AttachmentResponse> listAttachments(@PathVariable String slug) {
+        return documentService.listAttachments(slug);
+    }
+
+    @PostMapping("/{slug}/attachments")
+    @ResponseStatus(HttpStatus.CREATED)
+    public AttachmentResponse uploadAttachment(@PathVariable String slug,
+                                               @RequestParam("file") MultipartFile file) {
+        return documentService.uploadAttachment(slug, file);
+    }
+
+    @GetMapping("/{slug}/attachments/{attachmentId}/content")
+    public ResponseEntity<byte[]> getAttachmentContent(@PathVariable String slug, @PathVariable Long attachmentId) {
+        AttachmentContentResponse content = documentService.getAttachmentContent(slug, attachmentId);
+        MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+        if (content.contentType() != null && !content.contentType().isBlank()) {
+            mediaType = MediaType.parseMediaType(content.contentType());
+        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + content.fileName() + "\"")
+                .contentType(mediaType)
+                .body(content.bytes());
+    }
+
+    @DeleteMapping("/{slug}/attachments/{attachmentId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteAttachment(@PathVariable String slug, @PathVariable Long attachmentId) {
+        documentService.deleteAttachment(slug, attachmentId);
     }
 
     @GetMapping("/search")

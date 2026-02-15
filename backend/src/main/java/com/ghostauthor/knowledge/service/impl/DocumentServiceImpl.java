@@ -8,11 +8,15 @@ import com.ghostauthor.knowledge.dto.DocumentVersionResponse;
 import com.ghostauthor.knowledge.dto.DocumentMoveRequest;
 import com.ghostauthor.knowledge.dto.CommentCreateRequest;
 import com.ghostauthor.knowledge.dto.CommentResponse;
+import com.ghostauthor.knowledge.dto.AttachmentResponse;
+import com.ghostauthor.knowledge.dto.AttachmentContentResponse;
+import com.ghostauthor.knowledge.entity.DocumentAttachmentEntity;
 import com.ghostauthor.knowledge.entity.DocumentCommentEntity;
 import com.ghostauthor.knowledge.entity.DocumentEntity;
 import com.ghostauthor.knowledge.entity.DocumentStatus;
 import com.ghostauthor.knowledge.entity.DocumentVisibility;
 import com.ghostauthor.knowledge.entity.DocumentVersionEntity;
+import com.ghostauthor.knowledge.repository.DocumentAttachmentRepository;
 import com.ghostauthor.knowledge.repository.DocumentCommentRepository;
 import com.ghostauthor.knowledge.repository.DocumentRepository;
 import com.ghostauthor.knowledge.repository.DocumentVersionRepository;
@@ -27,6 +31,7 @@ import com.github.difflib.DiffUtils;
 import com.github.difflib.UnifiedDiffUtils;
 import com.github.difflib.patch.Patch;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
 import java.util.List;
@@ -36,17 +41,20 @@ import java.util.stream.Collectors;
 public class DocumentServiceImpl implements DocumentService {
 
     private final DocumentRepository documentRepository;
+    private final DocumentAttachmentRepository documentAttachmentRepository;
     private final DocumentCommentRepository documentCommentRepository;
     private final DocumentVersionRepository documentVersionRepository;
     private final FileStorageService fileStorageService;
     private final SearchService searchService;
 
     public DocumentServiceImpl(DocumentRepository documentRepository,
+                               DocumentAttachmentRepository documentAttachmentRepository,
                                DocumentCommentRepository documentCommentRepository,
                                DocumentVersionRepository documentVersionRepository,
                                FileStorageService fileStorageService,
                                SearchService searchService) {
         this.documentRepository = documentRepository;
+        this.documentAttachmentRepository = documentAttachmentRepository;
         this.documentCommentRepository = documentCommentRepository;
         this.documentVersionRepository = documentVersionRepository;
         this.fileStorageService = fileStorageService;
@@ -128,6 +136,9 @@ public class DocumentServiceImpl implements DocumentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
 
         fileStorageService.deleteMarkdown(entity.getFilePath());
+        documentAttachmentRepository.findByDocumentIdOrderByCreatedAtDesc(entity.getId())
+                .forEach(attachment -> fileStorageService.deleteFile(attachment.getFilePath()));
+        documentAttachmentRepository.deleteByDocumentId(entity.getId());
         documentCommentRepository.deleteByDocumentId(entity.getId());
         documentRepository.delete(entity);
         searchService.removeDocument(entity.getId());
@@ -239,6 +250,81 @@ public class DocumentServiceImpl implements DocumentService {
         documentCommentRepository.delete(comment);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<AttachmentResponse> listAttachments(String slug) {
+        DocumentEntity entity = documentRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+
+        return documentAttachmentRepository.findByDocumentIdOrderByCreatedAtDesc(entity.getId()).stream()
+                .map(attachment -> toAttachmentResponse(slug, attachment))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public AttachmentResponse uploadAttachment(String slug, MultipartFile file) {
+        DocumentEntity entity = documentRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Attachment file is empty");
+        }
+
+        String originalName = StringUtils.hasText(file.getOriginalFilename()) ? file.getOriginalFilename() : "file.bin";
+        String path;
+        try {
+            path = fileStorageService.writeAttachment(slug, originalName, file.getBytes());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store attachment");
+        }
+
+        String storedName = path.substring(path.lastIndexOf(java.io.File.separator) + 1);
+        DocumentAttachmentEntity attachment = new DocumentAttachmentEntity();
+        attachment.setDocumentId(entity.getId());
+        attachment.setOriginalFileName(originalName);
+        attachment.setStoredFileName(storedName);
+        attachment.setFilePath(path);
+        attachment.setContentType(file.getContentType());
+        attachment.setFileSize(file.getSize());
+        DocumentAttachmentEntity saved = documentAttachmentRepository.save(attachment);
+        return toAttachmentResponse(slug, saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AttachmentContentResponse getAttachmentContent(String slug, Long attachmentId) {
+        DocumentEntity entity = documentRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+
+        DocumentAttachmentEntity attachment = documentAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attachment not found"));
+        if (!attachment.getDocumentId().equals(entity.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Attachment does not belong to the document");
+        }
+        byte[] bytes = fileStorageService.readBinary(attachment.getFilePath());
+        return new AttachmentContentResponse(
+                attachment.getOriginalFileName(),
+                attachment.getContentType(),
+                bytes
+        );
+    }
+
+    @Override
+    @Transactional
+    public void deleteAttachment(String slug, Long attachmentId) {
+        DocumentEntity entity = documentRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+
+        DocumentAttachmentEntity attachment = documentAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attachment not found"));
+        if (!attachment.getDocumentId().equals(entity.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Attachment does not belong to the document");
+        }
+        fileStorageService.deleteFile(attachment.getFilePath());
+        documentAttachmentRepository.delete(attachment);
+    }
+
     private DocumentResponse toResponse(DocumentEntity entity, String content) {
         return new DocumentResponse(
                 entity.getId(),
@@ -331,6 +417,17 @@ public class DocumentServiceImpl implements DocumentService {
                 comment.getAuthor(),
                 comment.getContent(),
                 comment.getCreatedAt()
+        );
+    }
+
+    private AttachmentResponse toAttachmentResponse(String slug, DocumentAttachmentEntity attachment) {
+        return new AttachmentResponse(
+                attachment.getId(),
+                attachment.getOriginalFileName(),
+                attachment.getContentType(),
+                attachment.getFileSize(),
+                "/api/documents/" + slug + "/attachments/" + attachment.getId() + "/content",
+                attachment.getCreatedAt()
         );
     }
 }

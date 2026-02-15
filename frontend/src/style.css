@@ -594,6 +594,13 @@ li p {
   gap: 10px;
 }
 
+.template-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
 label {
   font-size: 12px;
   color: #405170;
@@ -758,6 +765,45 @@ label {
 .comment-inputs {
   display: grid;
   grid-template-columns: 1fr;
+}
+
+.attachment-actions {
+  margin: 8px 0;
+}
+
+.attachment-list {
+  margin-bottom: 10px;
+}
+
+.attachment-list li {
+  border: 1px solid #d8e3fb;
+  border-radius: 10px;
+  padding: 8px;
+  margin-bottom: 8px;
+  background: #fff;
+}
+
+.attachment-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.attachment-main a {
+  color: #2f5ca8;
+  text-decoration: none;
+}
+
+.attachment-main a:hover {
+  text-decoration: underline;
+}
+
+.attachment-btns {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
 }
 
 .comment-list {
