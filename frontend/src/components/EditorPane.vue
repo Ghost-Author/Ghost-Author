@@ -39,6 +39,15 @@
           </button>
           <div class="action-menu" v-if="pageActionMenuOpen" @click.stop>
             <button class="secondary small" @click="$emit('create-child')" :disabled="!canEdit">新建子页面</button>
+            <button
+              class="secondary small"
+              v-for="tpl in quickChildTemplates"
+              :key="`quick-child-${tpl.id}`"
+              @click="createChildFromTemplate(tpl.id)"
+              :disabled="!canEdit"
+            >
+              子页模板：{{ tpl.name }}
+            </button>
             <button class="secondary small" @click="runMenuAction('toggle-share')" :disabled="!canEdit">
               {{ model.shareEnabled ? '关闭分享' : '开启分享' }}
             </button>
@@ -641,6 +650,7 @@ const emit = defineEmits([
   'delete-attachment',
   'insert-attachment',
   'create-child',
+  'create-child-with-template',
   'select-child',
   'open-parent',
   'toggle-favorite',
@@ -882,6 +892,7 @@ const editTemplate = ref({
 const canCreateTemplate = computed(() => {
   return !!newTemplate.value.name.trim() && !!newTemplate.value.content.trim()
 })
+const quickChildTemplates = computed(() => props.templates.slice(0, 3))
 
 watch(
   () => props.doc.id,
@@ -1186,6 +1197,11 @@ function runMenuAction(action) {
   if (action === 'delete') {
     emit('delete', model.value.slug)
   }
+}
+
+function createChildFromTemplate(templateId) {
+  pageActionMenuOpen.value = false
+  emit('create-child-with-template', templateId)
 }
 
 function toggleEditMode() {

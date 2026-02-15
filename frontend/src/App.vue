@@ -91,6 +91,7 @@
           @delete-attachment="deleteAttachment"
           @insert-attachment="insertAttachment"
           @create-child="createChildPage"
+          @create-child-with-template="createChildPageWithTemplate"
           @select-child="loadDoc"
           @open-parent="loadDoc"
           @toggle-favorite="toggleFavorite"
@@ -755,6 +756,47 @@ function createChildPage() {
   diffFrom.value = null
   diffTo.value = null
   diffText.value = ''
+}
+
+function createChildPageWithTemplate(templateId) {
+  if (!activeSlug.value) {
+    return
+  }
+  if (!canEditDoc(currentDoc.value)) {
+    showToast('当前用户无编辑权限，不能创建子页面', 'error')
+    return
+  }
+  const tpl = templates.value.find((item) => item.id === Number(templateId))
+  if (!tpl) {
+    createChildPage()
+    return
+  }
+  const parent = currentDoc.value
+  const suffix = slugPartFromText(tpl.name || 'template')
+  activeSlug.value = ''
+  currentDoc.value = {
+    ...emptyDoc(),
+    parentSlug: parent.slug,
+    title: `${parent.title || parent.slug} - ${tpl.name || '模板子页'}`,
+    slug: `${parent.slug}-${suffix}-${Date.now().toString().slice(-6)}`,
+    content: tpl.content || `# ${tpl.name || '模板子页'}\n\n`
+  }
+  versions.value = []
+  comments.value = []
+  attachments.value = []
+  diffFrom.value = null
+  diffTo.value = null
+  diffText.value = ''
+  showToast(`已创建模板子页面：${tpl.name}`, 'success')
+}
+
+function slugPartFromText(text) {
+  const cleaned = String(text || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return cleaned || 'child'
 }
 
 async function saveDoc(doc) {
