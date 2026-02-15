@@ -16,7 +16,9 @@
     <div class="page-context-bar" v-if="!isCreateMode">
       <span class="context-chip mode">{{ isEditingSafe ? '编辑模式' : '阅读模式' }}</span>
       <span class="context-chip slug">slug: {{ model.slug || '-' }}</span>
-      <span class="context-chip" v-if="model.parentSlug">父级: {{ model.parentSlug }}</span>
+      <button class="context-chip context-link" v-if="model.parentSlug" @click="$emit('open-parent', model.parentSlug)">
+        父级: {{ model.parentSlug }}
+      </button>
       <span class="context-chip status" :class="(model.status || 'DRAFT').toLowerCase()">{{ statusText(model.status) }}</span>
       <span class="context-chip visibility">{{ model.visibility === 'PRIVATE' ? '仅自己可见' : '空间可见' }}</span>
       <span class="context-chip">负责人: {{ model.assignee || '-' }}</span>
@@ -51,7 +53,7 @@
         <span class="page-dirty-tip" :class="{ dirty: hasUnsavedChanges }">
           {{ hasUnsavedChanges ? '有改动待保存' : '内容已同步' }}
         </span>
-        <span class="page-action-shortcuts">Alt+F 收藏 · Alt+L 链接 · Alt+H 分享</span>
+        <span class="page-action-shortcuts">Alt+P 父级 · Alt+F 收藏 · Alt+L 链接 · Alt+H 分享</span>
         <span class="page-leave-tip" v-if="hasUnsavedChanges">关闭页面前会提示保存</span>
         <button v-if="isEditingSafe" @click="$emit('save', model)">保存</button>
         <button
@@ -1345,6 +1347,14 @@ function handlePageActionShortcuts(event) {
     return false
   }
   const key = (event.key || '').toLowerCase()
+  if (key === 'p') {
+    if (!model.value.parentSlug) {
+      return false
+    }
+    event.preventDefault()
+    emit('open-parent', model.value.parentSlug)
+    return true
+  }
   if (key === 'f') {
     if (!model.value.slug) {
       return false

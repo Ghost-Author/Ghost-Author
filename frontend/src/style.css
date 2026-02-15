@@ -381,6 +381,17 @@ body {
   padding: 2px 8px;
 }
 
+.context-link {
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.context-link:hover {
+  border-color: #9dbaf8;
+  background: #eef4ff;
+  color: #2f5ca8;
+}
+
 .context-chip.mode {
   border-color: #b8d8ff;
   background: #eef6ff;
