@@ -1729,6 +1729,16 @@ button.small {
   gap: 6px;
 }
 
+.read-shortcut-tip {
+  border: 1px dashed #c9daf8;
+  background: #f5f9ff;
+  color: #5e759e;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .read-mode-head h3 {
   margin: 0;
   font-size: 18px;
@@ -2605,6 +2615,10 @@ button.small {
 
   .read-mode-actions {
     width: 100%;
+  }
+
+  .read-shortcut-tip {
+    display: none;
   }
 
   .read-mode-actions .small {

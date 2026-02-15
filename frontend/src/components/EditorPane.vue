@@ -190,6 +190,7 @@
       <div class="read-mode-head">
         <h3>{{ model.title || 'Untitled' }}</h3>
         <div class="read-mode-actions">
+          <span class="read-shortcut-tip">快捷键 1/2/3/4</span>
           <button class="secondary small" @click="resetReadSidebarLayout">
             恢复默认布局
           </button>
@@ -209,6 +210,7 @@
               :key="card.key"
               class="read-side-card"
               :class="{ collapsed: isReadCardCollapsed(card.key) }"
+              :ref="(el) => setReadCardRef(card.key, el)"
             >
               <div class="read-card-tools">
                 <span class="read-card-title">{{ card.title }}</span>
@@ -546,6 +548,7 @@ const readInfoOpen = ref(false)
 const readPanelDock = ref('right')
 const readCardOrder = ref(loadReadCardOrder())
 const readCardCollapsed = ref(loadReadCardCollapsed())
+const readCardRefs = ref({})
 const childOpenMap = ref({})
 const READ_PANEL_DOCK_KEY = 'ga-read-panel-dock'
 const CHILD_OPEN_KEY = 'ga-read-child-open-state'
@@ -732,6 +735,7 @@ onMounted(() => {
       readPanelDock.value = rawDock
     }
     window.addEventListener('click', onGlobalClick)
+    window.addEventListener('keydown', onGlobalKeydown)
   }
   if (editorPaneRef.value) {
     editorPaneRef.value.addEventListener('scroll', onReadScroll, { passive: true })
@@ -741,6 +745,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('click', onGlobalClick)
+    window.removeEventListener('keydown', onGlobalKeydown)
   }
   if (editorPaneRef.value) {
     editorPaneRef.value.removeEventListener('scroll', onReadScroll)
@@ -924,9 +929,69 @@ function toggleReadCardCollapsed(cardKey) {
   }
 }
 
+function setReadCardRef(cardKey, el) {
+  if (el) {
+    readCardRefs.value = {
+      ...readCardRefs.value,
+      [cardKey]: el
+    }
+    return
+  }
+  const next = { ...readCardRefs.value }
+  delete next[cardKey]
+  readCardRefs.value = next
+}
+
 function resetReadSidebarLayout() {
   readCardOrder.value = normalizeReadCardOrder([])
   readCardCollapsed.value = {}
+}
+
+function onGlobalKeydown(event) {
+  if (event.defaultPrevented) {
+    return
+  }
+  if (isCreateMode.value || isEditingSafe.value) {
+    return
+  }
+  if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) {
+    return
+  }
+  if (!['1', '2', '3', '4'].includes(event.key)) {
+    return
+  }
+  const target = event.target
+  if (isInteractiveTarget(target)) {
+    return
+  }
+  const index = Number(event.key) - 1
+  const card = visibleReadCards.value[index]
+  if (!card) {
+    return
+  }
+  event.preventDefault()
+  if (!readInfoOpen.value) {
+    readInfoOpen.value = true
+  }
+  if (isReadCardCollapsed(card.key)) {
+    toggleReadCardCollapsed(card.key)
+  }
+  if (typeof window !== 'undefined') {
+    window.requestAnimationFrame(() => {
+      const el = readCardRefs.value[card.key]
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      }
+    })
+  }
+}
+
+function isInteractiveTarget(target) {
+  const tag = target?.tagName?.toUpperCase?.() || ''
+  if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(tag)) {
+    return true
+  }
+  return !!target?.isContentEditable
 }
 
 function normalizeReadCardOrder(value) {
