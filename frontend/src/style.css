@@ -246,6 +246,12 @@ body {
   white-space: nowrap;
 }
 
+.topbar-user.role {
+  border-color: #f1d4e0;
+  background: #fff5f9;
+  color: #8a4f6a;
+}
+
 .shortcut-hint {
   border: 1px dashed #c9daf8;
   background: #f5f9ff;

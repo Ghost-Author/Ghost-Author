@@ -34,7 +34,11 @@ public class AuthController {
     @GetMapping("/me")
     public Map<String, String> me(HttpServletRequest request) {
         Object username = request.getAttribute("authUser");
-        return Map.of("username", username == null ? "" : String.valueOf(username));
+        Object role = request.getAttribute("authRole");
+        return Map.of(
+                "username", username == null ? "" : String.valueOf(username),
+                "role", role == null ? "ADMIN" : String.valueOf(role)
+        );
     }
 
     @PostMapping("/logout")

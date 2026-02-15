@@ -42,6 +42,7 @@
       </div>
       <div class="topbar-right">
         <span class="topbar-user">当前用户：{{ currentUser }}</span>
+        <span class="topbar-user role">角色：{{ currentUserRole }}</span>
         <span class="shortcut-hint">⌘/Ctrl+K 搜索 · ⌘/Ctrl+S 保存 · Alt+1/2/3/4/5/6</span>
         <button class="secondary tiny" @click="openHome">空间首页</button>
         <button class="secondary tiny" @click="toggleRightPanel">
@@ -279,6 +280,7 @@ const templates = ref([])
 const docListRef = ref(null)
 const activeSlug = ref('')
 const currentUser = ref('admin')
+const currentUserRole = ref('ADMIN')
 const isAuthenticated = ref(false)
 const pendingPageSlug = ref('')
 const loginForm = ref({
@@ -1564,12 +1566,14 @@ function loadAuthSessionUser() {
     }
     const parsed = JSON.parse(raw)
     const username = (parsed?.username || '').trim()
+    const role = String(parsed?.role || 'ADMIN').trim().toUpperCase()
     const expiresAt = Number(parsed?.expiresAt || 0)
     if (!username || !Number.isFinite(expiresAt)) {
       return null
     }
     return {
       username,
+      role: role || 'ADMIN',
       expiresAt
     }
   } catch {
@@ -1577,11 +1581,12 @@ function loadAuthSessionUser() {
   }
 }
 
-function persistAuthSession(username, expiresAt = 0) {
+function persistAuthSession(username, role = 'ADMIN', expiresAt = 0) {
   if (typeof window === 'undefined') {
     return
   }
   const clean = (username || '').trim()
+  const cleanRole = String(role || 'ADMIN').trim().toUpperCase() || 'ADMIN'
   const expireNumber = Number(expiresAt || 0)
   if (!clean || !Number.isFinite(expireNumber) || expireNumber <= 0) {
     window.localStorage.removeItem(AUTH_SESSION_KEY)
@@ -1589,6 +1594,7 @@ function persistAuthSession(username, expiresAt = 0) {
   }
   window.localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({
     username: clean,
+    role: cleanRole,
     expiresAt: expireNumber
   }))
 }
@@ -1615,6 +1621,7 @@ async function submitLogin() {
       rememberMe: !!loginForm.value.rememberMe
     })
     const authUser = (data?.username || username).trim()
+    const authRole = String(data?.role || 'ADMIN').trim().toUpperCase() || 'ADMIN'
     const token = (data?.token || '').trim()
     const expiresAt = Number(data?.expiresAt || 0)
     if (!token || !authUser || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
@@ -1623,8 +1630,9 @@ async function submitLogin() {
     }
     setApiAuthToken(token)
     currentUser.value = authUser
+    currentUserRole.value = authRole
     persistCollections()
-    persistAuthSession(authUser, expiresAt)
+    persistAuthSession(authUser, authRole, expiresAt)
   } catch {
     loginError.value = '用户名或密码错误'
     return
@@ -1640,6 +1648,7 @@ async function submitLogin() {
 function clearWorkspaceAfterLogout() {
   isAuthenticated.value = false
   pendingPageSlug.value = ''
+  currentUserRole.value = 'ADMIN'
   loginForm.value = {
     username: currentUser.value || '',
     password: '',
@@ -1658,7 +1667,7 @@ function forceLogoutDueToAuthFailure() {
   if (loggingOut.value) {
     return
   }
-  persistAuthSession('', 0)
+  persistAuthSession('', 'ADMIN', 0)
   setApiAuthToken('')
   clearWorkspaceAfterLogout()
   showToast('登录已过期，请重新登录', 'error')
@@ -1674,7 +1683,7 @@ async function logout() {
   } catch {
     // Token may already be expired; continue local cleanup.
   } finally {
-    persistAuthSession('', 0)
+    persistAuthSession('', 'ADMIN', 0)
     setApiAuthToken('')
     clearWorkspaceAfterLogout()
     loggingOut.value = false
@@ -1814,20 +1823,21 @@ onMounted(async () => {
   const token = loadApiAuthToken()
   if (session && token && session.expiresAt > Date.now()) {
     try {
-      await api.get('/auth/me')
-      currentUser.value = session.username
-      loginForm.value.username = session.username
+      const { data } = await api.get('/auth/me')
+      currentUser.value = (data?.username || session.username || '').trim() || session.username
+      currentUserRole.value = String(data?.role || session.role || 'ADMIN').trim().toUpperCase() || 'ADMIN'
+      loginForm.value.username = currentUser.value
       isAuthenticated.value = true
       await bootstrapWorkspace(initialPage)
       pendingPageSlug.value = ''
     } catch {
-      persistAuthSession('', 0)
+      persistAuthSession('', 'ADMIN', 0)
       setApiAuthToken('')
       isAuthenticated.value = false
       loginForm.value.username = currentUser.value || ''
     }
   } else {
-    persistAuthSession('', 0)
+    persistAuthSession('', 'ADMIN', 0)
     setApiAuthToken('')
     isAuthenticated.value = false
     loginForm.value.username = currentUser.value || ''

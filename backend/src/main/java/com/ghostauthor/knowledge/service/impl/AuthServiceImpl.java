@@ -1,6 +1,7 @@
 package com.ghostauthor.knowledge.service.impl;
 
 import com.ghostauthor.knowledge.dto.AuthLoginResponse;
+import com.ghostauthor.knowledge.dto.AuthSession;
 import com.ghostauthor.knowledge.service.AuthService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AuthServiceImpl implements AuthService {
 
     private static final String BCRYPT_PREFIX = "{bcrypt}";
+    private static final String ROLE_ADMIN = "ADMIN";
+    private static final String ROLE_EDITOR = "EDITOR";
+    private static final String ROLE_VIEWER = "VIEWER";
 
     @Value("${knowledge.auth.users:admin:admin123}")
     private String usersConfig;
@@ -35,7 +39,7 @@ public class AuthServiceImpl implements AuthService {
     @Value("${knowledge.auth.lock-minutes:10}")
     private long lockMinutes;
 
-    private final Map<String, String> users = new ConcurrentHashMap<>();
+    private final Map<String, UserCredential> users = new ConcurrentHashMap<>();
     private final Map<String, Session> sessions = new ConcurrentHashMap<>();
     private final Map<String, FailedAttempt> failedAttempts = new ConcurrentHashMap<>();
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -54,13 +58,26 @@ public class AuthServiceImpl implements AuthService {
                 continue;
             }
             String username = trimmed.substring(0, splitAt).trim();
-            String password = trimmed.substring(splitAt + 1).trim();
-            if (!username.isEmpty() && !password.isEmpty()) {
-                users.put(username, password);
+            String rest = trimmed.substring(splitAt + 1).trim();
+            if (username.isEmpty() || rest.isEmpty()) {
+                continue;
+            }
+            String password = rest;
+            String role = ROLE_ADMIN;
+            int roleSplit = rest.lastIndexOf(':');
+            if (roleSplit > 0 && roleSplit < rest.length() - 1) {
+                String maybeRole = normalizeRole(rest.substring(roleSplit + 1).trim());
+                if (maybeRole != null) {
+                    password = rest.substring(0, roleSplit).trim();
+                    role = maybeRole;
+                }
+            }
+            if (!password.isEmpty()) {
+                users.put(username, new UserCredential(password, role));
             }
         }
         if (users.isEmpty()) {
-            users.put("admin", "admin123");
+            users.put("admin", new UserCredential("admin123", ROLE_ADMIN));
         }
     }
 
@@ -69,8 +86,8 @@ public class AuthServiceImpl implements AuthService {
         String cleanUser = username == null ? "" : username.trim();
         String cleanPass = password == null ? "" : password;
         ensureLoginNotLocked(cleanUser);
-        String expected = users.get(cleanUser);
-        if (expected == null || !passwordMatches(cleanPass, expected)) {
+        UserCredential credential = users.get(cleanUser);
+        if (credential == null || !passwordMatches(cleanPass, credential.password)) {
             markLoginFailure(cleanUser);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "用户名或密码错误");
         }
@@ -80,12 +97,12 @@ public class AuthServiceImpl implements AuthService {
         String token = UUID.randomUUID().toString().replace("-", "");
         long ttlHours = rememberMe ? Math.max(1, rememberTokenTtlHours) : Math.max(1, tokenTtlHours);
         long expiresAt = Instant.now().plusSeconds(ttlHours * 3600).toEpochMilli();
-        sessions.put(token, new Session(cleanUser, expiresAt));
-        return new AuthLoginResponse(token, cleanUser, expiresAt);
+        sessions.put(token, new Session(cleanUser, credential.role, expiresAt));
+        return new AuthLoginResponse(token, cleanUser, credential.role, expiresAt);
     }
 
     @Override
-    public String verifyToken(String token) {
+    public AuthSession verifyToken(String token) {
         if (token == null || token.isBlank()) {
             return null;
         }
@@ -97,7 +114,7 @@ public class AuthServiceImpl implements AuthService {
             sessions.remove(token);
             return null;
         }
-        return session.username;
+        return new AuthSession(session.username, session.role);
     }
 
     @Override
@@ -165,7 +182,21 @@ public class AuthServiceImpl implements AuthService {
         return configured.equals(rawPassword);
     }
 
-    private record Session(String username, long expiresAt) {
+    private String normalizeRole(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String role = raw.trim().toUpperCase();
+        if (ROLE_ADMIN.equals(role) || ROLE_EDITOR.equals(role) || ROLE_VIEWER.equals(role)) {
+            return role;
+        }
+        return null;
+    }
+
+    private record Session(String username, String role, long expiresAt) {
+    }
+
+    private record UserCredential(String password, String role) {
     }
 
     private static class FailedAttempt {

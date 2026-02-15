@@ -88,7 +88,7 @@ backend 环境变量建议：
 - `SEARCH_URIS=http://<your-es-host>:9200`（如果启用搜索）
 - `DOCS_BASE_DIR=/app/storage/docs`
 - `CORS_ALLOWED_ORIGIN=https://<your-frontend-domain>`
-- `AUTH_USERS=admin:admin123,liupeng:{bcrypt}$2a$...`（账号密码，逗号分隔；支持明文和 bcrypt）
+- `AUTH_USERS=admin:admin123:ADMIN,liupeng:{bcrypt}$2a$...:EDITOR`（账号密码，逗号分隔；支持明文和 bcrypt；可选角色）
 - `AUTH_TOKEN_TTL_HOURS=168`（登录 token 有效时长，单位小时）
 - `AUTH_REMEMBER_TOKEN_TTL_HOURS=720`（勾选“记住我”时的 token 有效时长，单位小时）
 - `AUTH_MAX_FAILURES=8`（连续失败多少次后临时锁定）
@@ -181,7 +181,7 @@ npm run dev
 - `SEARCH_ENABLED`：是否开启检索（`true/false`）
 - `DOCS_BASE_DIR`：Markdown 文档目录
 - `CORS_ALLOWED_ORIGIN`：前端跨域地址
-- `AUTH_USERS`：登录账号密码（格式：`user1:pass1,user2:{bcrypt}$2a$...`）
+- `AUTH_USERS`：登录账号密码（格式：`user1:pass1:ADMIN,user2:{bcrypt}$2a$...:VIEWER`，角色可选 `ADMIN/EDITOR/VIEWER`）
 - `AUTH_TOKEN_TTL_HOURS`：登录 token 有效时长（小时）
 - `AUTH_REMEMBER_TOKEN_TTL_HOURS`：记住我 token 有效时长（小时）
 - `AUTH_MAX_FAILURES`：连续登录失败阈值
@@ -212,6 +212,12 @@ curl -X POST http://localhost:8080/api/auth/logout \
 
 - 明文：`admin:admin123`
 - bcrypt：`liupeng:{bcrypt}$2a$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+
+`AUTH_USERS` 可附带角色（默认 `ADMIN`）：
+
+- `admin:admin123:ADMIN`
+- `editor:{bcrypt}$2a$...:EDITOR`
+- `guest:{bcrypt}$2a$...:VIEWER`（只读，禁止写操作）
 
 ### 创建文档
 
