@@ -8,6 +8,8 @@
         <button class="secondary tiny" :class="{ active: batchMode }" @click="toggleBatchMode">
           {{ batchMode ? '退出批量' : '批量操作' }}
         </button>
+        <button class="secondary tiny" v-if="batchMode" @click="selectAllVisible">全选</button>
+        <button class="secondary tiny" v-if="batchMode" @click="clearSelected">清空</button>
         <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_MOVE_ROOT')">移到顶级</button>
         <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_ARCHIVE')">归档</button>
         <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_UNARCHIVE')">恢复</button>
@@ -675,6 +677,18 @@ function emitBulkAction(action) {
     action,
     slugs: [...selectedSlugs.value]
   })
+}
+
+function selectAllVisible() {
+  const all = visibilitySections.value
+    .flatMap((section) => section.groups)
+    .flatMap((group) => group.items)
+    .map((item) => item.slug)
+  selectedSlugs.value = Array.from(new Set(all))
+}
+
+function clearSelected() {
+  selectedSlugs.value = []
 }
 
 function toggleMyTodoMode() {
