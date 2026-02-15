@@ -21,6 +21,8 @@
         <button class="secondary tiny" v-if="batchMode" @click="selectByPriority('LOW')">选低优</button>
         <button class="secondary tiny" v-if="batchMode" @click="selectByDue('TODAY')">选今天到期</button>
         <button class="secondary tiny" v-if="batchMode" @click="selectByDue('OVERDUE')">选已逾期</button>
+        <button class="secondary tiny" v-if="batchMode" @click="selectByVisibility('SPACE')">选空间可见</button>
+        <button class="secondary tiny" v-if="batchMode" @click="selectByVisibility('PRIVATE')">选私有</button>
         <button class="secondary tiny" v-if="batchMode" @click="invertSelection">反选</button>
         <button class="secondary tiny" v-if="batchMode" @click="clearSelected">清空</button>
         <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_MOVE_ROOT')">移到顶级</button>
@@ -759,6 +761,15 @@ function selectByDue(mode) {
       }
       return false
     })
+    .map((item) => item.slug)
+}
+
+function selectByVisibility(visibility) {
+  const all = visibilitySections.value
+    .flatMap((section) => section.groups)
+    .flatMap((group) => group.items)
+  selectedSlugs.value = all
+    .filter((item) => (item.visibility || 'SPACE') === visibility)
     .map((item) => item.slug)
 }
 
