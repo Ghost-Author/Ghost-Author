@@ -23,6 +23,8 @@
         <button class="secondary tiny" v-if="batchMode" @click="selectByDue('OVERDUE')">选已逾期</button>
         <button class="secondary tiny" v-if="batchMode" @click="selectByVisibility('SPACE')">选空间可见</button>
         <button class="secondary tiny" v-if="batchMode" @click="selectByVisibility('PRIVATE')">选私有</button>
+        <button class="secondary tiny" v-if="batchMode" @click="selectByAssigneeMe">选我负责</button>
+        <button class="secondary tiny" v-if="batchMode" @click="selectByEditableMe">选我可编辑</button>
         <button class="secondary tiny" v-if="batchMode" @click="invertSelection">反选</button>
         <button class="secondary tiny" v-if="batchMode" @click="clearSelected">清空</button>
         <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_MOVE_ROOT')">移到顶级</button>
@@ -770,6 +772,41 @@ function selectByVisibility(visibility) {
     .flatMap((group) => group.items)
   selectedSlugs.value = all
     .filter((item) => (item.visibility || 'SPACE') === visibility)
+    .map((item) => item.slug)
+}
+
+function selectByAssigneeMe() {
+  const me = (props.currentUser || '').trim()
+  if (!me) {
+    selectedSlugs.value = []
+    return
+  }
+  const all = visibilitySections.value
+    .flatMap((section) => section.groups)
+    .flatMap((group) => group.items)
+  selectedSlugs.value = all
+    .filter((item) => (item.assignee || '').trim() === me)
+    .map((item) => item.slug)
+}
+
+function selectByEditableMe() {
+  const me = (props.currentUser || '').trim()
+  if (!me) {
+    selectedSlugs.value = []
+    return
+  }
+  const all = visibilitySections.value
+    .flatMap((section) => section.groups)
+    .flatMap((group) => group.items)
+  selectedSlugs.value = all
+    .filter((item) => {
+      const owner = (item.owner || '').trim()
+      const editors = Array.isArray(item.editors) ? item.editors.map((x) => (x || '').trim()) : []
+      if (!owner && editors.length === 0) {
+        return true
+      }
+      return owner === me || editors.includes(me)
+    })
     .map((item) => item.slug)
 }
 
