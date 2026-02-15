@@ -607,6 +607,15 @@ const toolbars = [
   'revoke', 'next', 'save', '=',
   'pageFullscreen', 'fullscreen', 'preview', 'htmlPreview'
 ]
+const READ_PANEL_DOCK_KEY = 'ga-read-panel-dock'
+const CHILD_OPEN_KEY = 'ga-read-child-open-state'
+const READ_CARD_ORDER_KEY = 'ga-read-card-order'
+const READ_CARD_COLLAPSED_KEY = 'ga-read-card-collapsed'
+const READ_WIDTH_KEY = 'ga-read-width-mode'
+const OUTLINE_DEFAULT_ACTION_KEY = 'ga-outline-default-action'
+const OUTLINE_BATCH_FORMAT_KEY = 'ga-outline-batch-format'
+const OUTLINE_BATCH_SEPARATOR_KEY = 'ga-outline-batch-separator'
+const OUTLINE_BATCH_LEVEL_KEY = 'ga-outline-batch-level'
 
 const model = computed(() => props.doc)
 const isCreateMode = computed(() => !props.doc.id)
@@ -661,15 +670,6 @@ const outlineMenu = ref({
   item: null,
   activeIndex: 0
 })
-const READ_PANEL_DOCK_KEY = 'ga-read-panel-dock'
-const CHILD_OPEN_KEY = 'ga-read-child-open-state'
-const READ_CARD_ORDER_KEY = 'ga-read-card-order'
-const READ_CARD_COLLAPSED_KEY = 'ga-read-card-collapsed'
-const READ_WIDTH_KEY = 'ga-read-width-mode'
-const OUTLINE_DEFAULT_ACTION_KEY = 'ga-outline-default-action'
-const OUTLINE_BATCH_FORMAT_KEY = 'ga-outline-batch-format'
-const OUTLINE_BATCH_SEPARATOR_KEY = 'ga-outline-batch-separator'
-const OUTLINE_BATCH_LEVEL_KEY = 'ga-outline-batch-level'
 let readScrollRaf = null
 let outlineMenuRaf = null
 const readWidthModes = [
