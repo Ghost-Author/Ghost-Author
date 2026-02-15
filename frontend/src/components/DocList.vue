@@ -16,6 +16,9 @@
         <button class="secondary tiny" v-if="batchMode" @click="selectByStatus('DRAFT')">选草稿</button>
         <button class="secondary tiny" v-if="batchMode" @click="selectByStatus('PUBLISHED')">选已发布</button>
         <button class="secondary tiny" v-if="batchMode" @click="selectByStatus('ARCHIVED')">选已归档</button>
+        <button class="secondary tiny" v-if="batchMode" @click="selectByPriority('HIGH')">选高优</button>
+        <button class="secondary tiny" v-if="batchMode" @click="selectByPriority('MEDIUM')">选中优</button>
+        <button class="secondary tiny" v-if="batchMode" @click="selectByPriority('LOW')">选低优</button>
         <button class="secondary tiny" v-if="batchMode" @click="invertSelection">反选</button>
         <button class="secondary tiny" v-if="batchMode" @click="clearSelected">清空</button>
         <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_MOVE_ROOT')">移到顶级</button>
@@ -724,6 +727,15 @@ function selectByStatus(status) {
     .flatMap((group) => group.items)
   selectedSlugs.value = all
     .filter((item) => (item.status || 'DRAFT') === status)
+    .map((item) => item.slug)
+}
+
+function selectByPriority(priority) {
+  const all = visibilitySections.value
+    .flatMap((section) => section.groups)
+    .flatMap((group) => group.items)
+  selectedSlugs.value = all
+    .filter((item) => (item.priority || 'MEDIUM') === priority)
     .map((item) => item.slug)
 }
 
