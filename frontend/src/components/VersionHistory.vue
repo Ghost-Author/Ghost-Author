@@ -2,15 +2,32 @@
   <aside class="version-history">
     <div class="version-head">
       <div>
-        <h3>Version History</h3>
-        <p class="section-subtitle">挑两个版本就能看差异</p>
+        <h3>Page Tools</h3>
+        <p class="section-subtitle">目录导航 + 版本管理</p>
       </div>
       <button :disabled="!slug" @click="$emit('refresh')">刷新</button>
     </div>
 
-    <div v-if="!slug" class="hint">先保存文档后才会产生版本</div>
+    <div v-if="!slug" class="hint">先保存文档后才会产生目录和版本</div>
 
     <template v-else>
+      <div class="outline-panel">
+        <div class="outline-head">页面目录</div>
+        <ul class="outline-list" v-if="outline.length">
+          <li
+            v-for="item in outline"
+            :key="item.id"
+            :style="{ paddingLeft: `${(item.level - 1) * 12}px` }"
+            :title="item.text"
+          >
+            <span class="outline-dot">•</span>
+            <span>{{ item.text }}</span>
+          </li>
+        </ul>
+        <div v-else class="outline-empty">没有可识别的标题（可用 # ## ###）</div>
+      </div>
+
+      <div class="version-list-head">版本历史</div>
       <ul>
         <li v-for="item in versions" :key="item.id">
           <div>
@@ -55,6 +72,10 @@ const props = defineProps({
     default: ''
   },
   versions: {
+    type: Array,
+    default: () => []
+  },
+  outline: {
     type: Array,
     default: () => []
   },

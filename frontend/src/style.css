@@ -165,6 +165,12 @@ body {
   margin-bottom: 10px;
 }
 
+.header-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
 .header h2,
 .pane-head h2,
 .version-head h3 {
@@ -251,6 +257,11 @@ button.clear {
 button.secondary {
   background: linear-gradient(135deg, #66748f, #7f8ead);
   box-shadow: 0 6px 14px #60708b33;
+}
+
+button.tiny {
+  padding: 5px 8px;
+  font-size: 12px;
 }
 
 .search-actions {
@@ -553,6 +564,49 @@ label {
   border-radius: 10px;
   padding: 10px;
   background: #f8fbff;
+}
+
+.outline-panel {
+  border: 1px solid #d6e2fb;
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.outline-head,
+.version-list-head {
+  color: #51658d;
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+.version-list-head {
+  margin-top: 2px;
+}
+
+.outline-list li {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  color: #35517f;
+  padding: 5px 4px;
+  border-radius: 8px;
+}
+
+.outline-list li:hover {
+  background: #f1f6ff;
+}
+
+.outline-dot {
+  color: #8aa8db;
+}
+
+.outline-empty {
+  color: #8ca0c2;
+  font-size: 12px;
 }
 
 .version-history li {

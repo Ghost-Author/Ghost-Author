@@ -42,6 +42,7 @@
       <VersionHistory
         :slug="activeSlug"
         :versions="versions"
+        :outline="pageOutline"
         :diff-from="diffFrom"
         :diff-to="diffTo"
         :diff-text="diffText"
@@ -73,6 +74,24 @@ const diffText = ref('')
 const favorites = ref([])
 const recent = ref([])
 const breadcrumbTitle = computed(() => currentDoc.value.title || 'Untitled Page')
+const pageOutline = computed(() => {
+  const content = currentDoc.value?.content || ''
+  const lines = content.split('\n')
+  const result = []
+  let index = 0
+  for (const line of lines) {
+    const match = line.match(/^(#{1,4})\s+(.+)/)
+    if (!match) {
+      continue
+    }
+    result.push({
+      id: `outline-${index++}`,
+      level: match[1].length,
+      text: match[2].trim()
+    })
+  }
+  return result
+})
 
 const FAVORITES_KEY = 'ga-favorites'
 const RECENT_KEY = 'ga-recent'

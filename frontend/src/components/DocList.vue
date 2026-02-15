@@ -4,7 +4,11 @@
       <div>
         <h2>Space Pages</h2>
       </div>
-      <button @click="$emit('create')">+ 新建</button>
+      <div class="header-actions">
+        <button class="secondary tiny" @click="expandAll">展开</button>
+        <button class="secondary tiny" @click="collapseAll">折叠</button>
+        <button @click="$emit('create')">+ 新建</button>
+      </div>
     </div>
 
     <input
@@ -260,5 +264,17 @@ function toggleGroup(name) {
 
 function depthClass(depth) {
   return `depth-${Math.min(depth, 4)}`
+}
+
+function expandAll() {
+  groupedDocs.value.forEach((group) => {
+    opened.value[group.name] = true
+  })
+}
+
+function collapseAll() {
+  groupedDocs.value.forEach((group) => {
+    opened.value[group.name] = false
+  })
 }
 </script>
