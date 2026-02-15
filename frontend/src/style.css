@@ -1809,6 +1809,22 @@ button.small {
   margin-top: 8px;
 }
 
+.read-outline-filter {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.read-outline-filter input {
+  margin: 0;
+}
+
+.read-outline-filter .tiny {
+  white-space: nowrap;
+}
+
 .read-outline-progress {
   margin-top: 8px;
   border: 1px solid #d9e6fc;

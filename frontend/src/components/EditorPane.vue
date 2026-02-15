@@ -229,6 +229,10 @@
                 <strong>页面目录（{{ outline.length }}）</strong>
                 <span>{{ readOutlineOpen ? '收起 ▾' : '展开 ▸' }}</span>
               </button>
+              <div class="read-outline-filter" v-if="readOutlineOpen && outline.length">
+                <input v-model="readOutlineQuery" placeholder="过滤目录标题" />
+                <button class="secondary tiny" @click="readOutlineQuery = ''">清空</button>
+              </div>
               <div class="read-outline-progress" v-if="readOutlineOpen && outline.length">
                 <div class="read-outline-progress-head">
                   <span>阅读进度</span>
@@ -238,9 +242,9 @@
                   <div class="read-outline-progress-fill" :style="{ width: `${readProgressPercent}%` }"></div>
                 </div>
               </div>
-              <ul class="read-outline-list" v-if="readOutlineOpen && outline.length">
+              <ul class="read-outline-list" v-if="readOutlineOpen && filteredOutline.length">
                 <li
-                  v-for="item in outline"
+                  v-for="item in filteredOutline"
                   :key="item.id"
                   :class="{ active: isOutlineActive(item), done: isOutlineDone(item) }"
                   :style="{ '--outline-indent': `${(item.level - 1) * 14}px` }"
@@ -250,6 +254,7 @@
                   <span>{{ item.text }}</span>
                 </li>
               </ul>
+              <div class="comment-empty" v-else-if="readOutlineOpen && outline.length">没有匹配的目录标题</div>
               <div class="comment-empty" v-else-if="readOutlineOpen">没有可识别标题（# ## ###）</div>
             </section>
 
@@ -497,6 +502,7 @@ const taskMetaOpen = ref(true)
 const readPermOpen = ref(false)
 const readChildrenOpen = ref(true)
 const readOutlineOpen = ref(true)
+const readOutlineQuery = ref('')
 const activeOutlineText = ref('')
 const readInfoOpen = ref(false)
 const readPanelDock = ref('right')
@@ -521,6 +527,14 @@ const readProgressPercent = computed(() => {
   }
   const ratio = (activeOutlineIndex.value + 1) / total
   return Math.max(0, Math.min(100, Math.round(ratio * 100)))
+})
+
+const filteredOutline = computed(() => {
+  const q = readOutlineQuery.value.trim().toLowerCase()
+  if (!q) {
+    return props.outline
+  }
+  return props.outline.filter((item) => (item.text || '').toLowerCase().includes(q))
 })
 const newTemplate = ref({
   name: '',
@@ -781,6 +795,7 @@ function isOutlineDone(item) {
 watch(
   () => props.doc.id,
   () => {
+    readOutlineQuery.value = ''
     activeOutlineText.value = ''
     if (typeof window === 'undefined') {
       return
