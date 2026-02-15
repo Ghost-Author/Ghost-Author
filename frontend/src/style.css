@@ -332,6 +332,10 @@ button.tiny {
   margin: 0;
 }
 
+.todo-toggle-row {
+  margin-bottom: 10px;
+}
+
 .filter-btn {
   width: 100%;
   border: 1px solid #cfe0fb;
@@ -1324,6 +1328,20 @@ button.small {
 
 .home-card.assignee {
   margin-top: 2px;
+}
+
+.home-card.my-todo {
+  margin-top: 2px;
+  border-color: #bfe0ff;
+  background: #f4faff;
+}
+
+.my-todo-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
 }
 
 .home-card h3 {

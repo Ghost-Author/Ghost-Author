@@ -89,6 +89,20 @@
         <li v-if="assigneeBoard.length === 0" class="home-empty">暂无负责人数据</li>
       </ul>
     </div>
+
+    <div class="home-card my-todo">
+      <div class="my-todo-head">
+        <h3>我的待办</h3>
+        <button class="secondary small" @click="$emit('open-my-todo')">切换到待办视图</button>
+      </div>
+      <ul>
+        <li v-for="doc in myTodoDocs" :key="`my-${doc.slug}`" @click="$emit('select', doc.slug)">
+          <strong>{{ doc.title }}</strong>
+          <span>截止 {{ doc.dueDate || '-' }} · {{ priorityText(doc.priority) }}</span>
+        </li>
+        <li v-if="myTodoDocs.length === 0" class="home-empty">当前用户暂无待办页面</li>
+      </ul>
+    </div>
   </section>
 </template>
 
@@ -115,6 +129,10 @@ defineProps({
     default: () => []
   },
   assigneeBoard: {
+    type: Array,
+    default: () => []
+  },
+  myTodoDocs: {
     type: Array,
     default: () => []
   }

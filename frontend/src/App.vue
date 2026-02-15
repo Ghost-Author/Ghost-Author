@@ -27,10 +27,12 @@
 
     <div class="layout">
       <DocList
+        ref="docListRef"
         :docs="visibleDocs"
         :active-slug="activeSlug"
         :favorites="favorites"
         :recent="recent"
+        :current-user="currentUser"
         @create="createNewDoc"
         @search="searchDocs"
         @select="loadDoc"
@@ -47,8 +49,10 @@
         :overdue-docs="homeOverdueDocs"
         :today-docs="homeTodayDueDocs"
         :assignee-board="homeAssigneeBoard"
+        :my-todo-docs="myTodoDocs"
         @create="createNewDoc"
         @select="loadDoc"
+        @open-my-todo="openMyTodoView"
       />
       <EditorPane
         v-else
@@ -130,6 +134,7 @@ const versions = ref([])
 const comments = ref([])
 const attachments = ref([])
 const templates = ref([])
+const docListRef = ref(null)
 const activeSlug = ref('')
 const currentDoc = ref(emptyDoc())
 const showHome = ref(true)
@@ -225,6 +230,23 @@ const homeAssigneeBoard = computed(() => {
   return Array.from(board.values())
     .sort((a, b) => b.overdue - a.overdue || b.today - a.today || b.total - a.total)
     .slice(0, 10)
+})
+const myTodoDocs = computed(() => {
+  const user = (currentUser.value || '').trim()
+  if (!user) {
+    return []
+  }
+  return visibleDocs.value
+    .filter((doc) => (doc.assignee || '') === user && (doc.status || 'DRAFT') !== 'ARCHIVED')
+    .sort((a, b) => {
+      const dueA = a.dueDate || '9999-12-31'
+      const dueB = b.dueDate || '9999-12-31'
+      if (dueA !== dueB) {
+        return dueA.localeCompare(dueB)
+      }
+      return (a.priority || 'MEDIUM').localeCompare(b.priority || 'MEDIUM')
+    })
+    .slice(0, 12)
 })
 const commandResults = computed(() => {
   const q = commandQuery.value.trim().toLowerCase()
@@ -608,6 +630,14 @@ function openBreadcrumb(slug) {
     return
   }
   loadDoc(slug)
+}
+
+function openMyTodoView() {
+  docListRef.value?.setMyTodoFilter(currentUser.value)
+  showHome.value = false
+  if (myTodoDocs.value.length > 0) {
+    loadDoc(myTodoDocs.value[0].slug)
+  }
 }
 
 async function moveDoc(payload) {

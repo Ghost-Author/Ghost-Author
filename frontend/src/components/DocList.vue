@@ -104,6 +104,11 @@
         <option value="OVERDUE">已逾期</option>
       </select>
     </div>
+    <div class="todo-toggle-row">
+      <button class="filter-btn" :class="{ active: myTodoMode }" @click="toggleMyTodoMode">
+        我的待办视图
+      </button>
+    </div>
 
     <div class="quick-zones">
       <div class="quick-zone">
@@ -233,6 +238,7 @@ const visibilityFilter = ref('ALL')
 const priorityFilter = ref('ALL')
 const assigneeFilter = ref('')
 const dueFilter = ref('ALL')
+const myTodoMode = ref(false)
 const draggingSlug = ref('')
 const dropTargetSlug = ref('')
 const dropTargetRoot = ref(false)
@@ -253,6 +259,10 @@ const props = defineProps({
   recent: {
     type: Array,
     default: () => []
+  },
+  currentUser: {
+    type: String,
+    default: ''
   }
 })
 
@@ -275,7 +285,8 @@ const propertyFilteredDocs = computed(() => {
     } else if (dueFilter.value === 'OVERDUE') {
       duePass = !!doc.dueDate && doc.dueDate < new Date().toISOString().slice(0, 10)
     }
-    return priorityPass && assigneePass && duePass
+    const todoPass = !myTodoMode.value || ((doc.assignee || '') === assigneeFilter.value && (doc.status || 'DRAFT') !== 'ARCHIVED')
+    return priorityPass && assigneePass && duePass && todoPass
   })
 })
 
@@ -422,6 +433,24 @@ function clearSearch() {
   emit('search', '')
 }
 
+function toggleMyTodoMode() {
+  if (!myTodoMode.value && !assigneeFilter.value) {
+    assigneeFilter.value = props.currentUser || ''
+  }
+  myTodoMode.value = !myTodoMode.value
+}
+
+function setMyTodoFilter(userName) {
+  assigneeFilter.value = userName || ''
+  dueFilter.value = 'ALL'
+  priorityFilter.value = 'ALL'
+  myTodoMode.value = true
+}
+
+function clearMyTodoFilter() {
+  myTodoMode.value = false
+}
+
 function toggleGroup(name) {
   opened.value[name] = !opened.value[name]
 }
@@ -534,4 +563,9 @@ function onDropRoot() {
   })
   onDragEnd()
 }
+
+defineExpose({
+  setMyTodoFilter,
+  clearMyTodoFilter
+})
 </script>
