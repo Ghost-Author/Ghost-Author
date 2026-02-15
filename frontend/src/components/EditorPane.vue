@@ -272,6 +272,11 @@
                     <option value="MARKDOWN">Markdown 列表</option>
                     <option value="LINKS">纯链接</option>
                   </select>
+                  <select v-model="outlineBatchSeparator">
+                    <option value="NEWLINE">换行</option>
+                    <option value="BLANKLINE">空行</option>
+                    <option value="SEMICOLON">分号</option>
+                  </select>
                   <label class="outline-batch-level">
                     <input type="checkbox" v-model="outlineBatchWithLevel" />
                     层级前缀
@@ -604,6 +609,7 @@ const readOutlineQuery = ref('')
 const readOutlineLevelFilter = ref(null)
 const outlineDefaultAction = ref(loadOutlineDefaultAction())
 const outlineBatchFormat = ref(loadOutlineBatchFormat())
+const outlineBatchSeparator = ref(loadOutlineBatchSeparator())
 const outlineBatchWithLevel = ref(loadOutlineBatchWithLevel())
 const selectedOutlineIds = ref([])
 const lastSelectedOutlineId = ref('')
@@ -633,6 +639,7 @@ const READ_CARD_COLLAPSED_KEY = 'ga-read-card-collapsed'
 const READ_WIDTH_KEY = 'ga-read-width-mode'
 const OUTLINE_DEFAULT_ACTION_KEY = 'ga-outline-default-action'
 const OUTLINE_BATCH_FORMAT_KEY = 'ga-outline-batch-format'
+const OUTLINE_BATCH_SEPARATOR_KEY = 'ga-outline-batch-separator'
 const OUTLINE_BATCH_LEVEL_KEY = 'ga-outline-batch-level'
 let readScrollRaf = null
 let outlineMenuRaf = null
@@ -870,6 +877,10 @@ watch(outlineDefaultAction, (value) => {
 
 watch(outlineBatchFormat, (value) => {
   persistOutlineBatchFormat(value)
+})
+
+watch(outlineBatchSeparator, (value) => {
+  persistOutlineBatchSeparator(value)
 })
 
 watch(outlineBatchWithLevel, (value) => {
@@ -1313,6 +1324,24 @@ function persistOutlineBatchFormat(value) {
   window.localStorage.setItem(OUTLINE_BATCH_FORMAT_KEY, value)
 }
 
+function loadOutlineBatchSeparator() {
+  if (typeof window === 'undefined') {
+    return 'NEWLINE'
+  }
+  const raw = window.localStorage.getItem(OUTLINE_BATCH_SEPARATOR_KEY)
+  if (raw === 'NEWLINE' || raw === 'BLANKLINE' || raw === 'SEMICOLON') {
+    return raw
+  }
+  return 'NEWLINE'
+}
+
+function persistOutlineBatchSeparator(value) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(OUTLINE_BATCH_SEPARATOR_KEY, value)
+}
+
 function loadOutlineBatchWithLevel() {
   if (typeof window === 'undefined') {
     return false
@@ -1598,17 +1627,17 @@ async function copySelectedOutlineLinks() {
   const text = outlineBatchFormat.value === 'LINKS'
     ? selectedOutlineEntries.value
       .map((item) => outlineBatchWithLevel.value ? `${labelOf(item)} - ${item.link}` : item.link)
-      .join('\n')
+      .join(resolveOutlineSeparator())
     : selectedOutlineEntries.value
       .map((item) => `- [${labelOf(item)}](${item.link})`)
-      .join('\n')
+      .join(resolveOutlineSeparator())
   try {
     await navigator.clipboard.writeText(text)
     const rawCount = selectedOutlineItems.value.length
     const dedupedCount = selectedOutlineEntries.value.length
     emit('notify', {
       type: 'success',
-      message: `已复制 ${dedupedCount}/${rawCount} 条目录链接（${outlineBatchFormat.value === 'LINKS' ? '纯链接' : 'Markdown'}${outlineBatchWithLevel.value ? ' + 层级' : ''}）`
+      message: `已复制 ${dedupedCount}/${rawCount} 条目录链接（${outlineBatchFormat.value === 'LINKS' ? '纯链接' : 'Markdown'}${outlineBatchWithLevel.value ? ' + 层级' : ''} + ${outlineBatchSeparatorLabel()}）`
     })
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
@@ -1650,6 +1679,26 @@ function buildOutlineLink(item) {
   const pagePart = model.value.slug ? `?page=${encodeURIComponent(model.value.slug)}` : ''
   const hashPart = headingId ? `#${encodeURIComponent(headingId)}` : ''
   return `${base}${pagePart}${hashPart}`
+}
+
+function resolveOutlineSeparator() {
+  if (outlineBatchSeparator.value === 'BLANKLINE') {
+    return '\n\n'
+  }
+  if (outlineBatchSeparator.value === 'SEMICOLON') {
+    return '; '
+  }
+  return '\n'
+}
+
+function outlineBatchSeparatorLabel() {
+  if (outlineBatchSeparator.value === 'BLANKLINE') {
+    return '空行'
+  }
+  if (outlineBatchSeparator.value === 'SEMICOLON') {
+    return '分号'
+  }
+  return '换行'
 }
 
 function closeOutlineMenu() {
