@@ -799,12 +799,14 @@ async function handleDocBulkAction(payload) {
       }
     })
     persistCollections()
+    docListRef.value?.clearBatchSelection()
     return
   }
 
   if (payload.action === 'BULK_UNFAVORITE') {
     favorites.value = favorites.value.filter((slug) => !slugs.includes(slug))
     persistCollections()
+    docListRef.value?.clearBatchSelection()
     return
   }
 
@@ -827,6 +829,7 @@ async function handleDocBulkAction(payload) {
       await loadDoc(activeSlug.value)
     }
     alert(`批量移到顶级完成：成功 ${updated}，跳过 ${skipped}`)
+    docListRef.value?.clearBatchSelection()
     return
   }
 
@@ -872,6 +875,7 @@ async function handleDocBulkAction(payload) {
     await loadDoc(activeSlug.value)
   }
   alert(`批量操作完成：成功 ${updated}，跳过 ${skipped}`)
+  docListRef.value?.clearBatchSelection()
 }
 
 async function toggleShare(enabled) {

@@ -446,6 +446,12 @@ watch(() => props.docs, () => {
   selectedSlugs.value = selectedSlugs.value.filter((slug) => valid.has(slug))
 }, { deep: true })
 
+watch(selectedSlugs, (list) => {
+  if (list.length === 0) {
+    selectedOnlyMode.value = false
+  }
+})
+
 const statusFilteredDocs = computed(() => {
   if (statusFilter.value === 'ALL') {
     return props.docs
@@ -709,6 +715,11 @@ function invertSelection() {
   selectedSlugs.value = all.filter((slug) => !selected.has(slug))
 }
 
+function clearBatchSelection() {
+  selectedSlugs.value = []
+  selectedOnlyMode.value = false
+}
+
 function toggleMyTodoMode() {
   if (!myTodoMode.value && !assigneeFilter.value) {
     assigneeFilter.value = props.currentUser || ''
@@ -842,6 +853,7 @@ function onDropRoot() {
 
 defineExpose({
   setMyTodoFilter,
-  clearMyTodoFilter
+  clearMyTodoFilter,
+  clearBatchSelection
 })
 </script>
