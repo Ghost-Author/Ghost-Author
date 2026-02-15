@@ -288,6 +288,12 @@ body {
   align-items: center;
 }
 
+.header-actions .secondary.tiny.active {
+  border: 1px solid #8db1f7;
+  background: #edf4ff;
+  color: #2c5398;
+}
+
 .header h2,
 .pane-head h2,
 .version-head h3 {
@@ -715,6 +721,12 @@ ul {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.node-check {
+  width: 14px;
+  height: 14px;
+  margin: 0;
 }
 
 .node-branch {

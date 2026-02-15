@@ -5,6 +5,12 @@
         <h2>Space Pages</h2>
       </div>
       <div class="header-actions">
+        <button class="secondary tiny" :class="{ active: batchMode }" @click="toggleBatchMode">
+          {{ batchMode ? '退出批量' : '批量操作' }}
+        </button>
+        <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_ARCHIVE')">归档</button>
+        <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_UNARCHIVE')">恢复</button>
+        <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_FAVORITE')">收藏</button>
         <button class="secondary tiny" @click="expandAll">展开</button>
         <button class="secondary tiny" @click="collapseAll">折叠</button>
         <button @click="$emit('create')">+ 新建</button>
@@ -201,10 +207,17 @@
               @dragover.prevent="onDragOver(node.slug)"
               @dragleave="onDragLeave(node.slug)"
               @drop.prevent="onDropNode(node.slug)"
-              @click="$emit('select', node.slug)"
+              @click="onNodeClick(node.slug)"
             >
               <div class="node-title-row">
                 <div class="node-title-main">
+                  <input
+                    v-if="batchMode"
+                    type="checkbox"
+                    class="node-check"
+                    :checked="selectedSlugs.includes(node.slug)"
+                    @click.stop="toggleSelected(node.slug)"
+                  />
                   <span class="node-branch" v-if="node.depth > 0">└</span>
                   <span class="node-depth-pill" v-if="node.depth > 0">L{{ node.depth }}</span>
                   <strong>{{ node.title }}</strong>
@@ -378,6 +391,8 @@ const draggingSlug = ref('')
 const dropTargetSlug = ref('')
 const dropTargetRoot = ref(false)
 const quickMenuSlug = ref('')
+const batchMode = ref(false)
+const selectedSlugs = ref([])
 
 const props = defineProps({
   docs: {
@@ -402,7 +417,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['search', 'toggle-favorite', 'move', 'reorder', 'quick-action'])
+const emit = defineEmits(['search', 'toggle-favorite', 'move', 'reorder', 'quick-action', 'bulk-action'])
 
 watch([quickOpenFavorites, quickOpenRecent], ([favoritesOpen, recentOpen]) => {
   persistQuickPanelsState(favoritesOpen, recentOpen)
@@ -414,6 +429,11 @@ watch(filtersOpen, (open) => {
 
 watch(opened, (value) => {
   persistGroupOpenState(value)
+}, { deep: true })
+
+watch(() => props.docs, () => {
+  const valid = new Set(props.docs.map((doc) => doc.slug))
+  selectedSlugs.value = selectedSlugs.value.filter((slug) => valid.has(slug))
 }, { deep: true })
 
 const statusFilteredDocs = computed(() => {
@@ -622,6 +642,37 @@ function toggleQuickMenu(slug) {
 function emitQuickAction(action, slug) {
   quickMenuSlug.value = ''
   emit('quick-action', { action, slug })
+}
+
+function toggleBatchMode() {
+  batchMode.value = !batchMode.value
+  quickMenuSlug.value = ''
+  if (!batchMode.value) {
+    selectedSlugs.value = []
+  }
+}
+
+function toggleSelected(slug) {
+  if (selectedSlugs.value.includes(slug)) {
+    selectedSlugs.value = selectedSlugs.value.filter((item) => item !== slug)
+  } else {
+    selectedSlugs.value = [...selectedSlugs.value, slug]
+  }
+}
+
+function onNodeClick(slug) {
+  if (batchMode.value) {
+    toggleSelected(slug)
+    return
+  }
+  emit('select', slug)
+}
+
+function emitBulkAction(action) {
+  emit('bulk-action', {
+    action,
+    slugs: [...selectedSlugs.value]
+  })
 }
 
 function toggleMyTodoMode() {

@@ -40,6 +40,7 @@
         @move="moveDoc"
         @reorder="reorderDoc"
         @quick-action="handleDocQuickAction"
+        @bulk-action="handleDocBulkAction"
       />
 
       <SpaceHome
@@ -783,6 +784,66 @@ async function handleDocQuickAction(payload) {
       await loadDoc(payload.slug)
     }
   }
+}
+
+async function handleDocBulkAction(payload) {
+  const slugs = Array.isArray(payload?.slugs) ? payload.slugs.filter(Boolean) : []
+  if (!payload?.action || slugs.length === 0) {
+    return
+  }
+
+  if (payload.action === 'BULK_FAVORITE') {
+    slugs.forEach((slug) => {
+      if (!favorites.value.includes(slug)) {
+        favorites.value = [slug, ...favorites.value]
+      }
+    })
+    persistCollections()
+    return
+  }
+
+  const nextStatus = payload.action === 'BULK_ARCHIVE'
+    ? 'ARCHIVED'
+    : payload.action === 'BULK_UNARCHIVE'
+      ? 'DRAFT'
+      : ''
+  if (!nextStatus) {
+    return
+  }
+
+  let updated = 0
+  let skipped = 0
+  for (const slug of slugs) {
+    const target = docs.value.find((d) => d.slug === slug)
+    if (!target || !canEditDoc(target)) {
+      skipped += 1
+      continue
+    }
+    const { data } = await api.get(`/documents/${slug}`)
+    await api.put(`/documents/${slug}`, {
+      title: data.title,
+      summary: data.summary,
+      content: data.content,
+      parentSlug: data.parentSlug || null,
+      labels: data.labels || [],
+      owner: data.owner || null,
+      editors: data.editors || [],
+      viewers: data.viewers || [],
+      priority: data.priority || 'MEDIUM',
+      dueDate: data.dueDate || null,
+      assignee: data.assignee || null,
+      status: nextStatus,
+      visibility: data.visibility || 'SPACE',
+      locked: !!data.locked
+    })
+    updated += 1
+  }
+
+  await fetchDocs()
+  if (activeSlug.value && slugs.includes(activeSlug.value)) {
+    await loadDoc(activeSlug.value)
+  }
+  alert(`批量操作完成：成功 ${updated}，跳过 ${skipped}`)
 }
 
 async function toggleShare(enabled) {
