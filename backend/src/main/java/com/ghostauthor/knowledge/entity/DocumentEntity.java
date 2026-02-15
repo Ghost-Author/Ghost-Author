@@ -2,6 +2,8 @@ package com.ghostauthor.knowledge.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "documents")
@@ -26,6 +28,11 @@ public class DocumentEntity {
     @Column(length = 1024)
     private String labels;
 
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(length = 16)
+    private DocumentStatus status;
+
     @Column(nullable = false, length = 512)
     private String filePath;
 
@@ -40,6 +47,9 @@ public class DocumentEntity {
         LocalDateTime now = LocalDateTime.now();
         createdAt = now;
         updatedAt = now;
+        if (status == null) {
+            status = DocumentStatus.DRAFT;
+        }
     }
 
     @PreUpdate
@@ -101,6 +111,14 @@ public class DocumentEntity {
 
     public void setLabels(String labels) {
         this.labels = labels;
+    }
+
+    public DocumentStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(DocumentStatus status) {
+        this.status = status;
     }
 
     public LocalDateTime getCreatedAt() {

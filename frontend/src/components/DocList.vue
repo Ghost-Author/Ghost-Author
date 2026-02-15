@@ -3,7 +3,6 @@
     <div class="header">
       <div>
         <h2>Space Pages</h2>
-        <p class="section-subtitle">像 Confluence 一样管理文档</p>
       </div>
       <button @click="$emit('create')">+ 新建</button>
     </div>
@@ -18,6 +17,38 @@
     <div class="search-actions">
       <button class="search-btn" @click="$emit('search', keyword)">搜索</button>
       <button class="search-btn clear" @click="clearSearch">清空</button>
+    </div>
+
+    <div class="quick-zones">
+      <div class="quick-zone">
+        <h4>⭐ 收藏</h4>
+        <ul class="quick-list">
+          <li
+            v-for="doc in favoriteDocs"
+            :key="`fav-${doc.slug}`"
+            :class="{ active: activeSlug === doc.slug }"
+            @click="$emit('select', doc.slug)"
+          >
+            <span>{{ doc.title }}</span>
+          </li>
+          <li class="quick-empty" v-if="favoriteDocs.length === 0">还没有收藏页面</li>
+        </ul>
+      </div>
+
+      <div class="quick-zone">
+        <h4>🕘 最近访问</h4>
+        <ul class="quick-list">
+          <li
+            v-for="doc in recentDocs"
+            :key="`recent-${doc.slug}`"
+            :class="{ active: activeSlug === doc.slug }"
+            @click="$emit('select', doc.slug)"
+          >
+            <span>{{ doc.title }}</span>
+          </li>
+          <li class="quick-empty" v-if="recentDocs.length === 0">还没有访问记录</li>
+        </ul>
+      </div>
     </div>
 
     <div class="tree-nav">
@@ -35,11 +66,30 @@
           <li
             v-for="node in group.items"
             :key="node.slug"
-            :class="{ active: activeSlug === node.slug }"
-            :style="{ paddingLeft: `${10 + node.depth * 18}px` }"
+            :class="['tree-node', depthClass(node.depth), { active: activeSlug === node.slug }]"
+            :style="{ paddingLeft: `${10 + node.depth * 22}px` }"
             @click="$emit('select', node.slug)"
           >
-            <strong>{{ node.title }}</strong>
+            <div class="node-title-row">
+              <div class="node-title-main">
+                <span class="node-branch" v-if="node.depth > 0">└</span>
+                <span class="node-depth-pill" v-if="node.depth > 0">L{{ node.depth }}</span>
+                <strong>{{ node.title }}</strong>
+              </div>
+              <button
+                class="fav-toggle"
+                :class="{ active: favorites.includes(node.slug) }"
+                @click.stop="$emit('toggle-favorite', node.slug)"
+              >
+                {{ favorites.includes(node.slug) ? '★' : '☆' }}
+              </button>
+            </div>
+            <div class="node-meta-row">
+              <span class="node-slug">{{ node.slug }}</span>
+              <span class="node-status" :class="(node.status || 'DRAFT').toLowerCase()">
+                {{ node.status === 'PUBLISHED' ? '已发布' : '草稿' }}
+              </span>
+            </div>
             <p>{{ node.summary }}</p>
             <div class="label-row" v-if="node.labels && node.labels.length">
               <span class="doc-label" v-for="label in node.labels.slice(0, 3)" :key="label">{{ label }}</span>
@@ -65,10 +115,18 @@ const props = defineProps({
   activeSlug: {
     type: String,
     default: ''
+  },
+  favorites: {
+    type: Array,
+    default: () => []
+  },
+  recent: {
+    type: Array,
+    default: () => []
   }
 })
 
-const emit = defineEmits(['search'])
+const emit = defineEmits(['search', 'toggle-favorite'])
 
 const groupedDocs = computed(() => {
   const docsBySlug = new Map(props.docs.map((doc) => [doc.slug, doc]))
@@ -102,6 +160,20 @@ const groupedDocs = computed(() => {
       items
     }))
     .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'))
+})
+
+const favoriteDocs = computed(() => {
+  const bySlug = new Map(props.docs.map((d) => [d.slug, d]))
+  return props.favorites
+    .map((slug) => bySlug.get(slug))
+    .filter(Boolean)
+})
+
+const recentDocs = computed(() => {
+  const bySlug = new Map(props.docs.map((d) => [d.slug, d]))
+  return props.recent
+    .map((slug) => bySlug.get(slug))
+    .filter(Boolean)
 })
 
 function resolveGroup(slug) {
@@ -141,5 +213,9 @@ function clearSearch() {
 
 function toggleGroup(name) {
   opened.value[name] = !opened.value[name]
+}
+
+function depthClass(depth) {
+  return `depth-${Math.min(depth, 4)}`
 }
 </script>

@@ -5,6 +5,8 @@ import com.ghostauthor.knowledge.dto.DocumentResponse;
 import com.ghostauthor.knowledge.dto.DocumentUpdateRequest;
 import com.ghostauthor.knowledge.dto.DocumentVersionDiffResponse;
 import com.ghostauthor.knowledge.dto.DocumentVersionResponse;
+import com.ghostauthor.knowledge.dto.CommentCreateRequest;
+import com.ghostauthor.knowledge.dto.CommentResponse;
 
 import java.util.List;
 
@@ -17,4 +19,7 @@ public interface DocumentService {
     List<DocumentVersionResponse> listVersions(String slug);
     DocumentResponse restoreVersion(String slug, Integer versionNo);
     DocumentVersionDiffResponse diffVersions(String slug, Integer fromVersion, Integer toVersion);
+    List<CommentResponse> listComments(String slug);
+    CommentResponse addComment(String slug, CommentCreateRequest request);
+    void deleteComment(String slug, Long commentId);
 }

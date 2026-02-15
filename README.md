@@ -15,6 +15,8 @@
 - 文档版本对比（Diff）
 - 父子页面层级（`parentSlug`）
 - 文档标签（`labels`）
+- 页面状态（草稿 / 已发布）
+- 页面评论（按页面保存）
 - 全文搜索（标题/摘要/正文）
 
 ## 项目结构
@@ -34,7 +36,7 @@
 ## 一键私有化部署（推荐）
 
 ```bash
-cd /Users/liupeng/Documents/Ghost-Author
+cd Ghost-Author
 docker compose up -d --build
 ```
 
@@ -96,14 +98,14 @@ docker run -d --name elasticsearch \
 ### 2) 启动后端
 
 ```bash
-cd /Users/liupeng/Documents/Ghost-Author/backend
+cd backend
 mvn spring-boot:run
 ```
 
 ### 3) 启动前端
 
 ```bash
-cd /Users/liupeng/Documents/Ghost-Author/frontend
+cd frontend
 npm install
 npm run dev
 ```
@@ -131,7 +133,19 @@ curl -X POST http://localhost:8080/api/documents \
     "summary":"Spring Boot 快速入门",
     "content":"# Spring Guide\\n\\nHello",
     "parentSlug":null,
-    "labels":["spring","backend"]
+    "labels":["spring","backend"],
+    "status":"DRAFT"
+  }'
+```
+
+### 页面评论
+
+```bash
+curl -X POST http://localhost:8080/api/documents/spring-guide/comments \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "author":"liupeng",
+    "content":"这篇文档很清晰，继续补充部署细节"
   }'
 ```
 

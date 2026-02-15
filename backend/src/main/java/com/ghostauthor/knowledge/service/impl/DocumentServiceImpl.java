@@ -5,8 +5,13 @@ import com.ghostauthor.knowledge.dto.DocumentResponse;
 import com.ghostauthor.knowledge.dto.DocumentUpdateRequest;
 import com.ghostauthor.knowledge.dto.DocumentVersionDiffResponse;
 import com.ghostauthor.knowledge.dto.DocumentVersionResponse;
+import com.ghostauthor.knowledge.dto.CommentCreateRequest;
+import com.ghostauthor.knowledge.dto.CommentResponse;
+import com.ghostauthor.knowledge.entity.DocumentCommentEntity;
 import com.ghostauthor.knowledge.entity.DocumentEntity;
+import com.ghostauthor.knowledge.entity.DocumentStatus;
 import com.ghostauthor.knowledge.entity.DocumentVersionEntity;
+import com.ghostauthor.knowledge.repository.DocumentCommentRepository;
 import com.ghostauthor.knowledge.repository.DocumentRepository;
 import com.ghostauthor.knowledge.repository.DocumentVersionRepository;
 import com.ghostauthor.knowledge.service.DocumentService;
@@ -29,15 +34,18 @@ import java.util.stream.Collectors;
 public class DocumentServiceImpl implements DocumentService {
 
     private final DocumentRepository documentRepository;
+    private final DocumentCommentRepository documentCommentRepository;
     private final DocumentVersionRepository documentVersionRepository;
     private final FileStorageService fileStorageService;
     private final SearchService searchService;
 
     public DocumentServiceImpl(DocumentRepository documentRepository,
+                               DocumentCommentRepository documentCommentRepository,
                                DocumentVersionRepository documentVersionRepository,
                                FileStorageService fileStorageService,
                                SearchService searchService) {
         this.documentRepository = documentRepository;
+        this.documentCommentRepository = documentCommentRepository;
         this.documentVersionRepository = documentVersionRepository;
         this.fileStorageService = fileStorageService;
         this.searchService = searchService;
@@ -58,6 +66,7 @@ public class DocumentServiceImpl implements DocumentService {
         entity.setSummary(request.summary());
         entity.setParentSlug(normalizeParentSlug(request.slug(), request.parentSlug()));
         entity.setLabels(joinLabels(request.labels()));
+        entity.setStatus(request.status() == null ? DocumentStatus.DRAFT : request.status());
         entity.setFilePath(filePath);
 
         DocumentEntity saved = documentRepository.save(entity);
@@ -78,6 +87,9 @@ public class DocumentServiceImpl implements DocumentService {
         entity.setSummary(request.summary());
         entity.setParentSlug(normalizeParentSlug(slug, request.parentSlug()));
         entity.setLabels(joinLabels(request.labels()));
+        if (request.status() != null) {
+            entity.setStatus(request.status());
+        }
 
         DocumentEntity saved = documentRepository.save(entity);
         saveVersion(saved.getId(), saved.getTitle(), saved.getSummary(), request.content());
@@ -110,6 +122,7 @@ public class DocumentServiceImpl implements DocumentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
 
         fileStorageService.deleteMarkdown(entity.getFilePath());
+        documentCommentRepository.deleteByDocumentId(entity.getId());
         documentRepository.delete(entity);
         searchService.removeDocument(entity.getId());
     }
@@ -171,6 +184,44 @@ public class DocumentServiceImpl implements DocumentService {
         return new DocumentVersionDiffResponse(fromVersion, toVersion, String.join("\n", unified));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<CommentResponse> listComments(String slug) {
+        DocumentEntity entity = documentRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+
+        return documentCommentRepository.findByDocumentIdOrderByCreatedAtAsc(entity.getId()).stream()
+                .map(this::toCommentResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public CommentResponse addComment(String slug, CommentCreateRequest request) {
+        DocumentEntity entity = documentRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+
+        DocumentCommentEntity comment = new DocumentCommentEntity();
+        comment.setDocumentId(entity.getId());
+        comment.setAuthor(StringUtils.hasText(request.author()) ? request.author().trim() : "Anonymous");
+        comment.setContent(request.content().trim());
+        return toCommentResponse(documentCommentRepository.save(comment));
+    }
+
+    @Override
+    @Transactional
+    public void deleteComment(String slug, Long commentId) {
+        DocumentEntity entity = documentRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+
+        DocumentCommentEntity comment = documentCommentRepository.findById(commentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found"));
+        if (!comment.getDocumentId().equals(entity.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Comment does not belong to the document");
+        }
+        documentCommentRepository.delete(comment);
+    }
+
     private DocumentResponse toResponse(DocumentEntity entity, String content) {
         return new DocumentResponse(
                 entity.getId(),
@@ -180,6 +231,7 @@ public class DocumentServiceImpl implements DocumentService {
                 content,
                 entity.getParentSlug(),
                 splitLabels(entity.getLabels()),
+                entity.getStatus() == null ? DocumentStatus.DRAFT : entity.getStatus(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
@@ -243,5 +295,14 @@ public class DocumentServiceImpl implements DocumentService {
                 .map(String::trim)
                 .filter(StringUtils::hasText)
                 .toList();
+    }
+
+    private CommentResponse toCommentResponse(DocumentCommentEntity comment) {
+        return new CommentResponse(
+                comment.getId(),
+                comment.getAuthor(),
+                comment.getContent(),
+                comment.getCreatedAt()
+        );
     }
 }

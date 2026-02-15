@@ -5,6 +5,8 @@ import com.ghostauthor.knowledge.dto.DocumentResponse;
 import com.ghostauthor.knowledge.dto.DocumentUpdateRequest;
 import com.ghostauthor.knowledge.dto.DocumentVersionDiffResponse;
 import com.ghostauthor.knowledge.dto.DocumentVersionResponse;
+import com.ghostauthor.knowledge.dto.CommentCreateRequest;
+import com.ghostauthor.knowledge.dto.CommentResponse;
 import com.ghostauthor.knowledge.service.DocumentService;
 import com.ghostauthor.knowledge.service.SearchService;
 import jakarta.validation.Valid;
@@ -67,6 +69,23 @@ public class DocumentController {
                                                     @RequestParam("from") Integer fromVersion,
                                                     @RequestParam("to") Integer toVersion) {
         return documentService.diffVersions(slug, fromVersion, toVersion);
+    }
+
+    @GetMapping("/{slug}/comments")
+    public List<CommentResponse> listComments(@PathVariable String slug) {
+        return documentService.listComments(slug);
+    }
+
+    @PostMapping("/{slug}/comments")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CommentResponse addComment(@PathVariable String slug, @Valid @RequestBody CommentCreateRequest request) {
+        return documentService.addComment(slug, request);
+    }
+
+    @DeleteMapping("/{slug}/comments/{commentId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteComment(@PathVariable String slug, @PathVariable Long commentId) {
+        documentService.deleteComment(slug, commentId);
     }
 
     @GetMapping("/search")
