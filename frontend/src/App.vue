@@ -158,6 +158,35 @@
         </div>
       </div>
     </div>
+
+    <div v-if="bulkResult.open" class="confirm-overlay" @click.self="bulkResult.open = false">
+      <div class="confirm-panel bulk-result-panel">
+        <h4>批量操作结果</h4>
+        <p>{{ bulkResult.actionLabel }}：成功 {{ bulkResult.updated.length }}，跳过 {{ bulkResult.skipped.length }}</p>
+        <div class="bulk-result-columns">
+          <div>
+            <h5>成功</h5>
+            <ul class="bulk-result-list">
+              <li v-for="item in bulkResult.updated" :key="`ok-${item}`">{{ item }}</li>
+              <li v-if="bulkResult.updated.length === 0" class="bulk-result-empty">无</li>
+            </ul>
+          </div>
+          <div>
+            <h5>跳过</h5>
+            <ul class="bulk-result-list">
+              <li v-for="item in bulkResult.skipped" :key="`skip-${item.slug}`">
+                <strong>{{ item.slug }}</strong>
+                <span>{{ item.reason }}</span>
+              </li>
+              <li v-if="bulkResult.skipped.length === 0" class="bulk-result-empty">无</li>
+            </ul>
+          </div>
+        </div>
+        <div class="confirm-actions">
+          <button @click="bulkResult.open = false">我知道了</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -204,6 +233,12 @@ const promptDialog = ref({
   cancelText: '取消'
 })
 const promptInputRef = ref(null)
+const bulkResult = ref({
+  open: false,
+  actionLabel: '',
+  updated: [],
+  skipped: []
+})
 const diffFrom = ref(null)
 const diffTo = ref(null)
 const diffText = ref('')
@@ -439,6 +474,15 @@ function firstAccessibleSlug(slugs) {
     }
   }
   return ''
+}
+
+function showBulkResult(actionLabel, updated, skipped) {
+  bulkResult.value = {
+    open: true,
+    actionLabel,
+    updated: updated.slice(0, 80),
+    skipped: skipped.slice(0, 80)
+  }
 }
 
 function emptyDoc() {
@@ -984,17 +1028,30 @@ async function handleDocBulkAction(payload) {
     let updated = 0
     let skipped = 0
     const updatedSlugs = []
+    const skippedItems = []
     for (const slug of slugs) {
       const target = docs.value.find((d) => d.slug === slug)
       if (!target || !canEditDoc(target)) {
         skipped += 1
+        skippedItems.push({
+          slug,
+          reason: target ? '无编辑权限' : '页面不存在'
+        })
         continue
       }
-      await api.patch(`/documents/${slug}/move`, {
-        parentSlug: null
-      })
-      updated += 1
-      updatedSlugs.push(slug)
+      try {
+        await api.patch(`/documents/${slug}/move`, {
+          parentSlug: null
+        })
+        updated += 1
+        updatedSlugs.push(slug)
+      } catch {
+        skipped += 1
+        skippedItems.push({
+          slug,
+          reason: '请求失败'
+        })
+      }
     }
     await fetchDocs()
     if (activeSlug.value && slugs.includes(activeSlug.value)) {
@@ -1006,6 +1063,7 @@ async function handleDocBulkAction(payload) {
       }
     }
     showToast(`批量移到顶级完成：成功 ${updated}，跳过 ${skipped}`, updated > 0 ? 'success' : 'info')
+    showBulkResult('批量移到顶级', updatedSlugs, skippedItems)
     docListRef.value?.clearBatchSelection()
     return
   }
@@ -1022,31 +1080,44 @@ async function handleDocBulkAction(payload) {
   let updated = 0
   let skipped = 0
   const updatedSlugs = []
+  const skippedItems = []
   for (const slug of slugs) {
     const target = docs.value.find((d) => d.slug === slug)
     if (!target || !canEditDoc(target)) {
       skipped += 1
+      skippedItems.push({
+        slug,
+        reason: target ? '无编辑权限' : '页面不存在'
+      })
       continue
     }
-    const { data } = await api.get(`/documents/${slug}`)
-    await api.put(`/documents/${slug}`, {
-      title: data.title,
-      summary: data.summary,
-      content: data.content,
-      parentSlug: data.parentSlug || null,
-      labels: data.labels || [],
-      owner: data.owner || null,
-      editors: data.editors || [],
-      viewers: data.viewers || [],
-      priority: data.priority || 'MEDIUM',
-      dueDate: data.dueDate || null,
-      assignee: data.assignee || null,
-      status: nextStatus,
-      visibility: data.visibility || 'SPACE',
-      locked: !!data.locked
-    })
-    updated += 1
-    updatedSlugs.push(slug)
+    try {
+      const { data } = await api.get(`/documents/${slug}`)
+      await api.put(`/documents/${slug}`, {
+        title: data.title,
+        summary: data.summary,
+        content: data.content,
+        parentSlug: data.parentSlug || null,
+        labels: data.labels || [],
+        owner: data.owner || null,
+        editors: data.editors || [],
+        viewers: data.viewers || [],
+        priority: data.priority || 'MEDIUM',
+        dueDate: data.dueDate || null,
+        assignee: data.assignee || null,
+        status: nextStatus,
+        visibility: data.visibility || 'SPACE',
+        locked: !!data.locked
+      })
+      updated += 1
+      updatedSlugs.push(slug)
+    } catch {
+      skipped += 1
+      skippedItems.push({
+        slug,
+        reason: '请求失败'
+      })
+    }
   }
 
   await fetchDocs()
@@ -1059,6 +1130,7 @@ async function handleDocBulkAction(payload) {
     }
   }
   showToast(`批量操作完成：成功 ${updated}，跳过 ${skipped}`, updated > 0 ? 'success' : 'info')
+  showBulkResult(nextStatus === 'ARCHIVED' ? '批量归档' : '批量恢复草稿', updatedSlugs, skippedItems)
   docListRef.value?.clearBatchSelection()
 }
 
