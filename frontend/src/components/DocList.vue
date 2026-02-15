@@ -237,7 +237,38 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+
+const QUICK_PANEL_KEY = 'ga-sidebar-quick-panels'
+
+function loadQuickPanelsState() {
+  if (typeof window === 'undefined') {
+    return { favorites: true, recent: true }
+  }
+  try {
+    const raw = window.localStorage.getItem(QUICK_PANEL_KEY)
+    if (!raw) {
+      return { favorites: true, recent: true }
+    }
+    const parsed = JSON.parse(raw)
+    return {
+      favorites: parsed.favorites !== false,
+      recent: parsed.recent !== false
+    }
+  } catch {
+    return { favorites: true, recent: true }
+  }
+}
+
+function persistQuickPanelsState(favoritesOpen, recentOpen) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(QUICK_PANEL_KEY, JSON.stringify({
+    favorites: favoritesOpen,
+    recent: recentOpen
+  }))
+}
 
 const keyword = ref('')
 const opened = ref({})
@@ -247,8 +278,9 @@ const priorityFilter = ref('ALL')
 const assigneeFilter = ref('')
 const dueFilter = ref('ALL')
 const myTodoMode = ref(false)
-const quickOpenFavorites = ref(true)
-const quickOpenRecent = ref(true)
+const quickPanelsState = loadQuickPanelsState()
+const quickOpenFavorites = ref(quickPanelsState.favorites)
+const quickOpenRecent = ref(quickPanelsState.recent)
 const draggingSlug = ref('')
 const dropTargetSlug = ref('')
 const dropTargetRoot = ref(false)
@@ -277,6 +309,10 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['search', 'toggle-favorite', 'move', 'reorder'])
+
+watch([quickOpenFavorites, quickOpenRecent], ([favoritesOpen, recentOpen]) => {
+  persistQuickPanelsState(favoritesOpen, recentOpen)
+})
 
 const statusFilteredDocs = computed(() => {
   if (statusFilter.value === 'ALL') {
