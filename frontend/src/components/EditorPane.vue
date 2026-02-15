@@ -64,103 +64,125 @@
         </ul>
       </div>
 
-      <div class="meta-grid">
-        <label>
-          Slug
-          <input v-model="model.slug" :disabled="!isCreateMode || !isEditingSafe" />
-        </label>
-        <label>
-          标题
-          <input v-model="model.title" :disabled="!isEditingSafe" />
-        </label>
+      <div class="meta-section">
+        <button class="panel-fold-head section-fold-head" @click="basicMetaOpen = !basicMetaOpen">
+          <strong>基础信息</strong>
+          <span>{{ basicMetaOpen ? '收起 ▾' : '展开 ▸' }}</span>
+        </button>
+        <div v-show="basicMetaOpen">
+          <div class="meta-grid">
+            <label>
+              Slug
+              <input v-model="model.slug" :disabled="!isCreateMode || !isEditingSafe" />
+            </label>
+            <label>
+              标题
+              <input v-model="model.title" :disabled="!isEditingSafe" />
+            </label>
+          </div>
+
+          <div class="meta-grid">
+            <label>
+              父页面 Slug
+              <input v-model="model.parentSlug" :disabled="!isEditingSafe" placeholder="例如：product-guide（可选）" />
+            </label>
+            <label>
+              页面状态
+              <select v-model="model.status" :disabled="!isEditingSafe">
+                <option value="DRAFT">草稿</option>
+                <option value="PUBLISHED">已发布</option>
+                <option value="ARCHIVED">已归档</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="meta-grid">
+            <label>
+              可见性
+              <select v-model="model.visibility" :disabled="!isEditingSafe">
+                <option value="SPACE">空间可见</option>
+                <option value="PRIVATE">仅自己</option>
+              </select>
+            </label>
+            <label>
+              页面锁定
+              <select v-model="model.locked" :disabled="!isEditingSafe">
+                <option :value="false">未锁定</option>
+                <option :value="true">锁定（只读）</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="meta-grid">
+            <label>
+              标签（逗号分隔）
+              <input v-model="labelsText" :disabled="!isEditingSafe" placeholder="产品, 入门, SOP" />
+            </label>
+            <label>
+              摘要
+              <input v-model="model.summary" :disabled="!isEditingSafe" />
+            </label>
+          </div>
+        </div>
       </div>
 
-      <div class="meta-grid">
-        <label>
-          父页面 Slug
-          <input v-model="model.parentSlug" :disabled="!isEditingSafe" placeholder="例如：product-guide（可选）" />
-        </label>
-        <label>
-          页面状态
-          <select v-model="model.status" :disabled="!isEditingSafe">
-            <option value="DRAFT">草稿</option>
-            <option value="PUBLISHED">已发布</option>
-            <option value="ARCHIVED">已归档</option>
-          </select>
-        </label>
+      <div class="meta-section">
+        <button class="panel-fold-head section-fold-head" @click="permissionMetaOpen = !permissionMetaOpen">
+          <strong>权限设置</strong>
+          <span>{{ permissionMetaOpen ? '收起 ▾' : '展开 ▸' }}</span>
+        </button>
+        <div v-show="permissionMetaOpen">
+          <div class="meta-grid">
+            <label>
+              Owner
+              <input v-model="model.owner" :disabled="!isEditingSafe" placeholder="例如：liupeng" />
+            </label>
+            <label>
+              Editors（逗号分隔）
+              <input v-model="editorsText" :disabled="!isEditingSafe" placeholder="alice, bob" />
+            </label>
+          </div>
+
+          <div class="meta-grid">
+            <label>
+              Viewers（逗号分隔）
+              <input v-model="viewersText" :disabled="!isEditingSafe" placeholder="carol, david" />
+            </label>
+            <div />
+          </div>
+        </div>
       </div>
 
-      <div class="meta-grid">
-        <label>
-          可见性
-          <select v-model="model.visibility" :disabled="!isEditingSafe">
-            <option value="SPACE">空间可见</option>
-            <option value="PRIVATE">仅自己</option>
-          </select>
-        </label>
-        <label>
-          页面锁定
-          <select v-model="model.locked" :disabled="!isEditingSafe">
-            <option :value="false">未锁定</option>
-            <option :value="true">锁定（只读）</option>
-          </select>
-        </label>
-      </div>
+      <div class="meta-section">
+        <button class="panel-fold-head section-fold-head" @click="taskMetaOpen = !taskMetaOpen">
+          <strong>任务属性</strong>
+          <span>{{ taskMetaOpen ? '收起 ▾' : '展开 ▸' }}</span>
+        </button>
+        <div v-show="taskMetaOpen">
+          <div class="meta-grid">
+            <label>
+              优先级
+              <select v-model="model.priority" :disabled="!isEditingSafe">
+                <option value="LOW">低</option>
+                <option value="MEDIUM">中</option>
+                <option value="HIGH">高</option>
+              </select>
+            </label>
+            <label>
+              截止日期
+              <input type="date" v-model="model.dueDate" :disabled="!isEditingSafe" />
+            </label>
+          </div>
 
-      <div class="meta-grid">
-        <label>
-          标签（逗号分隔）
-          <input v-model="labelsText" :disabled="!isEditingSafe" placeholder="产品, 入门, SOP" />
-        </label>
-        <div />
+          <div class="meta-grid">
+            <label>
+              负责人
+              <input v-model="model.assignee" :disabled="!isEditingSafe" placeholder="例如：liupeng" />
+            </label>
+            <div />
+          </div>
+        </div>
       </div>
-
-      <div class="meta-grid">
-        <label>
-          Owner
-          <input v-model="model.owner" :disabled="!isEditingSafe" placeholder="例如：liupeng" />
-        </label>
-        <label>
-          Editors（逗号分隔）
-          <input v-model="editorsText" :disabled="!isEditingSafe" placeholder="alice, bob" />
-        </label>
-      </div>
-
-      <div class="meta-grid">
-        <label>
-          Viewers（逗号分隔）
-          <input v-model="viewersText" :disabled="!isEditingSafe" placeholder="carol, david" />
-        </label>
-        <div />
-      </div>
-
-      <div class="meta-grid">
-        <label>
-          优先级
-          <select v-model="model.priority" :disabled="!isEditingSafe">
-            <option value="LOW">低</option>
-            <option value="MEDIUM">中</option>
-            <option value="HIGH">高</option>
-          </select>
-        </label>
-        <label>
-          截止日期
-          <input type="date" v-model="model.dueDate" :disabled="!isEditingSafe" />
-        </label>
-      </div>
-
-      <div class="meta-grid">
-        <label>
-          负责人
-          <input v-model="model.assignee" :disabled="!isEditingSafe" placeholder="例如：liupeng" />
-        </label>
-        <div />
-      </div>
-
-      <label>
-        摘要
-        <input v-model="model.summary" :disabled="!isEditingSafe" />
-      </label>
 
       <MdEditor v-model="model.content" :toolbars="toolbars" />
     </template>
@@ -397,6 +419,9 @@ const actionMenuOpen = ref(false)
 const actionMenuRef = ref(null)
 const attachmentsOpen = ref(true)
 const commentsOpen = ref(true)
+const basicMetaOpen = ref(true)
+const permissionMetaOpen = ref(true)
+const taskMetaOpen = ref(true)
 const newTemplate = ref({
   name: '',
   description: '',

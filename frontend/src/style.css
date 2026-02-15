@@ -1103,6 +1103,14 @@ li p {
   gap: 10px;
 }
 
+.meta-section {
+  border: 1px solid #d8e3fb;
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
 .template-bar {
   display: flex;
   gap: 8px;
