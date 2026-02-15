@@ -44,6 +44,9 @@
         :stats="homeStats"
         :recent-docs="homeRecentDocs"
         :favorite-docs="homeFavoriteDocs"
+        :overdue-docs="homeOverdueDocs"
+        :today-docs="homeTodayDueDocs"
+        :assignee-board="homeAssigneeBoard"
         @create="createNewDoc"
         @select="loadDoc"
       />
@@ -187,6 +190,41 @@ const homeRecentDocs = computed(() => {
 const homeFavoriteDocs = computed(() => {
   const bySlug = new Map(visibleDocs.value.map((d) => [d.slug, d]))
   return favorites.value.map((slug) => bySlug.get(slug)).filter(Boolean).slice(0, 8)
+})
+const homeOverdueDocs = computed(() => {
+  const today = new Date().toISOString().slice(0, 10)
+  return visibleDocs.value
+    .filter((doc) => !!doc.dueDate && doc.dueDate < today && (doc.status || 'DRAFT') !== 'ARCHIVED')
+    .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''))
+    .slice(0, 8)
+})
+const homeTodayDueDocs = computed(() => {
+  const today = new Date().toISOString().slice(0, 10)
+  return visibleDocs.value
+    .filter((doc) => doc.dueDate === today && (doc.status || 'DRAFT') !== 'ARCHIVED')
+    .sort((a, b) => (a.priority || 'MEDIUM').localeCompare(b.priority || 'MEDIUM'))
+    .slice(0, 8)
+})
+const homeAssigneeBoard = computed(() => {
+  const board = new Map()
+  visibleDocs.value.forEach((doc) => {
+    const assignee = (doc.assignee || '未分配').trim() || '未分配'
+    if (!board.has(assignee)) {
+      board.set(assignee, { assignee, total: 0, overdue: 0, today: 0 })
+    }
+    const item = board.get(assignee)
+    item.total += 1
+    const today = new Date().toISOString().slice(0, 10)
+    if (doc.dueDate && doc.dueDate < today && (doc.status || 'DRAFT') !== 'ARCHIVED') {
+      item.overdue += 1
+    }
+    if (doc.dueDate && doc.dueDate === today && (doc.status || 'DRAFT') !== 'ARCHIVED') {
+      item.today += 1
+    }
+  })
+  return Array.from(board.values())
+    .sort((a, b) => b.overdue - a.overdue || b.today - a.today || b.total - a.total)
+    .slice(0, 10)
 })
 const commandResults = computed(() => {
   const q = commandQuery.value.trim().toLowerCase()

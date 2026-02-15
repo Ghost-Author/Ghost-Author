@@ -1312,6 +1312,20 @@ button.small {
   padding: 10px;
 }
 
+.home-card.overdue {
+  border-color: #ffd2d2;
+  background: #fff8f8;
+}
+
+.home-card.today {
+  border-color: #ffe0bb;
+  background: #fffaf1;
+}
+
+.home-card.assignee {
+  margin-top: 2px;
+}
+
 .home-card h3 {
   margin: 0 0 8px;
   font-size: 14px;
