@@ -296,10 +296,16 @@
                   class="outline-context-menu"
                   :style="{ left: `${outlineMenu.x}px`, top: `${outlineMenu.y}px` }"
                 >
-                  <button class="outline-context-item" @click="copyOutlineText">复制标题文本</button>
-                  <button class="outline-context-item" @click="copyOutlineLink">复制标题链接</button>
-                  <button class="outline-context-item" @click="filterOutlineByLevel">仅看同级标题</button>
-                  <button class="outline-context-item" @click="clearOutlineLevelFilter">显示全部标题</button>
+                  <button
+                    v-for="(action, idx) in outlineMenuActions"
+                    :key="action.key"
+                    class="outline-context-item"
+                    :class="{ active: outlineMenu.activeIndex === idx }"
+                    @mouseenter="outlineMenu.activeIndex = idx"
+                    @click="selectOutlineMenuAction(action.key)"
+                  >
+                    {{ action.label }}
+                  </button>
                 </div>
               </template>
 
@@ -582,7 +588,8 @@ const outlineMenu = ref({
   open: false,
   x: 0,
   y: 0,
-  item: null
+  item: null,
+  activeIndex: 0
 })
 const READ_PANEL_DOCK_KEY = 'ga-read-panel-dock'
 const CHILD_OPEN_KEY = 'ga-read-child-open-state'
@@ -594,6 +601,12 @@ const readWidthModes = [
   { key: 'compact', label: '紧凑' },
   { key: 'standard', label: '标准' },
   { key: 'comfortable', label: '舒适' }
+]
+const outlineMenuActions = [
+  { key: 'copy-text', label: '复制标题文本' },
+  { key: 'copy-link', label: '复制标题链接' },
+  { key: 'filter-level', label: '仅看同级标题' },
+  { key: 'clear-level', label: '显示全部标题' }
 ]
 
 const activeOutlineIndex = computed(() => {
@@ -715,7 +728,7 @@ watch(
     readPermOpen.value = false
     readChildrenOpen.value = true
     readOutlineLevelFilter.value = null
-    outlineMenu.value = { open: false, x: 0, y: 0, item: null }
+    outlineMenu.value = { open: false, x: 0, y: 0, item: null, activeIndex: 0 }
     childQuery.value = ''
     childOpenMap.value = loadChildOpenState(id)
   },
@@ -769,7 +782,7 @@ watch([isCreateMode, isEditingSafe], async ([createMode, editable]) => {
 }, { immediate: true })
 
 function onGlobalClick(event) {
-  outlineMenu.value.open = false
+  closeOutlineMenu()
   if (!actionMenuRef.value) {
     return
   }
@@ -1009,6 +1022,10 @@ function onGlobalKeydown(event) {
   if (event.defaultPrevented) {
     return
   }
+  if (outlineMenu.value.open) {
+    handleOutlineMenuKeydown(event)
+    return
+  }
   if (isCreateMode.value || isEditingSafe.value) {
     return
   }
@@ -1206,7 +1223,8 @@ function openOutlineMenu(event, item) {
     open: true,
     x: event.clientX,
     y: event.clientY,
-    item
+    item,
+    activeIndex: 0
   }
 }
 
@@ -1264,7 +1282,7 @@ async function copyOutlineText() {
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
   } finally {
-    outlineMenu.value.open = false
+    closeOutlineMenu()
   }
 }
 
@@ -1284,19 +1302,19 @@ async function copyOutlineLink() {
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
   } finally {
-    outlineMenu.value.open = false
+    closeOutlineMenu()
   }
 }
 
 function filterOutlineByLevel() {
   const item = outlineMenu.value.item
   readOutlineLevelFilter.value = item?.level || null
-  outlineMenu.value.open = false
+  closeOutlineMenu()
 }
 
 function clearOutlineLevelFilter() {
   readOutlineLevelFilter.value = null
-  outlineMenu.value.open = false
+  closeOutlineMenu()
 }
 
 function findHeadingIdByText(text) {
@@ -1315,6 +1333,61 @@ function headingSlug(text) {
     .trim()
     .replace(/[^\w\u4e00-\u9fa5\s-]/g, '')
     .replace(/\s+/g, '-')
+}
+
+function closeOutlineMenu() {
+  outlineMenu.value = {
+    ...outlineMenu.value,
+    open: false,
+    activeIndex: 0
+  }
+}
+
+function handleOutlineMenuKeydown(event) {
+  if (!['ArrowUp', 'ArrowDown', 'Enter', 'Escape'].includes(event.key)) {
+    return
+  }
+  event.preventDefault()
+  const total = outlineMenuActions.length
+  if (!total) {
+    return
+  }
+  if (event.key === 'Escape') {
+    closeOutlineMenu()
+    return
+  }
+  if (event.key === 'ArrowDown') {
+    outlineMenu.value.activeIndex = (outlineMenu.value.activeIndex + 1) % total
+    return
+  }
+  if (event.key === 'ArrowUp') {
+    outlineMenu.value.activeIndex = (outlineMenu.value.activeIndex - 1 + total) % total
+    return
+  }
+  if (event.key === 'Enter') {
+    const action = outlineMenuActions[outlineMenu.value.activeIndex]
+    if (action) {
+      selectOutlineMenuAction(action.key)
+    }
+  }
+}
+
+function selectOutlineMenuAction(actionKey) {
+  if (actionKey === 'copy-text') {
+    copyOutlineText()
+    return
+  }
+  if (actionKey === 'copy-link') {
+    copyOutlineLink()
+    return
+  }
+  if (actionKey === 'filter-level') {
+    filterOutlineByLevel()
+    return
+  }
+  if (actionKey === 'clear-level') {
+    clearOutlineLevelFilter()
+  }
 }
 
 watch(

@@ -2002,6 +2002,12 @@ button.small {
   color: #2f5ca8;
 }
 
+.outline-context-item.active {
+  border-color: #7ca6f6;
+  background: #e6f0ff;
+  color: #2b4f89;
+}
+
 .perm-tags {
   display: flex;
   gap: 6px;
