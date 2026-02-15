@@ -33,7 +33,8 @@
 ├── frontend
 │   ├── src
 │   ├── nginx.conf
-│   └── vercel.json
+│   └── Dockerfile
+├── railway.toml
 └── docker-compose.yml
 ```
 
@@ -50,62 +51,75 @@ docker compose up -d --build
 - 后端 API：[http://localhost:8080/api/documents](http://localhost:8080/api/documents)
 - Elasticsearch：[http://localhost:9200](http://localhost:9200)
 
-## 在 Vercel 部署（前端可直接部署）
+## 在 Railway 部署（推荐云部署方案）
 
-> 说明：Vercel 负责部署 `frontend`。`backend`（Spring Boot）建议继续用 Docker/云主机部署，然后把 API 地址配置给前端。
+建议在 Railway 建 2 个服务：
 
-### 1) 先部署后端（任一可公网访问环境）
+1. `backend`（Spring Boot）
+2. `frontend`（Vue + Nginx）
 
-例如继续使用你的服务器 Docker：
+可选第 3 个服务：`elasticsearch`（如需全文搜索）
 
-```bash
-docker compose up -d --build backend elasticsearch
-```
+仓库根目录提供了通用 `railway.toml`（Dockerfile 构建策略）。  
+在 Railway 控制台里，分别给两个服务设置不同 Root Directory 即可。
 
-确保后端可通过公网域名访问，例如：
+### 1) 部署 backend 服务
 
-- `https://api.your-domain.com/api`
+- New Service -> Deploy from GitHub Repo
+- Root Directory 设为：`backend`
+- Builder 使用：`Dockerfile`
+- Start Command 留空（使用镜像默认 `ENTRYPOINT`）
 
-并设置后端 CORS（环境变量）：
+建议为 backend 挂载 Volume：
 
-- `CORS_ALLOWED_ORIGIN=https://your-frontend.vercel.app`
+- 挂载路径：`/app/data`
+- 挂载路径：`/app/storage/docs`
 
-### 2) 在 Vercel 导入本仓库
+backend 环境变量建议：
 
-在 Vercel 新建项目时使用以下配置：
+- `SEARCH_ENABLED=false`（如果你暂时不部署 Elasticsearch）
+- `SEARCH_URIS=http://<your-es-host>:9200`（如果启用搜索）
+- `DOCS_BASE_DIR=/app/storage/docs`
+- `CORS_ALLOWED_ORIGIN=https://<your-frontend-domain>`
 
-- Framework Preset: `Vite`
-- Root Directory: `frontend`（推荐）
-- Build Command: `npm run build`
-- Output Directory: `dist`
+后端健康后会得到一个 Railway 域名，例如：
 
-> 如果你直接把仓库根目录作为 Root Directory，也可以。仓库根目录已提供 `vercel.json`，会自动进入 `frontend` 安装依赖并构建，再做 SPA 路由回退。
+- `https://ghost-backend-production.up.railway.app`
 
-### 3) 配置前端环境变量（Vercel Project Settings -> Environment Variables）
+### 2) 部署 frontend 服务
 
-- `VITE_API_BASE_URL=https://api.your-domain.com/api`
+- New Service -> Deploy from GitHub Repo
+- Root Directory 设为：`frontend`
+- Builder 使用：`Dockerfile`
+- Start Command 留空（使用 Nginx 默认启动）
 
-### 4) 重新部署
+前端环境变量（必须）：
 
-触发一次 Redeploy 后即可访问 Vercel 域名。
+- `VITE_API_BASE_URL=https://<your-backend-domain>/api`
 
-### 常见问题：`404: NOT_FOUND`
+说明：
 
-出现 `Code: NOT_FOUND` 时，通常是项目根目录或输出目录配置不匹配。按下面检查：
+- 前端构建期会读取 `VITE_API_BASE_URL`
+- 若未配置，前端会默认请求同域 `/api`
 
-1. Vercel Project Settings -> General -> Root Directory  
-`frontend`（推荐）或仓库根目录（已支持）
-2. Build & Output Settings  
-`Build Command = npm run build`，`Output Directory = dist`（当 Root Directory 为 `frontend`）
-3. 环境变量  
-确认 `VITE_API_BASE_URL` 已设置并重新部署
-4. 触发 Redeploy  
-配置修改后需要重新部署，旧部署仍可能返回 404
+### 3) （可选）部署 Elasticsearch 服务
 
-### 常见问题：页面白屏（HTML 能打开但无内容）
+如果你需要全文搜索，可额外创建 ES 服务，并将其地址填入 backend 的 `SEARCH_URIS`。
 
-通常是 SPA 重写规则把 `/assets/*.js` 也重写到了 `index.html`。  
-本仓库已使用 Vercel `routes` 配置（先 `handle: filesystem`，再回退到 `/index.html`）。如果你自定义过 `vercel.json`，请确认仍保留这一规则顺序。
+若不需要搜索，保持：
+
+- `SEARCH_ENABLED=false`
+
+### 4) Railway 上的常见问题
+
+1. 后端启动成功但外网 502/无法访问  
+确认后端监听端口使用了 `PORT`（本仓库已支持 `server.port=${PORT:8080}`）。
+
+2. 前端可打开但请求后端失败  
+检查 `VITE_API_BASE_URL` 是否带 `/api`，并在 frontend 服务重新部署。
+
+3. 出现 CORS 报错  
+把 backend 的 `CORS_ALLOWED_ORIGIN` 设为 frontend 实际域名（含 `https://`）。
 
 ## 本地开发
 
@@ -142,7 +156,7 @@ npm run dev
 - `SEARCH_ENABLED`：是否开启检索（`true/false`）
 - `DOCS_BASE_DIR`：Markdown 文档目录
 - `CORS_ALLOWED_ORIGIN`：前端跨域地址
-- `VITE_API_BASE_URL`：前端调用后端 API 基地址（Vercel 必配）
+- `VITE_API_BASE_URL`：前端调用后端 API 基地址（Railway 前端服务建议配置）
 
 ## API 示例
 
