@@ -75,6 +75,7 @@
           v-else
           :doc="currentDoc"
           :is-favorite="!!activeSlug && favorites.includes(activeSlug)"
+          :right-panel-open="rightPanelOpen"
           :prev-sibling-slug="siblingNav.prevSlug"
           :prev-sibling-title="siblingNav.prevTitle"
           :next-sibling-slug="siblingNav.nextSlug"
@@ -99,6 +100,7 @@
           @select-child="loadDoc"
           @open-parent="loadDoc"
           @open-sibling="loadDoc"
+          @toggle-right-panel="toggleRightPanel"
           @toggle-favorite="toggleFavorite"
           @toggle-share="toggleShare"
           @regenerate-share="regenerateShare"
