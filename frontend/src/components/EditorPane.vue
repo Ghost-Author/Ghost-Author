@@ -293,6 +293,7 @@
                 <div class="comment-empty" v-else-if="readOutlineOpen">没有可识别标题（# ## ###）</div>
                 <div
                   v-if="outlineMenu.open"
+                  ref="outlineMenuRef"
                   class="outline-context-menu"
                   :style="{ left: `${outlineMenu.x}px`, top: `${outlineMenu.y}px` }"
                 >
@@ -583,6 +584,7 @@ const readCardOrder = ref(loadReadCardOrder())
 const readCardCollapsed = ref(loadReadCardCollapsed())
 const readWidthMode = ref(loadReadWidthMode())
 const readCardRefs = ref({})
+const outlineMenuRef = ref(null)
 const childOpenMap = ref({})
 const outlineMenu = ref({
   open: false,
@@ -1226,6 +1228,9 @@ function openOutlineMenu(event, item) {
     item,
     activeIndex: 0
   }
+  nextTick(() => {
+    adjustOutlineMenuPosition()
+  })
 }
 
 function onReadScroll() {
@@ -1340,6 +1345,34 @@ function closeOutlineMenu() {
     ...outlineMenu.value,
     open: false,
     activeIndex: 0
+  }
+}
+
+function adjustOutlineMenuPosition() {
+  const menu = outlineMenuRef.value
+  if (!menu || typeof window === 'undefined') {
+    return
+  }
+  const rect = menu.getBoundingClientRect()
+  const margin = 8
+  let nextX = outlineMenu.value.x
+  let nextY = outlineMenu.value.y
+  const overflowRight = rect.right > window.innerWidth - margin
+  const overflowBottom = rect.bottom > window.innerHeight - margin
+  if (overflowRight) {
+    nextX = Math.max(margin, nextX - rect.width)
+  }
+  if (overflowBottom) {
+    nextY = Math.max(margin, nextY - rect.height)
+  }
+  nextX = Math.min(Math.max(margin, nextX), Math.max(margin, window.innerWidth - rect.width - margin))
+  nextY = Math.min(Math.max(margin, nextY), Math.max(margin, window.innerHeight - rect.height - margin))
+  if (nextX !== outlineMenu.value.x || nextY !== outlineMenu.value.y) {
+    outlineMenu.value = {
+      ...outlineMenu.value,
+      x: nextX,
+      y: nextY
+    }
   }
 }
 
