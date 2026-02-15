@@ -9,7 +9,7 @@
       </div>
       <div class="topbar-right">
         <input v-model="currentUser" class="user-input" placeholder="当前用户（如 liupeng）" />
-        <span class="shortcut-hint">⌘/Ctrl+K 搜索 · ⌘/Ctrl+S 保存 · Alt+1/2/3/4</span>
+        <span class="shortcut-hint">⌘/Ctrl+K 搜索 · ⌘/Ctrl+S 保存 · Alt+1/2/3/4/5/6</span>
         <button class="secondary tiny" @click="openHome">空间首页</button>
         <button class="secondary tiny" @click="toggleRightPanel">
           {{ rightPanelOpen ? '收起右栏' : '展开右栏' }}
@@ -1546,6 +1546,20 @@ function handleKeydown(event) {
   if (isToggleFocusMode) {
     event.preventDefault()
     toggleFocusMode()
+    return
+  }
+
+  const isCollapseSidebarPanels = event.altKey && !event.ctrlKey && !event.metaKey && event.key === '5'
+  if (isCollapseSidebarPanels) {
+    event.preventDefault()
+    docListRef.value?.collapseSidebarPanels()
+    return
+  }
+
+  const isExpandSidebarPanels = event.altKey && !event.ctrlKey && !event.metaKey && event.key === '6'
+  if (isExpandSidebarPanels) {
+    event.preventDefault()
+    docListRef.value?.expandSidebarPanels()
     return
   }
 

@@ -25,6 +25,8 @@
         <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_UNFAVORITE')">取消收藏</button>
         <button class="secondary tiny" @click="expandAll">展开</button>
         <button class="secondary tiny" @click="collapseAll">折叠</button>
+        <button class="secondary tiny" @click="expandSidebarPanels">展开导航</button>
+        <button class="secondary tiny" @click="collapseSidebarPanels">收起导航</button>
         <button class="secondary tiny" :class="{ active: compactMode }" @click="compactMode = !compactMode">
           {{ compactMode ? '舒适视图' : '紧凑视图' }}
         </button>
@@ -1272,6 +1274,20 @@ function collapseAll() {
   nodeOpened.value = next
 }
 
+function expandSidebarPanels() {
+  filtersOpen.value = true
+  quickOpenFavorites.value = true
+  quickOpenRecent.value = true
+  treeOpen.value = true
+}
+
+function collapseSidebarPanels() {
+  filtersOpen.value = false
+  quickOpenFavorites.value = false
+  quickOpenRecent.value = false
+  treeOpen.value = false
+}
+
 function onDragStart(slug) {
   draggingSlug.value = slug
 }
@@ -1338,6 +1354,8 @@ defineExpose({
   clearBatchSelection,
   expandAll,
   collapseAll,
+  expandSidebarPanels,
+  collapseSidebarPanels,
   toggleCompactMode
 })
 </script>
