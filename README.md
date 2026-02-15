@@ -75,7 +75,7 @@ docker compose up -d --build backend elasticsearch
 - Build Command: `npm run build`
 - Output Directory: `dist`
 
-> 如果你直接把仓库根目录作为 Root Directory，也可以。仓库根目录已提供 `vercel.json`，会自动构建 `frontend` 并做 SPA 路由回退。
+> 如果你直接把仓库根目录作为 Root Directory，也可以。仓库根目录已提供 `vercel.json`，会自动进入 `frontend` 安装依赖并构建，再做 SPA 路由回退。
 
 ### 3) 配置前端环境变量（Vercel Project Settings -> Environment Variables）
 
