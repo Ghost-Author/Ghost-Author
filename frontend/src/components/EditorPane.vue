@@ -190,6 +190,9 @@
       <div class="read-mode-head">
         <h3>{{ model.title || 'Untitled' }}</h3>
         <div class="read-mode-actions">
+          <button class="secondary small" @click="resetReadSidebarLayout">
+            恢复默认布局
+          </button>
           <button class="secondary small" @click="toggleReadDock">
             停靠{{ readPanelDock === 'right' ? '左侧' : '右侧' }}
           </button>
@@ -201,15 +204,24 @@
       <div class="read-layout" :class="{ 'panel-left': readPanelDock === 'left' }">
         <aside class="read-side-panel" v-if="readInfoOpen">
           <div class="read-side-stack">
-            <section v-for="card in visibleReadCards" :key="card.key" class="read-side-card">
+            <section
+              v-for="card in visibleReadCards"
+              :key="card.key"
+              class="read-side-card"
+              :class="{ collapsed: isReadCardCollapsed(card.key) }"
+            >
               <div class="read-card-tools">
                 <span class="read-card-title">{{ card.title }}</span>
                 <div class="read-card-order">
+                  <button class="secondary tiny" @click="toggleReadCardCollapsed(card.key)">
+                    {{ isReadCardCollapsed(card.key) ? '展开' : '折叠' }}
+                  </button>
                   <button class="secondary tiny" :disabled="!canMoveReadCard(card.key, -1)" @click="moveReadCard(card.key, -1)">↑</button>
                   <button class="secondary tiny" :disabled="!canMoveReadCard(card.key, 1)" @click="moveReadCard(card.key, 1)">↓</button>
                 </div>
               </div>
 
+              <div class="read-card-body" v-show="!isReadCardCollapsed(card.key)">
               <template v-if="card.key === 'overview'">
                 <div class="read-meta-row">
                   <div class="read-badges">
@@ -328,6 +340,7 @@
                   <div class="comment-empty" v-if="filteredChildTreeRows.length === 0">没有匹配的子页面</div>
                 </div>
               </template>
+              </div>
             </section>
           </div>
         </aside>
@@ -532,10 +545,12 @@ const activeOutlineText = ref('')
 const readInfoOpen = ref(false)
 const readPanelDock = ref('right')
 const readCardOrder = ref(loadReadCardOrder())
+const readCardCollapsed = ref(loadReadCardCollapsed())
 const childOpenMap = ref({})
 const READ_PANEL_DOCK_KEY = 'ga-read-panel-dock'
 const CHILD_OPEN_KEY = 'ga-read-child-open-state'
 const READ_CARD_ORDER_KEY = 'ga-read-card-order'
+const READ_CARD_COLLAPSED_KEY = 'ga-read-card-collapsed'
 let readScrollRaf = null
 
 const activeOutlineIndex = computed(() => {
@@ -684,6 +699,10 @@ watch(
 
 watch(readCardOrder, (order) => {
   persistReadCardOrder(order)
+}, { deep: true })
+
+watch(readCardCollapsed, (state) => {
+  persistReadCardCollapsed(state)
 }, { deep: true })
 
 watch([isCreateMode, isEditingSafe], async ([createMode, editable]) => {
@@ -894,6 +913,22 @@ function moveReadCard(cardKey, delta) {
   readCardOrder.value = next
 }
 
+function isReadCardCollapsed(cardKey) {
+  return readCardCollapsed.value[cardKey] === true
+}
+
+function toggleReadCardCollapsed(cardKey) {
+  readCardCollapsed.value = {
+    ...readCardCollapsed.value,
+    [cardKey]: !isReadCardCollapsed(cardKey)
+  }
+}
+
+function resetReadSidebarLayout() {
+  readCardOrder.value = normalizeReadCardOrder([])
+  readCardCollapsed.value = {}
+}
+
 function normalizeReadCardOrder(value) {
   const defaults = ['overview', 'outline', 'permission', 'children']
   const source = Array.isArray(value) ? value : []
@@ -932,6 +967,36 @@ function persistReadCardOrder(order) {
   }
   try {
     window.localStorage.setItem(READ_CARD_ORDER_KEY, JSON.stringify(normalizeReadCardOrder(order)))
+  } catch {
+    // ignore persistence failures
+  }
+}
+
+function loadReadCardCollapsed() {
+  if (typeof window === 'undefined') {
+    return {}
+  }
+  try {
+    const raw = window.localStorage.getItem(READ_CARD_COLLAPSED_KEY)
+    if (!raw) {
+      return {}
+    }
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') {
+      return {}
+    }
+    return parsed
+  } catch {
+    return {}
+  }
+}
+
+function persistReadCardCollapsed(state) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  try {
+    window.localStorage.setItem(READ_CARD_COLLAPSED_KEY, JSON.stringify(state || {}))
   } catch {
     // ignore persistence failures
   }

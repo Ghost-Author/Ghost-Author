@@ -1788,6 +1788,14 @@ button.small {
   gap: 4px;
 }
 
+.read-side-card.collapsed {
+  background: #f3f8ff;
+}
+
+.read-card-body {
+  min-width: 0;
+}
+
 .read-meta {
   padding: 0;
 }
