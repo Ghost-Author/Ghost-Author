@@ -1,0 +1,23 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/knowledge-db
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  elasticsearch:
+    uris: ${SEARCH_URIS:http://localhost:9200}
+
+knowledge:
+  storage:
+    base-dir: ${DOCS_BASE_DIR:data/docs}
+  search:
+    enabled: ${SEARCH_ENABLED:true}
+  cors:
+    allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:5173}
