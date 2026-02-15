@@ -294,6 +294,15 @@ body {
   color: #2c5398;
 }
 
+.batch-count {
+  font-size: 11px;
+  border: 1px solid #cfe0fb;
+  background: #f3f8ff;
+  color: #4b648f;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
 .header h2,
 .pane-head h2,
 .version-head h3 {
