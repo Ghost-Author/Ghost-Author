@@ -29,8 +29,9 @@
       </template>
     </div>
 
-    <div class="layout" :class="{ 'right-collapsed': !rightPanelOpen }">
+    <div class="layout" :class="{ 'right-collapsed': !rightPanelOpen }" :style="layoutStyle">
       <DocList
+        class="layout-doclist"
         ref="docListRef"
         :docs="visibleDocs"
         :active-slug="activeSlug"
@@ -46,50 +47,59 @@
         @quick-action="handleDocQuickAction"
         @bulk-action="handleDocBulkAction"
       />
+      <div
+        class="layout-splitter"
+        role="separator"
+        aria-label="调整左侧栏宽度"
+        @mousedown="startLeftResize"
+      ></div>
 
-      <SpaceHome
-        v-if="showHome"
-        :stats="homeStats"
-        :recent-docs="homeRecentDocs"
-        :favorite-docs="homeFavoriteDocs"
-        :overdue-docs="homeOverdueDocs"
-        :today-docs="homeTodayDueDocs"
-        :assignee-board="homeAssigneeBoard"
-        :my-todo-docs="myTodoDocs"
-        @create="createNewDoc"
-        @select="loadDoc"
-        @open-my-todo="openMyTodoView"
-      />
-      <EditorPane
-        v-else
-        :doc="currentDoc"
-        :outline="pageOutline"
-        :comments="comments"
-        :attachments="attachments"
-        :child-pages="childPages"
-        :current-user="currentUser"
-        :can-edit="currentCanEdit"
-        :share-link="currentShareLink"
-        :templates="templates"
-        @save="saveDoc"
-        @delete="deleteDoc"
-        @add-comment="addComment"
-        @delete-comment="deleteComment"
-        @upload-attachment="uploadAttachment"
-        @delete-attachment="deleteAttachment"
-        @insert-attachment="insertAttachment"
-        @create-child="createChildPage"
-        @select-child="loadDoc"
-        @toggle-share="toggleShare"
-        @regenerate-share="regenerateShare"
-        @create-template="createTemplate"
-        @update-template="updateTemplate"
-        @delete-template="deleteTemplate"
-        @notify="handleEditorNotify"
-      />
+      <div class="layout-main">
+        <SpaceHome
+          v-if="showHome"
+          :stats="homeStats"
+          :recent-docs="homeRecentDocs"
+          :favorite-docs="homeFavoriteDocs"
+          :overdue-docs="homeOverdueDocs"
+          :today-docs="homeTodayDueDocs"
+          :assignee-board="homeAssigneeBoard"
+          :my-todo-docs="myTodoDocs"
+          @create="createNewDoc"
+          @select="loadDoc"
+          @open-my-todo="openMyTodoView"
+        />
+        <EditorPane
+          v-else
+          :doc="currentDoc"
+          :outline="pageOutline"
+          :comments="comments"
+          :attachments="attachments"
+          :child-pages="childPages"
+          :current-user="currentUser"
+          :can-edit="currentCanEdit"
+          :share-link="currentShareLink"
+          :templates="templates"
+          @save="saveDoc"
+          @delete="deleteDoc"
+          @add-comment="addComment"
+          @delete-comment="deleteComment"
+          @upload-attachment="uploadAttachment"
+          @delete-attachment="deleteAttachment"
+          @insert-attachment="insertAttachment"
+          @create-child="createChildPage"
+          @select-child="loadDoc"
+          @toggle-share="toggleShare"
+          @regenerate-share="regenerateShare"
+          @create-template="createTemplate"
+          @update-template="updateTemplate"
+          @delete-template="deleteTemplate"
+          @notify="handleEditorNotify"
+        />
+      </div>
 
       <VersionHistory
         v-if="rightPanelOpen"
+        class="layout-version"
         :slug="activeSlug"
         :versions="versions"
         :outline="pageOutline"
@@ -251,6 +261,7 @@ const favorites = ref([])
 const recent = ref([])
 const currentUser = ref('admin')
 const rightPanelOpen = ref(loadRightPanelState())
+const leftPaneWidth = ref(loadLeftPaneWidth())
 const shareTokenFromUrl = ref('')
 let toastTimer = null
 let confirmResolver = null
@@ -411,11 +422,15 @@ const currentShareLink = computed(() => {
   }
   return `${window.location.origin}?page=${encodeURIComponent(activeSlug.value)}&token=${encodeURIComponent(currentDoc.value.shareToken)}`
 })
+const layoutStyle = computed(() => ({
+  '--left-col': `${leftPaneWidth.value}px`
+}))
 
 const FAVORITES_KEY = 'ga-favorites'
 const RECENT_KEY = 'ga-recent'
 const CURRENT_USER_KEY = 'ga-current-user'
 const RIGHT_PANEL_KEY = 'ga-right-panel-open'
+const LEFT_PANE_KEY = 'ga-left-pane-width'
 
 function loadRightPanelState() {
   if (typeof window === 'undefined') {
@@ -437,6 +452,62 @@ function persistRightPanelState(open) {
 
 function toggleRightPanel() {
   rightPanelOpen.value = !rightPanelOpen.value
+}
+
+function loadLeftPaneWidth() {
+  if (typeof window === 'undefined') {
+    return 320
+  }
+  const raw = Number(window.localStorage.getItem(LEFT_PANE_KEY) || '')
+  if (!Number.isFinite(raw) || raw <= 0) {
+    return 320
+  }
+  return Math.max(260, Math.min(460, Math.round(raw)))
+}
+
+function persistLeftPaneWidth(width) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(LEFT_PANE_KEY, String(width))
+}
+
+let resizingLeft = false
+let leftResizeStartX = 0
+let leftResizeStartWidth = 320
+
+function onLeftResizeMove(event) {
+  if (!resizingLeft) {
+    return
+  }
+  const delta = event.clientX - leftResizeStartX
+  const next = Math.max(260, Math.min(460, Math.round(leftResizeStartWidth + delta)))
+  leftPaneWidth.value = next
+}
+
+function stopLeftResize() {
+  if (!resizingLeft) {
+    return
+  }
+  resizingLeft = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  window.removeEventListener('mousemove', onLeftResizeMove)
+  window.removeEventListener('mouseup', stopLeftResize)
+}
+
+function startLeftResize(event) {
+  if (event.button !== 0) {
+    return
+  }
+  event.preventDefault()
+  resizingLeft = true
+  leftResizeStartX = event.clientX
+  leftResizeStartWidth = leftPaneWidth.value
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+  window.addEventListener('mousemove', onLeftResizeMove)
+  window.addEventListener('mouseup', stopLeftResize)
 }
 
 function showToast(message, type = 'info') {
@@ -1409,6 +1480,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
+  stopLeftResize()
   if (toastTimer) {
     clearTimeout(toastTimer)
   }
@@ -1446,6 +1518,10 @@ watch(currentUser, () => {
 
 watch(rightPanelOpen, (open) => {
   persistRightPanelState(open)
+})
+
+watch(leftPaneWidth, (width) => {
+  persistLeftPaneWidth(width)
 })
 
 function normalizeMembers(values) {

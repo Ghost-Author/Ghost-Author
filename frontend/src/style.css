@@ -180,7 +180,7 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: 320px 1fr 340px;
+  grid-template-columns: var(--left-col, 320px) 8px minmax(0, 1fr) 340px;
   gap: 14px;
   flex: 1;
   min-height: 0;
@@ -189,7 +189,54 @@ body {
 }
 
 .layout.right-collapsed {
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: var(--left-col, 320px) 8px minmax(0, 1fr);
+}
+
+.layout-doclist {
+  min-width: 0;
+}
+
+.layout-main {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-main > .space-home,
+.layout-main > .editor-pane {
+  flex: 1;
+}
+
+.layout-version {
+  min-width: 0;
+}
+
+.layout-splitter {
+  border: 1px solid #d5e3fc;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff, #f0f5ff);
+  cursor: col-resize;
+  align-self: stretch;
+  position: relative;
+  box-shadow: 0 4px 10px #1f4d9312;
+}
+
+.layout-splitter::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 26px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: #9fb8e8;
+}
+
+.layout-splitter:hover {
+  border-color: #9dbaf8;
+  background: linear-gradient(180deg, #f8fbff, #eaf2ff);
 }
 
 .doc-list,
@@ -2761,6 +2808,14 @@ button.small {
     grid-template-columns: 1fr;
     flex: initial;
     min-height: auto;
+  }
+
+  .layout.right-collapsed {
+    grid-template-columns: 1fr;
+  }
+
+  .layout-splitter {
+    display: none;
   }
 
   .doc-list,
