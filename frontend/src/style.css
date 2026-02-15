@@ -1160,19 +1160,49 @@ label {
 .actions {
   margin-top: 12px;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px dashed #d6e2fb;
+  padding-top: 10px;
 }
 
 .action-group {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
-.action-group + .action-group {
-  border-top: 1px dashed #d6e2fb;
-  padding-top: 8px;
+.action-group.more {
+  margin-left: auto;
+  position: relative;
+}
+
+.action-group.more .secondary.active {
+  border-color: #8db1f7;
+  background: #edf4ff;
+}
+
+.action-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 164px;
+  border: 1px solid #d5e2fb;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 18px #1f4d9322;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 8;
+}
+
+.action-menu button {
+  width: 100%;
+  justify-content: flex-start;
 }
 
 .version-history .hint {
@@ -1982,5 +2012,15 @@ button.small {
 
   .home-stats {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-group.more {
+    margin-left: 0;
+    align-self: flex-end;
   }
 }

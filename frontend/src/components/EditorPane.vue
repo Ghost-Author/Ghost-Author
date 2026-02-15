@@ -225,55 +225,45 @@
     <div class="actions">
       <div class="action-group primary">
         <button v-if="isEditingSafe" @click="$emit('save', model)">保存</button>
-        <button v-if="!isCreateMode" class="secondary" :disabled="!canEdit" @click="$emit('create-child')">新建子页面</button>
-      </div>
-      <div class="action-group status" v-if="!isCreateMode && isEditingSafe">
         <button
-          v-if="model.status !== 'ARCHIVED'"
+          v-if="!isCreateMode && isEditingSafe && model.status !== 'ARCHIVED'"
           class="secondary"
           @click="quickToggleStatus"
         >
-          {{ model.status === 'PUBLISHED' ? '转为草稿并保存' : '发布并保存' }}
+          {{ model.status === 'PUBLISHED' ? '转草稿并保存' : '发布并保存' }}
         </button>
         <button
-          v-if="model.status !== 'ARCHIVED'"
+          v-if="!isCreateMode && isEditingSafe && model.status !== 'ARCHIVED'"
           class="secondary"
           @click="setStatusAndSave('ARCHIVED')"
         >
-          归档页面
+          归档
         </button>
         <button
-          v-if="model.status === 'ARCHIVED'"
+          v-if="!isCreateMode && isEditingSafe && model.status === 'ARCHIVED'"
           class="secondary"
           @click="setStatusAndSave('DRAFT')"
         >
-          从归档恢复
+          恢复
         </button>
+        <button v-if="!isCreateMode" class="secondary" :disabled="!canEdit" @click="$emit('create-child')">新建子页面</button>
       </div>
-      <div class="action-group advanced" v-if="!isCreateMode">
-        <button
-          class="secondary"
-          :disabled="!canEdit"
-          @click="setLockedAndSave(!model.locked)"
-        >
-          {{ model.locked ? '解除锁定' : '锁定页面' }}
+      <div class="action-group more" v-if="!isCreateMode" ref="actionMenuRef">
+        <button class="secondary" :class="{ active: actionMenuOpen }" @click.stop="actionMenuOpen = !actionMenuOpen">
+          更多操作 {{ actionMenuOpen ? '▴' : '▾' }}
         </button>
-        <button
-          class="secondary"
-          :disabled="!canEdit"
-          @click="$emit('toggle-share', !model.shareEnabled)"
-        >
-          {{ model.shareEnabled ? '关闭分享' : '开启分享' }}
-        </button>
-        <button
-          v-if="model.shareEnabled"
-          class="secondary"
-          :disabled="!canEdit"
-          @click="$emit('regenerate-share')"
-        >
-          重置分享链接
-        </button>
-        <button class="danger" :disabled="isCreateMode || !canEdit" @click="$emit('delete', model.slug)">删除</button>
+        <div class="action-menu" v-if="actionMenuOpen" @click.stop>
+          <button class="secondary small" :disabled="!canEdit" @click="runMenuAction('toggle-lock')">
+            {{ model.locked ? '解除锁定' : '锁定页面' }}
+          </button>
+          <button class="secondary small" :disabled="!canEdit" @click="runMenuAction('toggle-share')">
+            {{ model.shareEnabled ? '关闭分享' : '开启分享' }}
+          </button>
+          <button v-if="model.shareEnabled" class="secondary small" :disabled="!canEdit" @click="runMenuAction('regen-share')">
+            重置分享链接
+          </button>
+          <button class="danger small" :disabled="isCreateMode || !canEdit" @click="runMenuAction('delete')">删除页面</button>
+        </div>
       </div>
     </div>
 
@@ -319,7 +309,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { MdEditor, MdPreview } from 'md-editor-v3'
 
 const props = defineProps({
@@ -393,6 +383,8 @@ const fileInput = ref(null)
 const selectedTemplate = ref('')
 const templateCenterOpen = ref(false)
 const editingTemplateId = ref(null)
+const actionMenuOpen = ref(false)
+const actionMenuRef = ref(null)
 const newTemplate = ref({
   name: '',
   description: '',
@@ -413,9 +405,31 @@ watch(
   (id) => {
     // Existing docs default to preview-only view; new docs default to edit.
     isEditing.value = !id
+    actionMenuOpen.value = false
   },
   { immediate: true }
 )
+
+function onGlobalClick(event) {
+  if (!actionMenuRef.value) {
+    return
+  }
+  if (!actionMenuRef.value.contains(event.target)) {
+    actionMenuOpen.value = false
+  }
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('click', onGlobalClick)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('click', onGlobalClick)
+  }
+})
 
 const labelsText = computed({
   get() {
@@ -497,6 +511,25 @@ function setLockedAndSave(nextLocked) {
 function setStatusAndSave(nextStatus) {
   model.value.status = nextStatus
   emit('save', model.value)
+}
+
+function runMenuAction(action) {
+  actionMenuOpen.value = false
+  if (action === 'toggle-lock') {
+    setLockedAndSave(!model.value.locked)
+    return
+  }
+  if (action === 'toggle-share') {
+    emit('toggle-share', !model.value.shareEnabled)
+    return
+  }
+  if (action === 'regen-share') {
+    emit('regenerate-share')
+    return
+  }
+  if (action === 'delete') {
+    emit('delete', model.value.slug)
+  }
 }
 
 function toggleEditMode() {
