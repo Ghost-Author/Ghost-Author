@@ -59,6 +59,7 @@
         @delete-attachment="deleteAttachment"
         @insert-attachment="insertAttachment"
         @create-child="createChildPage"
+        @select-child="loadDoc"
       />
 
       <VersionHistory
@@ -153,12 +154,15 @@ const childPages = computed(() => {
 })
 const homeStats = computed(() => {
   const published = docs.value.filter((d) => (d.status || 'DRAFT') === 'PUBLISHED').length
+  const archived = docs.value.filter((d) => (d.status || 'DRAFT') === 'ARCHIVED').length
+  const draft = docs.value.length - published - archived
   const privateCount = docs.value.filter((d) => (d.visibility || 'SPACE') === 'PRIVATE').length
   return {
     total: docs.value.length,
     published,
-    draft: docs.value.length - published,
-    privateCount
+    draft,
+    privateCount,
+    archived
   }
 })
 const homeRecentDocs = computed(() => {

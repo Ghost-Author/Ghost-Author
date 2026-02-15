@@ -45,6 +45,13 @@
       >
         草稿 {{ statusCounts.DRAFT }}
       </button>
+      <button
+        class="filter-btn"
+        :class="{ active: statusFilter === 'ARCHIVED' }"
+        @click="statusFilter = 'ARCHIVED'"
+      >
+        已归档 {{ statusCounts.ARCHIVED }}
+      </button>
     </div>
 
     <div class="visibility-filters">
@@ -160,7 +167,7 @@
                   {{ node.visibility === 'PRIVATE' ? '私有' : '空间' }}
                 </span>
                 <span class="node-status" :class="(node.status || 'DRAFT').toLowerCase()">
-                  {{ node.status === 'PUBLISHED' ? '已发布' : '草稿' }}
+                  {{ statusText(node.status) }}
                 </span>
               </div>
               <p>{{ node.summary }}</p>
@@ -216,11 +223,13 @@ const statusFilteredDocs = computed(() => {
 
 const statusCounts = computed(() => {
   const published = props.docs.filter((doc) => (doc.status || 'DRAFT') === 'PUBLISHED').length
-  const draft = props.docs.length - published
+  const archived = props.docs.filter((doc) => (doc.status || 'DRAFT') === 'ARCHIVED').length
+  const draft = props.docs.length - published - archived
   return {
     ALL: props.docs.length,
     PUBLISHED: published,
-    DRAFT: draft
+    DRAFT: draft,
+    ARCHIVED: archived
   }
 })
 
@@ -350,6 +359,16 @@ function toggleGroup(name) {
 
 function depthClass(depth) {
   return `depth-${Math.min(depth, 4)}`
+}
+
+function statusText(status) {
+  if (status === 'PUBLISHED') {
+    return '已发布'
+  }
+  if (status === 'ARCHIVED') {
+    return '已归档'
+  }
+  return '草稿'
 }
 
 function expandAll() {

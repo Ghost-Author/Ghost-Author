@@ -3,7 +3,7 @@
     <div class="space-home-head">
       <div>
         <h2>Space Home</h2>
-        <p class="section-subtitle">像 Confluence 一样从空间首页管理页面</p>
+        <p class="section-subtitle">从空间首页快速进入常用页面</p>
       </div>
       <button @click="$emit('create')">+ 新建页面</button>
     </div>
@@ -24,6 +24,10 @@
       <article>
         <strong>{{ stats.privateCount }}</strong>
         <span>私有页面</span>
+      </article>
+      <article>
+        <strong>{{ stats.archived }}</strong>
+        <span>已归档</span>
       </article>
     </div>
 
@@ -57,7 +61,7 @@
 defineProps({
   stats: {
     type: Object,
-    default: () => ({ total: 0, published: 0, draft: 0, privateCount: 0 })
+    default: () => ({ total: 0, published: 0, draft: 0, privateCount: 0, archived: 0 })
   },
   recentDocs: {
     type: Array,

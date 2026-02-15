@@ -40,6 +40,7 @@
           <select v-model="model.status" :disabled="!isEditingSafe">
             <option value="DRAFT">草稿</option>
             <option value="PUBLISHED">已发布</option>
+            <option value="ARCHIVED">已归档</option>
           </select>
         </label>
       </div>
@@ -77,7 +78,7 @@
           <h3>{{ model.title || 'Untitled' }}</h3>
           <div class="read-badges">
             <span class="read-status" :class="(model.status || 'DRAFT').toLowerCase()">
-              {{ model.status === 'PUBLISHED' ? '已发布' : '草稿' }}
+              {{ statusText(model.status) }}
             </span>
             <span class="read-visibility" :class="(model.visibility || 'SPACE').toLowerCase()">
               {{ model.visibility === 'PRIVATE' ? '仅自己' : '空间可见' }}
@@ -91,7 +92,14 @@
         <div class="child-pages" v-if="childPages.length">
           <p>子页面</p>
           <ul>
-            <li v-for="item in childPages" :key="item.slug">{{ item.title }}</li>
+            <li
+              v-for="item in childPages"
+              :key="item.slug"
+              @click="$emit('select-child', item.slug)"
+            >
+              <strong>{{ item.title }}</strong>
+              <span>{{ item.slug }}</span>
+            </li>
           </ul>
         </div>
       </div>
@@ -103,11 +111,25 @@
     <div class="actions">
       <button v-if="isEditingSafe" @click="$emit('save', model)">保存</button>
       <button
-        v-if="!isCreateMode && isEditingSafe"
+        v-if="!isCreateMode && isEditingSafe && model.status !== 'ARCHIVED'"
         class="secondary"
         @click="quickToggleStatus"
       >
         {{ model.status === 'PUBLISHED' ? '转为草稿并保存' : '发布并保存' }}
+      </button>
+      <button
+        v-if="!isCreateMode && isEditingSafe && model.status !== 'ARCHIVED'"
+        class="secondary"
+        @click="setStatusAndSave('ARCHIVED')"
+      >
+        归档页面
+      </button>
+      <button
+        v-if="!isCreateMode && isEditingSafe && model.status === 'ARCHIVED'"
+        class="secondary"
+        @click="setStatusAndSave('DRAFT')"
+      >
+        从归档恢复
       </button>
       <button v-if="!isCreateMode" class="secondary" @click="$emit('create-child')">新建子页面</button>
       <button class="danger" :disabled="isCreateMode" @click="$emit('delete', model.slug)">删除</button>
@@ -177,7 +199,15 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['add-comment', 'delete-comment', 'upload-attachment', 'delete-attachment', 'insert-attachment', 'create-child'])
+const emit = defineEmits([
+  'add-comment',
+  'delete-comment',
+  'upload-attachment',
+  'delete-attachment',
+  'insert-attachment',
+  'create-child',
+  'select-child'
+])
 
 const toolbars = [
   'bold', 'underline', 'italic', '-',
@@ -300,6 +330,11 @@ function quickToggleStatus() {
   emit('save', model.value)
 }
 
+function setStatusAndSave(nextStatus) {
+  model.value.status = nextStatus
+  emit('save', model.value)
+}
+
 function onSelectFile(event) {
   const file = event.target.files?.[0]
   if (!file) {
@@ -327,5 +362,15 @@ function applyTemplate() {
     return
   }
   model.value.content = item.content
+}
+
+function statusText(status) {
+  if (status === 'PUBLISHED') {
+    return '已发布'
+  }
+  if (status === 'ARCHIVED') {
+    return '已归档'
+  }
+  return '草稿'
 }
 </script>
