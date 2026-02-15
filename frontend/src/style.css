@@ -212,6 +212,8 @@ body {
   flex: 1;
   min-height: 0;
   padding-right: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .doc-list-scroll.compact .doc-items li {
@@ -585,9 +587,25 @@ button.tiny {
 }
 
 .quick-zone h4 {
-  margin: 0 0 6px;
+  margin: 0;
   font-size: 12px;
   color: #5d7095;
+}
+
+.quick-zone-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quick-zone-title em {
+  font-style: normal;
+  border: 1px solid #d1e0fb;
+  background: #f4f8ff;
+  color: #4d6592;
+  border-radius: 999px;
+  font-size: 10px;
+  padding: 0 6px;
 }
 
 .quick-zone-head {
@@ -632,9 +650,44 @@ button.tiny {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border-top: 1px dashed #d8e3fb;
-  padding-top: 8px;
+  border: 1px solid #d8e3fb;
+  border-radius: 12px;
+  background: #ffffffb8;
+  padding: 8px;
   isolation: isolate;
+}
+
+.tree-nav-head {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #355b98;
+  font-weight: 800;
+  border: 1px solid #d4e2fb;
+  border-radius: 10px;
+  background: #eef4ff;
+  box-shadow: none;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+}
+
+.tree-nav-head em {
+  font-style: normal;
+  background: #fff;
+  color: #4d6692;
+  border: 1px solid #c8daf9;
+  border-radius: 999px;
+  padding: 0 7px;
+  font-size: 11px;
+}
+
+.tree-nav-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .tree-section-head {
@@ -647,7 +700,7 @@ button.tiny {
   font-weight: 700;
   margin: 4px 2px;
   position: sticky;
-  top: 0;
+  top: 36px;
   z-index: 3;
   padding: 6px 8px;
   border: 1px solid #d4e2fb;
@@ -880,6 +933,16 @@ ul {
   padding: 1px 6px;
   font-size: 10px;
   line-height: 1.4;
+}
+
+.node-child-count {
+  border: 1px solid #cce0ff;
+  border-radius: 999px;
+  background: #edf5ff;
+  color: #3b5f9c;
+  font-size: 10px;
+  line-height: 1.4;
+  padding: 1px 6px;
 }
 
 .tree-node {

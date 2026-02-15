@@ -2,7 +2,6 @@
   <div class="editor-pane">
     <div class="pane-head">
       <h2>Page Editor</h2>
-      <p class="section-subtitle">Markdown + 实时预览</p>
       <div class="view-switch" v-if="!isCreateMode">
         <button class="secondary" @click="toggleEditMode" :disabled="!canEdit">
           {{ isEditing ? '查看预览' : '编辑页面' }}

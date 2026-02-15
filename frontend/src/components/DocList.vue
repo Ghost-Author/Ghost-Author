@@ -164,7 +164,10 @@
       <div class="quick-zones">
       <div class="quick-zone">
         <button class="quick-zone-head" @click="quickOpenFavorites = !quickOpenFavorites">
-          <h4>⭐ 收藏</h4>
+          <div class="quick-zone-title">
+            <h4>⭐ 收藏</h4>
+            <em>{{ favoriteDocs.length }}</em>
+          </div>
           <span>{{ quickOpenFavorites ? '▾' : '▸' }}</span>
         </button>
         <ul class="quick-list" v-show="quickOpenFavorites">
@@ -182,7 +185,10 @@
 
       <div class="quick-zone">
         <button class="quick-zone-head" @click="quickOpenRecent = !quickOpenRecent">
-          <h4>🕘 最近访问</h4>
+          <div class="quick-zone-title">
+            <h4>🕘 最近访问</h4>
+            <em>{{ recentDocs.length }}</em>
+          </div>
           <span>{{ quickOpenRecent ? '▾' : '▸' }}</span>
         </button>
         <ul class="quick-list" v-show="quickOpenRecent">
@@ -200,142 +206,152 @@
       </div>
 
       <div class="tree-nav">
-      <div
-        class="root-drop-zone"
-        :class="{ active: dropTargetRoot }"
-        @dragover.prevent="onRootDragOver"
-        @dragleave="onRootDragLeave"
-        @drop.prevent="onDropRoot"
-      >
-        拖拽到这里设为顶级页面
-      </div>
-
-      <div v-for="section in visibilitySections" :key="section.key" class="tree-section">
-        <button class="tree-section-head" @click="toggleSection(section.key)">
-          <span>{{ isSectionOpen(section.key) ? '▾' : '▸' }} {{ section.title }}</span>
-          <em>{{ section.groups.reduce((sum, group) => sum + group.items.length, 0) }}</em>
+        <button class="tree-nav-head" @click="treeOpen = !treeOpen">
+          <span>{{ treeOpen ? '▾' : '▸' }} 页面树</span>
+          <em>{{ totalVisibleNodes }}</em>
         </button>
-        <div v-show="isSectionOpen(section.key)">
+        <div class="tree-nav-body" v-show="treeOpen">
           <div
-            v-for="group in section.groups"
-            :key="group.id"
-            class="tree-group"
+            class="root-drop-zone"
+            :class="{ active: dropTargetRoot }"
+            @dragover.prevent="onRootDragOver"
+            @dragleave="onRootDragLeave"
+            @drop.prevent="onDropRoot"
           >
-          <button class="tree-group-head" @click="toggleGroup(group.id)">
-            <span>{{ opened[group.id] ? '▾' : '▸' }} {{ group.name }}</span>
-            <em>{{ group.items.length }}</em>
-          </button>
-
-          <ul class="doc-items" v-show="opened[group.id]">
-            <li
-              v-for="node in group.items"
-              :key="node.slug"
-              :data-node-slug="node.slug"
-              :class="[
-                'tree-node',
-                depthClass(node.depth),
-                {
-                  active: activeSlug === node.slug,
-                  ancestor: activeAncestorSet.has(node.slug) && activeSlug !== node.slug,
-                  'drag-target': dropTargetSlug === node.slug
-                }
-              ]"
-              :style="{ '--node-indent': `${12 + node.depth * 22}px` }"
-              draggable="true"
-              @dragstart="onDragStart(node.slug)"
-              @dragend="onDragEnd"
-              @dragover.prevent="onDragOver(node.slug)"
-              @dragleave="onDragLeave(node.slug)"
-              @drop.prevent="onDropNode(node.slug)"
-              @click="onNodeClick(node.slug)"
-              tabindex="0"
-              @keydown="onNodeKeydown($event, node.slug)"
-            >
-              <div class="node-title-row">
-                <div class="node-title-main">
-                  <input
-                    v-if="batchMode"
-                    type="checkbox"
-                    class="node-check"
-                    :checked="selectedSlugs.includes(node.slug)"
-                    @click.stop="toggleSelected(node.slug)"
-                  />
-                  <span class="node-type-dot" :class="{ root: node.depth === 0 }"></span>
-                  <span class="node-branch" v-if="node.depth > 0">↳</span>
-                  <span class="node-depth-pill" v-if="node.depth > 0">L{{ node.depth }}</span>
-                  <strong>{{ node.title }}</strong>
-                </div>
-                <div class="node-more">
-                  <button class="node-more-btn" @click.stop="toggleQuickMenu(node.slug)">⋯</button>
-                  <div v-if="quickMenuSlug === node.slug" class="node-menu" @click.stop>
-                    <button class="node-menu-item" @click="emitQuickAction('OPEN_PAGE', node.slug)">
-                      打开页面
-                    </button>
-                    <button class="node-menu-item" @click="emitQuickAction('RENAME', node.slug)">
-                      重命名标题
-                    </button>
-                    <button class="node-menu-item" @click="emitQuickAction('MOVE_ROOT', node.slug)">
-                      设为顶级页面
-                    </button>
-                    <button
-                      class="node-menu-item"
-                      @click="emitQuickAction((node.status || 'DRAFT') === 'ARCHIVED' ? 'UNARCHIVE' : 'ARCHIVE', node.slug)"
-                    >
-                      {{ (node.status || 'DRAFT') === 'ARCHIVED' ? '恢复为草稿' : '归档页面' }}
-                    </button>
-                    <button class="node-menu-item" @click="emitQuickAction('COPY_LINK', node.slug)">
-                      复制页面链接
-                    </button>
-                    <button class="node-menu-item" @click="emitQuickAction('COPY_SLUG', node.slug)">
-                      复制 slug
-                    </button>
-                    <button class="node-menu-item" @click="emitQuickAction('TOGGLE_FAVORITE', node.slug)">
-                      {{ favorites.includes(node.slug) ? '取消收藏' : '加入收藏' }}
-                    </button>
-                  </div>
-                </div>
-                <button
-                  class="fav-toggle"
-                  :class="{ active: favorites.includes(node.slug) }"
-                  @click.stop="$emit('toggle-favorite', node.slug)"
-                >
-                  {{ favorites.includes(node.slug) ? '★' : '☆' }}
-                </button>
-                <div class="order-controls">
-                  <button class="order-btn" @click.stop="emit('reorder', { slug: node.slug, direction: 'UP' })">↑</button>
-                  <button class="order-btn" @click.stop="emit('reorder', { slug: node.slug, direction: 'DOWN' })">↓</button>
-                </div>
-              </div>
-              <div class="node-meta-row">
-                <span class="node-slug">{{ node.slug }}</span>
-                <span class="node-visibility" :class="(node.visibility || 'SPACE').toLowerCase()">
-                  {{ node.visibility === 'PRIVATE' ? '私有' : '空间' }}
-                </span>
-                <span class="node-lock" :class="{ locked: !!node.locked }">
-                  {{ node.locked ? '锁定' : '可编辑' }}
-                </span>
-                <span class="node-status" :class="(node.status || 'DRAFT').toLowerCase()">
-                  {{ statusText(node.status) }}
-                </span>
-                <span class="node-priority" :class="(node.priority || 'MEDIUM').toLowerCase()">
-                  {{ priorityText(node.priority) }}
-                </span>
-              </div>
-              <p>{{ node.summary }}</p>
-              <div class="label-row">
-                <span class="node-owner">👤 {{ node.assignee || '-' }}</span>
-                <span class="node-owner">⏰ {{ node.dueDate || '-' }}</span>
-              </div>
-              <div class="label-row" v-if="node.labels && node.labels.length">
-                <span class="doc-label" v-for="label in node.labels.slice(0, 3)" :key="label">{{ label }}</span>
-              </div>
-            </li>
-          </ul>
+            拖拽到这里设为顶级页面
           </div>
+
+          <div v-for="section in visibilitySections" :key="section.key" class="tree-section">
+            <button class="tree-section-head" @click="toggleSection(section.key)">
+              <span>{{ isSectionOpen(section.key) ? '▾' : '▸' }} {{ section.title }}</span>
+              <em>{{ section.groups.reduce((sum, group) => sum + group.items.length, 0) }}</em>
+            </button>
+            <div v-show="isSectionOpen(section.key)">
+              <div
+                v-for="group in section.groups"
+                :key="group.id"
+                class="tree-group"
+              >
+                <button class="tree-group-head" @click="toggleGroup(group.id)">
+                  <span>{{ opened[group.id] ? '▾' : '▸' }} {{ group.name }}</span>
+                  <em>{{ group.items.length }}</em>
+                </button>
+
+                <ul class="doc-items" v-show="opened[group.id]">
+                  <li
+                    v-for="node in group.items"
+                    :key="node.slug"
+                    :data-node-slug="node.slug"
+                    :class="[
+                      'tree-node',
+                      depthClass(node.depth),
+                      {
+                        active: activeSlug === node.slug,
+                        ancestor: activeAncestorSet.has(node.slug) && activeSlug !== node.slug,
+                        'drag-target': dropTargetSlug === node.slug
+                      }
+                    ]"
+                    :style="{ '--node-indent': `${12 + node.depth * 22}px` }"
+                    draggable="true"
+                    @dragstart="onDragStart(node.slug)"
+                    @dragend="onDragEnd"
+                    @dragover.prevent="onDragOver(node.slug)"
+                    @dragleave="onDragLeave(node.slug)"
+                    @drop.prevent="onDropNode(node.slug)"
+                    @click="onNodeClick(node.slug)"
+                    tabindex="0"
+                    @keydown="onNodeKeydown($event, node.slug)"
+                  >
+                    <div class="node-title-row">
+                      <div class="node-title-main">
+                        <input
+                          v-if="batchMode"
+                          type="checkbox"
+                          class="node-check"
+                          :checked="selectedSlugs.includes(node.slug)"
+                          @click.stop="toggleSelected(node.slug)"
+                        />
+                        <span class="node-type-dot" :class="{ root: node.depth === 0 }"></span>
+                        <span class="node-branch" v-if="node.depth > 0">↳</span>
+                        <span class="node-depth-pill" v-if="node.depth > 0">L{{ node.depth }}</span>
+                        <strong>{{ node.title }}</strong>
+                        <span class="node-child-count" v-if="directChildrenCount[node.slug]">
+                          {{ directChildrenCount[node.slug] }} 子页
+                        </span>
+                      </div>
+                      <div class="node-more">
+                        <button class="node-more-btn" @click.stop="toggleQuickMenu(node.slug)">⋯</button>
+                        <div v-if="quickMenuSlug === node.slug" class="node-menu" @click.stop>
+                          <button class="node-menu-item" @click="emitQuickAction('OPEN_PAGE', node.slug)">
+                            打开页面
+                          </button>
+                          <button class="node-menu-item" @click="emitQuickAction('RENAME', node.slug)">
+                            重命名标题
+                          </button>
+                          <button class="node-menu-item" @click="emitQuickAction('MOVE_ROOT', node.slug)">
+                            设为顶级页面
+                          </button>
+                          <button
+                            class="node-menu-item"
+                            @click="emitQuickAction((node.status || 'DRAFT') === 'ARCHIVED' ? 'UNARCHIVE' : 'ARCHIVE', node.slug)"
+                          >
+                            {{ (node.status || 'DRAFT') === 'ARCHIVED' ? '恢复为草稿' : '归档页面' }}
+                          </button>
+                          <button class="node-menu-item" @click="emitQuickAction('COPY_LINK', node.slug)">
+                            复制页面链接
+                          </button>
+                          <button class="node-menu-item" @click="emitQuickAction('COPY_SLUG', node.slug)">
+                            复制 slug
+                          </button>
+                          <button class="node-menu-item" @click="emitQuickAction('TOGGLE_FAVORITE', node.slug)">
+                            {{ favorites.includes(node.slug) ? '取消收藏' : '加入收藏' }}
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        class="fav-toggle"
+                        :class="{ active: favorites.includes(node.slug) }"
+                        @click.stop="$emit('toggle-favorite', node.slug)"
+                      >
+                        {{ favorites.includes(node.slug) ? '★' : '☆' }}
+                      </button>
+                      <div class="order-controls">
+                        <button class="order-btn" @click.stop="emit('reorder', { slug: node.slug, direction: 'UP' })">↑</button>
+                        <button class="order-btn" @click.stop="emit('reorder', { slug: node.slug, direction: 'DOWN' })">↓</button>
+                      </div>
+                    </div>
+                    <div class="node-meta-row">
+                      <span class="node-slug">{{ node.slug }}</span>
+                      <span class="node-visibility" :class="(node.visibility || 'SPACE').toLowerCase()">
+                        {{ node.visibility === 'PRIVATE' ? '私有' : '空间' }}
+                      </span>
+                      <span class="node-lock" :class="{ locked: !!node.locked }">
+                        {{ node.locked ? '锁定' : '可编辑' }}
+                      </span>
+                      <span class="node-status" :class="(node.status || 'DRAFT').toLowerCase()">
+                        {{ statusText(node.status) }}
+                      </span>
+                      <span class="node-priority" :class="(node.priority || 'MEDIUM').toLowerCase()">
+                        {{ priorityText(node.priority) }}
+                      </span>
+                    </div>
+                    <p>{{ node.summary }}</p>
+                    <div class="label-row">
+                      <span class="node-owner">👤 {{ node.assignee || '-' }}</span>
+                      <span class="node-owner">⏰ {{ node.dueDate || '-' }}</span>
+                    </div>
+                    <div class="label-row" v-if="node.labels && node.labels.length">
+                      <span class="doc-label" v-for="label in node.labels.slice(0, 3)" :key="label">{{ label }}</span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div v-if="totalVisibleNodes === 0" class="quick-empty">当前筛选条件下没有页面</div>
         </div>
       </div>
-    </div>
-    </div>
+  </div>
   </div>
 </template>
 
@@ -347,6 +363,7 @@ const FILTER_PANEL_KEY = 'ga-sidebar-filter-panel'
 const GROUP_OPEN_KEY = 'ga-sidebar-open-groups'
 const SECTION_OPEN_KEY = 'ga-sidebar-open-sections'
 const DENSITY_KEY = 'ga-sidebar-density'
+const TREE_PANEL_KEY = 'ga-sidebar-tree-panel'
 
 function loadQuickPanelsState() {
   if (typeof window === 'undefined') {
@@ -461,6 +478,24 @@ function persistCompactMode(compact) {
   window.localStorage.setItem(DENSITY_KEY, compact ? 'compact' : 'comfortable')
 }
 
+function loadTreePanelState() {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  const raw = window.localStorage.getItem(TREE_PANEL_KEY)
+  if (raw === null) {
+    return true
+  }
+  return raw !== '0'
+}
+
+function persistTreePanelState(open) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(TREE_PANEL_KEY, open ? '1' : '0')
+}
+
 const keyword = ref('')
 const opened = ref(loadGroupOpenState())
 const sectionOpened = ref(loadSectionOpenState())
@@ -483,6 +518,7 @@ const selectedSlugs = ref([])
 const selectedOnlyMode = ref(false)
 const compactMode = ref(loadCompactMode())
 const batchQuickOpen = ref(false)
+const treeOpen = ref(loadTreePanelState())
 
 const props = defineProps({
   docs: {
@@ -527,6 +563,10 @@ watch(sectionOpened, (value) => {
 
 watch(compactMode, (compact) => {
   persistCompactMode(compact)
+})
+
+watch(treeOpen, (open) => {
+  persistTreePanelState(open)
 })
 
 watch(() => props.docs, () => {
@@ -617,6 +657,24 @@ const visibilitySections = computed(() => {
     title,
     groups: buildGroups(sourceDocs, visibilityFilter.value)
   }]
+})
+
+const totalVisibleNodes = computed(() => {
+  return visibilitySections.value.reduce((sectionSum, section) => {
+    return sectionSum + section.groups.reduce((groupSum, group) => groupSum + group.items.length, 0)
+  }, 0)
+})
+
+const directChildrenCount = computed(() => {
+  const result = {}
+  props.docs.forEach((doc) => {
+    const parent = (doc.parentSlug || '').trim()
+    if (!parent) {
+      return
+    }
+    result[parent] = (result[parent] || 0) + 1
+  })
+  return result
 })
 
 const visibleRows = computed(() => {
