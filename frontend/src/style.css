@@ -432,6 +432,12 @@ body {
   flex-wrap: wrap;
 }
 
+.page-action-left .secondary.active {
+  border-color: #ffd87a;
+  background: #fff7df;
+  color: #9a6a07;
+}
+
 .page-status-pill {
   border: 1px solid #d4e1fb;
   border-radius: 999px;

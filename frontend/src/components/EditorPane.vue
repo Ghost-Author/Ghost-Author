@@ -25,6 +25,9 @@
     <div class="page-action-bar" v-if="!isCreateMode">
       <div class="page-action-left">
         <button class="secondary small" @click="copyPageLink">复制页面链接</button>
+        <button class="secondary small" :class="{ active: isFavorite }" @click="$emit('toggle-favorite', model.slug)">
+          {{ isFavorite ? '取消收藏' : '收藏页面' }}
+        </button>
         <button class="secondary small" @click="$emit('create-child')" :disabled="!canEdit">新建子页面</button>
         <button class="secondary small" @click="runMenuAction('toggle-share')" :disabled="!canEdit">
           {{ model.shareEnabled ? '关闭分享' : '开启分享' }}
@@ -579,6 +582,10 @@ const props = defineProps({
     type: Object,
     required: true
   },
+  isFavorite: {
+    type: Boolean,
+    default: false
+  },
   outline: {
     type: Array,
     default: () => []
@@ -621,6 +628,7 @@ const emit = defineEmits([
   'insert-attachment',
   'create-child',
   'select-child',
+  'toggle-favorite',
   'toggle-share',
   'regenerate-share',
   'create-template',

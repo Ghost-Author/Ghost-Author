@@ -74,6 +74,7 @@
         <EditorPane
           v-else
           :doc="currentDoc"
+          :is-favorite="!!activeSlug && favorites.includes(activeSlug)"
           :outline="pageOutline"
           :comments="comments"
           :attachments="attachments"
@@ -91,6 +92,7 @@
           @insert-attachment="insertAttachment"
           @create-child="createChildPage"
           @select-child="loadDoc"
+          @toggle-favorite="toggleFavorite"
           @toggle-share="toggleShare"
           @regenerate-share="regenerateShare"
           @create-template="createTemplate"
