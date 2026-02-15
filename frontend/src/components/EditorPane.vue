@@ -201,123 +201,133 @@
       <div class="read-layout" :class="{ 'panel-left': readPanelDock === 'left' }">
         <aside class="read-side-panel" v-if="readInfoOpen">
           <div class="read-side-stack">
-            <section class="read-side-card">
-              <div class="read-meta-row">
-                <div class="read-badges">
-                  <span class="read-status" :class="(model.status || 'DRAFT').toLowerCase()">
-                    {{ statusText(model.status) }}
-                  </span>
-                  <span class="read-visibility" :class="(model.visibility || 'SPACE').toLowerCase()">
-                    {{ model.visibility === 'PRIVATE' ? '仅自己' : '空间可见' }}
-                  </span>
-                  <span class="read-locked" :class="{ locked: !!model.locked }">
-                    {{ model.locked ? '已锁定' : '未锁定' }}
-                  </span>
+            <section v-for="card in visibleReadCards" :key="card.key" class="read-side-card">
+              <div class="read-card-tools">
+                <span class="read-card-title">{{ card.title }}</span>
+                <div class="read-card-order">
+                  <button class="secondary tiny" :disabled="!canMoveReadCard(card.key, -1)" @click="moveReadCard(card.key, -1)">↑</button>
+                  <button class="secondary tiny" :disabled="!canMoveReadCard(card.key, 1)" @click="moveReadCard(card.key, 1)">↓</button>
                 </div>
               </div>
-              <p class="read-summary">{{ model.summary || '暂无摘要' }}</p>
-              <p class="read-times" v-if="model.updatedAt || model.createdAt">
-                更新于 {{ formatTime(model.updatedAt) }} · 创建于 {{ formatTime(model.createdAt) }}
-              </p>
-              <div class="read-tags" v-if="model.labels && model.labels.length">
-                <span class="doc-label" v-for="label in model.labels" :key="label">{{ label }}</span>
-              </div>
-            </section>
 
-            <section class="read-side-card">
-              <button class="panel-fold-head section-fold-head compact" @click="readOutlineOpen = !readOutlineOpen">
-                <strong>页面目录（{{ outline.length }}）</strong>
-                <span>{{ readOutlineOpen ? '收起 ▾' : '展开 ▸' }}</span>
-              </button>
-              <div class="read-outline-filter" v-if="readOutlineOpen && outline.length">
-                <input v-model="readOutlineQuery" placeholder="过滤目录标题" />
-                <button class="secondary tiny" @click="readOutlineQuery = ''">清空</button>
-              </div>
-              <div class="read-outline-progress" v-if="readOutlineOpen && outline.length">
-                <div class="read-outline-progress-head">
-                  <span>阅读进度</span>
-                  <strong>{{ readProgressPercent }}%</strong>
+              <template v-if="card.key === 'overview'">
+                <div class="read-meta-row">
+                  <div class="read-badges">
+                    <span class="read-status" :class="(model.status || 'DRAFT').toLowerCase()">
+                      {{ statusText(model.status) }}
+                    </span>
+                    <span class="read-visibility" :class="(model.visibility || 'SPACE').toLowerCase()">
+                      {{ model.visibility === 'PRIVATE' ? '仅自己' : '空间可见' }}
+                    </span>
+                    <span class="read-locked" :class="{ locked: !!model.locked }">
+                      {{ model.locked ? '已锁定' : '未锁定' }}
+                    </span>
+                  </div>
                 </div>
-                <div class="read-outline-progress-track">
-                  <div class="read-outline-progress-fill" :style="{ width: `${readProgressPercent}%` }"></div>
+                <p class="read-summary">{{ model.summary || '暂无摘要' }}</p>
+                <p class="read-times" v-if="model.updatedAt || model.createdAt">
+                  更新于 {{ formatTime(model.updatedAt) }} · 创建于 {{ formatTime(model.createdAt) }}
+                </p>
+                <div class="read-tags" v-if="model.labels && model.labels.length">
+                  <span class="doc-label" v-for="label in model.labels" :key="label">{{ label }}</span>
                 </div>
-              </div>
-              <ul class="read-outline-list" v-if="readOutlineOpen && filteredOutline.length">
-                <li
-                  v-for="item in filteredOutline"
-                  :key="item.id"
-                  :class="{ active: isOutlineActive(item), done: isOutlineDone(item) }"
-                  :style="{ '--outline-indent': `${(item.level - 1) * 14}px` }"
-                  @click="jumpToOutline(item)"
-                >
-                  <span class="read-outline-dot">•</span>
-                  <span>{{ item.text }}</span>
-                </li>
-              </ul>
-              <div class="comment-empty" v-else-if="readOutlineOpen && outline.length">没有匹配的目录标题</div>
-              <div class="comment-empty" v-else-if="readOutlineOpen">没有可识别标题（# ## ###）</div>
-            </section>
+              </template>
 
-            <section class="read-side-card">
-              <button class="panel-fold-head section-fold-head compact" @click="readPermOpen = !readPermOpen">
-                <strong>权限与访问</strong>
-                <span>{{ readPermOpen ? '收起 ▾' : '展开 ▸' }}</span>
-              </button>
-              <div class="perm-tags" v-show="readPermOpen">
-                <span class="perm-chip owner">Owner: {{ model.owner || '-' }}</span>
-                <span class="perm-chip">Editors: {{ (model.editors || []).join(', ') || '-' }}</span>
-                <span class="perm-chip">Viewers: {{ (model.viewers || []).join(', ') || '-' }}</span>
-                <span class="perm-chip current">当前用户: {{ currentUser || '-' }}</span>
-                <span class="perm-chip share">{{ model.shareEnabled ? '分享已开启' : '未开启分享' }}</span>
-                <span class="perm-chip priority">优先级: {{ priorityText(model.priority) }}</span>
-                <span class="perm-chip">负责人: {{ model.assignee || '-' }}</span>
-                <span class="perm-chip">截止: {{ model.dueDate || '-' }}</span>
-              </div>
-              <div class="share-bar" v-if="model.shareEnabled && shareLink && readPermOpen">
-                <input :value="shareLink" readonly />
-                <button class="secondary small" @click="copyShareLink">复制链接</button>
-              </div>
-            </section>
-
-            <section class="read-side-card" v-if="childPages.length">
-              <button class="panel-fold-head section-fold-head compact" @click="readChildrenOpen = !readChildrenOpen">
-                <strong>子页面导航（{{ childPages.length }}）</strong>
-                <span>{{ readChildrenOpen ? '收起 ▾' : '展开 ▸' }}</span>
-              </button>
-              <div class="child-pages" v-if="readChildrenOpen">
-                <div class="child-filter">
-                  <input v-model="childQuery" placeholder="过滤子页面" />
-                  <button class="secondary tiny" @click="childQuery = ''">清空</button>
+              <template v-else-if="card.key === 'outline'">
+                <button class="panel-fold-head section-fold-head compact" @click="readOutlineOpen = !readOutlineOpen">
+                  <strong>页面目录（{{ outline.length }}）</strong>
+                  <span>{{ readOutlineOpen ? '收起 ▾' : '展开 ▸' }}</span>
+                </button>
+                <div class="read-outline-filter" v-if="readOutlineOpen && outline.length">
+                  <input v-model="readOutlineQuery" placeholder="过滤目录标题" />
+                  <button class="secondary tiny" @click="readOutlineQuery = ''">清空</button>
                 </div>
-                <ul>
+                <div class="read-outline-progress" v-if="readOutlineOpen && outline.length">
+                  <div class="read-outline-progress-head">
+                    <span>阅读进度</span>
+                    <strong>{{ readProgressPercent }}%</strong>
+                  </div>
+                  <div class="read-outline-progress-track">
+                    <div class="read-outline-progress-fill" :style="{ width: `${readProgressPercent}%` }"></div>
+                  </div>
+                </div>
+                <ul class="read-outline-list" v-if="readOutlineOpen && filteredOutline.length">
                   <li
-                    v-for="item in filteredChildTreeRows"
-                    :key="item.slug"
-                    :style="{ '--child-indent': `${item.depth * 16}px` }"
-                    @click="$emit('select-child', item.slug)"
+                    v-for="item in filteredOutline"
+                    :key="item.id"
+                    :class="{ active: isOutlineActive(item), done: isOutlineDone(item) }"
+                    :style="{ '--outline-indent': `${(item.level - 1) * 14}px` }"
+                    @click="jumpToOutline(item)"
                   >
-                    <div class="child-main">
-                      <button
-                        v-if="item.childCount > 0"
-                        class="child-expand"
-                        @click.stop="toggleChildOpen(item.slug)"
-                      >
-                        {{ isChildOpen(item.slug) ? '▾' : '▸' }}
-                      </button>
-                      <span v-else class="child-expand placeholder">·</span>
-                      <span class="child-tree-dot"></span>
-                      <strong>{{ item.title }}</strong>
-                      <span>{{ item.slug }}</span>
-                    </div>
-                    <div class="child-extra">
-                      <em class="child-status" :class="(item.status || 'DRAFT').toLowerCase()">{{ statusText(item.status) }}</em>
-                      <em class="child-priority" :class="(item.priority || 'MEDIUM').toLowerCase()">优先级: {{ priorityText(item.priority) }}</em>
-                      <em class="child-due">截止: {{ item.dueDate || '-' }}</em>
-                    </div>
+                    <span class="read-outline-dot">•</span>
+                    <span>{{ item.text }}</span>
                   </li>
                 </ul>
-                <div class="comment-empty" v-if="filteredChildTreeRows.length === 0">没有匹配的子页面</div>
-              </div>
+                <div class="comment-empty" v-else-if="readOutlineOpen && outline.length">没有匹配的目录标题</div>
+                <div class="comment-empty" v-else-if="readOutlineOpen">没有可识别标题（# ## ###）</div>
+              </template>
+
+              <template v-else-if="card.key === 'permission'">
+                <button class="panel-fold-head section-fold-head compact" @click="readPermOpen = !readPermOpen">
+                  <strong>权限与访问</strong>
+                  <span>{{ readPermOpen ? '收起 ▾' : '展开 ▸' }}</span>
+                </button>
+                <div class="perm-tags" v-show="readPermOpen">
+                  <span class="perm-chip owner">Owner: {{ model.owner || '-' }}</span>
+                  <span class="perm-chip">Editors: {{ (model.editors || []).join(', ') || '-' }}</span>
+                  <span class="perm-chip">Viewers: {{ (model.viewers || []).join(', ') || '-' }}</span>
+                  <span class="perm-chip current">当前用户: {{ currentUser || '-' }}</span>
+                  <span class="perm-chip share">{{ model.shareEnabled ? '分享已开启' : '未开启分享' }}</span>
+                  <span class="perm-chip priority">优先级: {{ priorityText(model.priority) }}</span>
+                  <span class="perm-chip">负责人: {{ model.assignee || '-' }}</span>
+                  <span class="perm-chip">截止: {{ model.dueDate || '-' }}</span>
+                </div>
+                <div class="share-bar" v-if="model.shareEnabled && shareLink && readPermOpen">
+                  <input :value="shareLink" readonly />
+                  <button class="secondary small" @click="copyShareLink">复制链接</button>
+                </div>
+              </template>
+
+              <template v-else-if="card.key === 'children'">
+                <button class="panel-fold-head section-fold-head compact" @click="readChildrenOpen = !readChildrenOpen">
+                  <strong>子页面导航（{{ childPages.length }}）</strong>
+                  <span>{{ readChildrenOpen ? '收起 ▾' : '展开 ▸' }}</span>
+                </button>
+                <div class="child-pages" v-if="readChildrenOpen">
+                  <div class="child-filter">
+                    <input v-model="childQuery" placeholder="过滤子页面" />
+                    <button class="secondary tiny" @click="childQuery = ''">清空</button>
+                  </div>
+                  <ul>
+                    <li
+                      v-for="item in filteredChildTreeRows"
+                      :key="item.slug"
+                      :style="{ '--child-indent': `${item.depth * 16}px` }"
+                      @click="$emit('select-child', item.slug)"
+                    >
+                      <div class="child-main">
+                        <button
+                          v-if="item.childCount > 0"
+                          class="child-expand"
+                          @click.stop="toggleChildOpen(item.slug)"
+                        >
+                          {{ isChildOpen(item.slug) ? '▾' : '▸' }}
+                        </button>
+                        <span v-else class="child-expand placeholder">·</span>
+                        <span class="child-tree-dot"></span>
+                        <strong>{{ item.title }}</strong>
+                        <span>{{ item.slug }}</span>
+                      </div>
+                      <div class="child-extra">
+                        <em class="child-status" :class="(item.status || 'DRAFT').toLowerCase()">{{ statusText(item.status) }}</em>
+                        <em class="child-priority" :class="(item.priority || 'MEDIUM').toLowerCase()">优先级: {{ priorityText(item.priority) }}</em>
+                        <em class="child-due">截止: {{ item.dueDate || '-' }}</em>
+                      </div>
+                    </li>
+                  </ul>
+                  <div class="comment-empty" v-if="filteredChildTreeRows.length === 0">没有匹配的子页面</div>
+                </div>
+              </template>
             </section>
           </div>
         </aside>
@@ -521,9 +531,11 @@ const childQuery = ref('')
 const activeOutlineText = ref('')
 const readInfoOpen = ref(false)
 const readPanelDock = ref('right')
+const readCardOrder = ref(loadReadCardOrder())
 const childOpenMap = ref({})
 const READ_PANEL_DOCK_KEY = 'ga-read-panel-dock'
 const CHILD_OPEN_KEY = 'ga-read-child-open-state'
+const READ_CARD_ORDER_KEY = 'ga-read-card-order'
 let readScrollRaf = null
 
 const activeOutlineIndex = computed(() => {
@@ -596,6 +608,27 @@ const filteredChildTreeRows = computed(() => {
 
   return childTreeRows.value.filter((item) => include.has(item.slug))
 })
+
+const visibleReadCards = computed(() => {
+  const definitions = new Map([
+    ['overview', { key: 'overview', title: '概览' }],
+    ['outline', { key: 'outline', title: '目录' }],
+    ['permission', { key: 'permission', title: '权限' }],
+    ['children', { key: 'children', title: '子页面' }]
+  ])
+  const order = normalizeReadCardOrder(readCardOrder.value)
+  const cards = []
+  order.forEach((key) => {
+    if (key === 'children' && !props.childPages.length) {
+      return
+    }
+    const card = definitions.get(key)
+    if (card) {
+      cards.push(card)
+    }
+  })
+  return cards
+})
 const newTemplate = ref({
   name: '',
   description: '',
@@ -648,6 +681,10 @@ watch(
   },
   { deep: true }
 )
+
+watch(readCardOrder, (order) => {
+  persistReadCardOrder(order)
+}, { deep: true })
 
 watch([isCreateMode, isEditingSafe], async ([createMode, editable]) => {
   if (!createMode || !editable) {
@@ -823,6 +860,80 @@ function toggleChildOpen(slug) {
   childOpenMap.value = {
     ...childOpenMap.value,
     [slug]: !isChildOpen(slug)
+  }
+}
+
+function canMoveReadCard(cardKey, delta) {
+  const keys = visibleReadCards.value.map((card) => card.key)
+  const index = keys.indexOf(cardKey)
+  if (index < 0) {
+    return false
+  }
+  const target = index + delta
+  return target >= 0 && target < keys.length
+}
+
+function moveReadCard(cardKey, delta) {
+  const keys = visibleReadCards.value.map((card) => card.key)
+  const index = keys.indexOf(cardKey)
+  const target = index + delta
+  if (index < 0 || target < 0 || target >= keys.length) {
+    return
+  }
+  const targetKey = keys[target]
+  const full = normalizeReadCardOrder(readCardOrder.value)
+  const left = full.indexOf(cardKey)
+  const right = full.indexOf(targetKey)
+  if (left < 0 || right < 0) {
+    return
+  }
+  const next = full.slice()
+  const temp = next[left]
+  next[left] = next[right]
+  next[right] = temp
+  readCardOrder.value = next
+}
+
+function normalizeReadCardOrder(value) {
+  const defaults = ['overview', 'outline', 'permission', 'children']
+  const source = Array.isArray(value) ? value : []
+  const unique = []
+  source.forEach((item) => {
+    if (defaults.includes(item) && !unique.includes(item)) {
+      unique.push(item)
+    }
+  })
+  defaults.forEach((item) => {
+    if (!unique.includes(item)) {
+      unique.push(item)
+    }
+  })
+  return unique
+}
+
+function loadReadCardOrder() {
+  if (typeof window === 'undefined') {
+    return ['overview', 'outline', 'permission', 'children']
+  }
+  try {
+    const raw = window.localStorage.getItem(READ_CARD_ORDER_KEY)
+    if (!raw) {
+      return ['overview', 'outline', 'permission', 'children']
+    }
+    return normalizeReadCardOrder(JSON.parse(raw))
+  } catch {
+    return ['overview', 'outline', 'permission', 'children']
+  }
+}
+
+function persistReadCardOrder(order) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  try {
+    window.localStorage.setItem(READ_CARD_ORDER_KEY, JSON.stringify(normalizeReadCardOrder(order)))
+  } catch {
+    // ignore persistence failures
   }
 }
 

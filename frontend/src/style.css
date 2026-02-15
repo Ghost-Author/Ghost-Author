@@ -1768,6 +1768,26 @@ button.small {
   padding: 8px;
 }
 
+.read-card-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.read-card-title {
+  font-size: 11px;
+  color: #6a80a7;
+  font-weight: 700;
+}
+
+.read-card-order {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .read-meta {
   padding: 0;
 }
