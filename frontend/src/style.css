@@ -453,6 +453,41 @@ button.tiny {
   margin-bottom: 10px;
 }
 
+.batch-quick-panel {
+  border: 1px solid #d8e3fb;
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.batch-quick-head {
+  width: 100%;
+  border: 1px solid #d2e1fb;
+  background: #eef5ff;
+  color: #3a5f99;
+  box-shadow: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.batch-quick-head strong {
+  font-size: 12px;
+}
+
+.batch-quick-head span {
+  font-size: 11px;
+  color: #768db4;
+}
+
+.batch-quick-body {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .filter-panel-head {
   width: 100%;
   display: flex;

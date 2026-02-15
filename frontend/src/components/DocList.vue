@@ -12,19 +12,10 @@
         <button class="secondary tiny" v-if="batchMode" :class="{ active: selectedOnlyMode }" @click="selectedOnlyMode = !selectedOnlyMode">
           仅看已选
         </button>
+        <button class="secondary tiny" v-if="batchMode" :class="{ active: batchQuickOpen }" @click="batchQuickOpen = !batchQuickOpen">
+          快速筛选
+        </button>
         <button class="secondary tiny" v-if="batchMode" @click="selectAllVisible">全选</button>
-        <button class="secondary tiny" v-if="batchMode" @click="selectByStatus('DRAFT')">选草稿</button>
-        <button class="secondary tiny" v-if="batchMode" @click="selectByStatus('PUBLISHED')">选已发布</button>
-        <button class="secondary tiny" v-if="batchMode" @click="selectByStatus('ARCHIVED')">选已归档</button>
-        <button class="secondary tiny" v-if="batchMode" @click="selectByPriority('HIGH')">选高优</button>
-        <button class="secondary tiny" v-if="batchMode" @click="selectByPriority('MEDIUM')">选中优</button>
-        <button class="secondary tiny" v-if="batchMode" @click="selectByPriority('LOW')">选低优</button>
-        <button class="secondary tiny" v-if="batchMode" @click="selectByDue('TODAY')">选今天到期</button>
-        <button class="secondary tiny" v-if="batchMode" @click="selectByDue('OVERDUE')">选已逾期</button>
-        <button class="secondary tiny" v-if="batchMode" @click="selectByVisibility('SPACE')">选空间可见</button>
-        <button class="secondary tiny" v-if="batchMode" @click="selectByVisibility('PRIVATE')">选私有</button>
-        <button class="secondary tiny" v-if="batchMode" @click="selectByAssigneeMe">选我负责</button>
-        <button class="secondary tiny" v-if="batchMode" @click="selectByEditableMe">选我可编辑</button>
         <button class="secondary tiny" v-if="batchMode" @click="invertSelection">反选</button>
         <button class="secondary tiny" v-if="batchMode" @click="clearSelected">清空</button>
         <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_MOVE_ROOT')">移到顶级</button>
@@ -146,6 +137,27 @@
               我的待办视图
             </button>
           </div>
+        </div>
+      </div>
+
+      <div class="batch-quick-panel" v-if="batchMode">
+        <button class="batch-quick-head" @click="batchQuickOpen = !batchQuickOpen">
+          <strong>批量快速筛选</strong>
+          <span>{{ batchQuickOpen ? '收起 ▾' : '展开 ▸' }}</span>
+        </button>
+        <div class="batch-quick-body" v-show="batchQuickOpen">
+          <button class="secondary tiny" @click="selectByStatus('DRAFT')">选草稿</button>
+          <button class="secondary tiny" @click="selectByStatus('PUBLISHED')">选已发布</button>
+          <button class="secondary tiny" @click="selectByStatus('ARCHIVED')">选已归档</button>
+          <button class="secondary tiny" @click="selectByPriority('HIGH')">选高优</button>
+          <button class="secondary tiny" @click="selectByPriority('MEDIUM')">选中优</button>
+          <button class="secondary tiny" @click="selectByPriority('LOW')">选低优</button>
+          <button class="secondary tiny" @click="selectByDue('TODAY')">选今天到期</button>
+          <button class="secondary tiny" @click="selectByDue('OVERDUE')">选已逾期</button>
+          <button class="secondary tiny" @click="selectByVisibility('SPACE')">选空间可见</button>
+          <button class="secondary tiny" @click="selectByVisibility('PRIVATE')">选私有</button>
+          <button class="secondary tiny" @click="selectByAssigneeMe">选我负责</button>
+          <button class="secondary tiny" @click="selectByEditableMe">选我可编辑</button>
         </div>
       </div>
 
@@ -470,6 +482,7 @@ const batchMode = ref(false)
 const selectedSlugs = ref([])
 const selectedOnlyMode = ref(false)
 const compactMode = ref(loadCompactMode())
+const batchQuickOpen = ref(false)
 
 const props = defineProps({
   docs: {
