@@ -2101,6 +2101,38 @@ button.small {
   cursor: default;
 }
 
+.app-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 30;
+  border: 1px solid #cfe0fb;
+  background: #f5f9ff;
+  color: #35527f;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  box-shadow: 0 10px 24px #193e8122;
+}
+
+.app-toast.success {
+  border-color: #b8dfcb;
+  background: #eefff6;
+  color: #1f7b57;
+}
+
+.app-toast.error {
+  border-color: #f5c5d7;
+  background: #fff2f7;
+  color: #a84f77;
+}
+
+.app-toast.info {
+  border-color: #cfe0fb;
+  background: #f5f9ff;
+  color: #35527f;
+}
+
 .quick-list .quick-empty,
 .outline-empty,
 .version-history .hint,
@@ -2195,5 +2227,11 @@ button.small {
 
   .user-input {
     width: 100%;
+  }
+
+  .app-toast {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
   }
 }

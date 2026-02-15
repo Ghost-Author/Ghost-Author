@@ -122,6 +122,10 @@
         </ul>
       </div>
     </div>
+
+    <div v-if="toast.show" class="app-toast" :class="toast.type">
+      {{ toast.message }}
+    </div>
   </div>
 </template>
 
@@ -145,6 +149,11 @@ const showHome = ref(true)
 const commandOpen = ref(false)
 const commandQuery = ref('')
 const commandActiveIndex = ref(0)
+const toast = ref({
+  show: false,
+  message: '',
+  type: 'info'
+})
 const diffFrom = ref(null)
 const diffTo = ref(null)
 const diffText = ref('')
@@ -152,6 +161,7 @@ const favorites = ref([])
 const recent = ref([])
 const currentUser = ref('admin')
 const shareTokenFromUrl = ref('')
+let toastTimer = null
 const breadcrumbTitle = computed(() => currentDoc.value.title || 'Untitled Page')
 const breadcrumbPath = computed(() => {
   if (showHome.value) {
@@ -292,6 +302,23 @@ const FAVORITES_KEY = 'ga-favorites'
 const RECENT_KEY = 'ga-recent'
 const CURRENT_USER_KEY = 'ga-current-user'
 
+function showToast(message, type = 'info') {
+  if (!message) {
+    return
+  }
+  toast.value = {
+    show: true,
+    message,
+    type
+  }
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+  }
+  toastTimer = setTimeout(() => {
+    toast.value.show = false
+  }, 2200)
+}
+
 function emptyDoc() {
   return {
     id: null,
@@ -330,12 +357,12 @@ async function fetchTemplates() {
 async function loadDoc(slug) {
   const candidate = docs.value.find((d) => d.slug === slug)
   if (candidate && !canViewDoc(candidate)) {
-    alert('当前用户无权限查看该页面')
+    showToast('当前用户无权限查看该页面', 'error')
     return
   }
   const { data } = await api.get(`/documents/${slug}`)
   if (!canViewDoc(data)) {
-    alert('当前用户无权限查看该页面')
+    showToast('当前用户无权限查看该页面', 'error')
     return
   }
   currentDoc.value = data
@@ -397,7 +424,7 @@ function createChildPage() {
     return
   }
   if (!canEditDoc(currentDoc.value)) {
-    alert('当前用户无编辑权限，不能创建子页面')
+    showToast('当前用户无编辑权限，不能创建子页面', 'error')
     return
   }
   const parent = currentDoc.value
@@ -419,11 +446,11 @@ function createChildPage() {
 
 async function saveDoc(doc) {
   if (doc.id && !canEditDoc(doc)) {
-    alert('当前用户无编辑权限')
+    showToast('当前用户无编辑权限', 'error')
     return
   }
   if (!doc.slug || !doc.title || !doc.summary || !doc.content) {
-    alert('请填写完整字段')
+    showToast('请填写完整字段', 'error')
     return
   }
 
@@ -466,6 +493,7 @@ async function saveDoc(doc) {
 
   await fetchDocs()
   await loadDoc(doc.slug)
+  showToast('页面已保存', 'success')
 }
 
 async function deleteDoc(slug) {
@@ -474,7 +502,7 @@ async function deleteDoc(slug) {
   }
   const target = docs.value.find((d) => d.slug === slug)
   if (target && !canEditDoc(target)) {
-    alert('当前用户无删除权限')
+    showToast('当前用户无删除权限', 'error')
     return
   }
   if (!confirm(`确认删除文档 ${slug} ?`)) {
@@ -488,6 +516,7 @@ async function deleteDoc(slug) {
   attachments.value = []
   persistCollections()
   openHome()
+  showToast('页面已删除', 'success')
 }
 
 async function loadVersions(slug) {
@@ -529,6 +558,7 @@ async function restoreVersion(versionNo) {
   await loadAttachments(activeSlug.value)
   await refreshVersions()
   diffText.value = ''
+  showToast(`已回滚到 v${versionNo}`, 'success')
 }
 
 function pickDiffLeft(versionNo) {
@@ -585,7 +615,7 @@ async function uploadAttachment(file) {
     return
   }
   if (!canEditDoc(currentDoc.value)) {
-    alert('当前用户无编辑权限')
+    showToast('当前用户无编辑权限', 'error')
     return
   }
   const form = new FormData()
@@ -599,7 +629,7 @@ async function deleteAttachment(attachmentId) {
     return
   }
   if (!canEditDoc(currentDoc.value)) {
-    alert('当前用户无编辑权限')
+    showToast('当前用户无编辑权限', 'error')
     return
   }
   await api.delete(`/documents/${activeSlug.value}/attachments/${attachmentId}`)
@@ -651,7 +681,7 @@ async function moveDoc(payload) {
   }
   const target = docs.value.find((d) => d.slug === payload.slug)
   if (target && !canEditDoc(target)) {
-    alert('当前用户无编辑权限')
+    showToast('当前用户无编辑权限', 'error')
     return
   }
   await api.patch(`/documents/${payload.slug}/move`, {
@@ -669,7 +699,7 @@ async function reorderDoc(payload) {
   }
   const target = docs.value.find((d) => d.slug === payload.slug)
   if (target && !canEditDoc(target)) {
-    alert('当前用户无编辑权限')
+    showToast('当前用户无编辑权限', 'error')
     return
   }
   await api.patch(`/documents/${payload.slug}/reorder`, {
@@ -694,9 +724,9 @@ async function handleDocQuickAction(payload) {
     const shareableLink = `${window.location.origin}?page=${encodeURIComponent(payload.slug)}`
     try {
       await navigator.clipboard.writeText(shareableLink)
-      alert('页面链接已复制')
+      showToast('页面链接已复制', 'success')
     } catch {
-      alert('复制失败，请手动复制')
+      showToast('复制失败，请手动复制', 'error')
     }
     return
   }
@@ -704,9 +734,9 @@ async function handleDocQuickAction(payload) {
   if (payload.action === 'COPY_SLUG') {
     try {
       await navigator.clipboard.writeText(payload.slug)
-      alert('slug 已复制')
+      showToast('slug 已复制', 'success')
     } catch {
-      alert('复制失败，请手动复制')
+      showToast('复制失败，请手动复制', 'error')
     }
     return
   }
@@ -722,7 +752,7 @@ async function handleDocQuickAction(payload) {
   }
 
   if (!canEditDoc(target)) {
-    alert('当前用户无编辑权限')
+    showToast('当前用户无编辑权限', 'error')
     return
   }
 
@@ -831,7 +861,7 @@ async function handleDocBulkAction(payload) {
     if (activeSlug.value && slugs.includes(activeSlug.value)) {
       await loadDoc(activeSlug.value)
     }
-    alert(`批量移到顶级完成：成功 ${updated}，跳过 ${skipped}`)
+    showToast(`批量移到顶级完成：成功 ${updated}，跳过 ${skipped}`, updated > 0 ? 'success' : 'info')
     docListRef.value?.clearBatchSelection()
     return
   }
@@ -877,7 +907,7 @@ async function handleDocBulkAction(payload) {
   if (activeSlug.value && slugs.includes(activeSlug.value)) {
     await loadDoc(activeSlug.value)
   }
-  alert(`批量操作完成：成功 ${updated}，跳过 ${skipped}`)
+  showToast(`批量操作完成：成功 ${updated}，跳过 ${skipped}`, updated > 0 ? 'success' : 'info')
   docListRef.value?.clearBatchSelection()
 }
 
@@ -894,6 +924,7 @@ async function toggleShare(enabled) {
     ...data
   }
   await fetchDocs()
+  showToast(enabled ? '已开启分享' : '已关闭分享', 'success')
 }
 
 async function regenerateShare() {
@@ -909,6 +940,7 @@ async function regenerateShare() {
     ...data
   }
   await fetchDocs()
+  showToast('分享链接已重置', 'success')
 }
 
 async function createTemplate(payload) {
@@ -921,6 +953,7 @@ async function createTemplate(payload) {
     content: payload.content
   })
   await fetchTemplates()
+  showToast('模板已创建', 'success')
 }
 
 async function updateTemplate(payload) {
@@ -933,6 +966,7 @@ async function updateTemplate(payload) {
     content: payload.content
   })
   await fetchTemplates()
+  showToast('模板已更新', 'success')
 }
 
 async function deleteTemplate(templateId) {
@@ -944,6 +978,7 @@ async function deleteTemplate(templateId) {
   }
   await api.delete(`/templates/${templateId}`)
   await fetchTemplates()
+  showToast('模板已删除', 'success')
 }
 
 function toggleFavorite(slug) {
@@ -1096,6 +1131,9 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+  }
 })
 
 watch(commandQuery, () => {
