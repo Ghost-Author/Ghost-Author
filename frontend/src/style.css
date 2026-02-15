@@ -1754,8 +1754,22 @@ button.small {
   overflow: auto;
 }
 
+.read-side-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+
+.read-side-card {
+  border: 1px solid #dbe6fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px;
+}
+
 .read-meta {
-  padding: 10px;
+  padding: 0;
 }
 
 .read-meta-row {
@@ -1789,6 +1803,39 @@ button.small {
   gap: 6px;
   flex-wrap: wrap;
   margin-top: 8px;
+}
+
+.read-outline-list {
+  margin-top: 8px;
+}
+
+.read-outline-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #dce8fc;
+  border-radius: 8px;
+  background: #fff;
+  color: #48608a;
+  font-size: 12px;
+  padding: 5px 7px 5px calc(7px + var(--outline-indent, 0px));
+  margin-bottom: 5px;
+  cursor: pointer;
+}
+
+.read-outline-list li:hover {
+  border-color: #9dbaf8;
+  background: #edf4ff;
+}
+
+.read-outline-list li.active {
+  border-color: #7ca6f6;
+  background: #e6f0ff;
+  color: #2b4f89;
+}
+
+.read-outline-dot {
+  color: #8ca8d8;
 }
 
 .perm-tags {

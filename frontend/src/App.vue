@@ -60,6 +60,7 @@
       <EditorPane
         v-else
         :doc="currentDoc"
+        :outline="pageOutline"
         :comments="comments"
         :attachments="attachments"
         :child-pages="childPages"
