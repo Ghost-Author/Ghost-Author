@@ -272,6 +272,10 @@
                     <option value="MARKDOWN">Markdown 列表</option>
                     <option value="LINKS">纯链接</option>
                   </select>
+                  <label class="outline-batch-level">
+                    <input type="checkbox" v-model="outlineBatchWithLevel" />
+                    层级前缀
+                  </label>
                   <button class="secondary tiny" @click="copySelectedOutlineLinks">复制已选链接</button>
                   <button class="secondary tiny" @click="clearOutlineSelection">清空选择</button>
                 </div>
@@ -600,6 +604,7 @@ const readOutlineQuery = ref('')
 const readOutlineLevelFilter = ref(null)
 const outlineDefaultAction = ref(loadOutlineDefaultAction())
 const outlineBatchFormat = ref(loadOutlineBatchFormat())
+const outlineBatchWithLevel = ref(loadOutlineBatchWithLevel())
 const selectedOutlineIds = ref([])
 const lastSelectedOutlineId = ref('')
 const outlineCursorId = ref('')
@@ -628,6 +633,7 @@ const READ_CARD_COLLAPSED_KEY = 'ga-read-card-collapsed'
 const READ_WIDTH_KEY = 'ga-read-width-mode'
 const OUTLINE_DEFAULT_ACTION_KEY = 'ga-outline-default-action'
 const OUTLINE_BATCH_FORMAT_KEY = 'ga-outline-batch-format'
+const OUTLINE_BATCH_LEVEL_KEY = 'ga-outline-batch-level'
 let readScrollRaf = null
 let outlineMenuRaf = null
 const readWidthModes = [
@@ -864,6 +870,10 @@ watch(outlineDefaultAction, (value) => {
 
 watch(outlineBatchFormat, (value) => {
   persistOutlineBatchFormat(value)
+})
+
+watch(outlineBatchWithLevel, (value) => {
+  persistOutlineBatchWithLevel(value)
 })
 
 watch([isCreateMode, isEditingSafe], async ([createMode, editable]) => {
@@ -1303,6 +1313,20 @@ function persistOutlineBatchFormat(value) {
   window.localStorage.setItem(OUTLINE_BATCH_FORMAT_KEY, value)
 }
 
+function loadOutlineBatchWithLevel() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+  return window.localStorage.getItem(OUTLINE_BATCH_LEVEL_KEY) === '1'
+}
+
+function persistOutlineBatchWithLevel(value) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(OUTLINE_BATCH_LEVEL_KEY, value ? '1' : '0')
+}
+
 function loadChildOpenState(docId) {
   if (typeof window === 'undefined' || !docId) {
     return {}
@@ -1566,12 +1590,17 @@ async function copySelectedOutlineLinks() {
   if (!selectedOutlineEntries.value.length) {
     return
   }
+  const labelOf = (item) => {
+    const matched = props.outline.find((node) => node.id === item.id)
+    const levelPrefix = outlineBatchWithLevel.value && matched ? `H${matched.level} ` : ''
+    return `${levelPrefix}${item.text}`
+  }
   const text = outlineBatchFormat.value === 'LINKS'
     ? selectedOutlineEntries.value
-      .map((item) => item.link)
+      .map((item) => outlineBatchWithLevel.value ? `${labelOf(item)} - ${item.link}` : item.link)
       .join('\n')
     : selectedOutlineEntries.value
-      .map((item) => `- [${item.text}](${item.link})`)
+      .map((item) => `- [${labelOf(item)}](${item.link})`)
       .join('\n')
   try {
     await navigator.clipboard.writeText(text)
@@ -1579,7 +1608,7 @@ async function copySelectedOutlineLinks() {
     const dedupedCount = selectedOutlineEntries.value.length
     emit('notify', {
       type: 'success',
-      message: `已复制 ${dedupedCount}/${rawCount} 条目录链接（${outlineBatchFormat.value === 'LINKS' ? '纯链接' : 'Markdown'}）`
+      message: `已复制 ${dedupedCount}/${rawCount} 条目录链接（${outlineBatchFormat.value === 'LINKS' ? '纯链接' : 'Markdown'}${outlineBatchWithLevel.value ? ' + 层级' : ''}）`
     })
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })

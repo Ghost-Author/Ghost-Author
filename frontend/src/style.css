@@ -1921,6 +1921,17 @@ button.small {
   font-size: 11px;
 }
 
+.outline-batch-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #5f759f;
+}
+
+.outline-batch-level input {
+  margin: 0;
+}
+
 .read-outline-progress {
   margin-top: 8px;
   border: 1px solid #d9e6fc;
