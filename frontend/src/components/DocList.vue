@@ -24,91 +24,99 @@
         <button class="search-btn clear" @click="clearSearch">清空</button>
       </div>
 
-      <div class="status-filters">
-      <button
-        class="filter-btn"
-        :class="{ active: statusFilter === 'ALL' }"
-        @click="statusFilter = 'ALL'"
-      >
-        全部 {{ statusCounts.ALL }}
-      </button>
-      <button
-        class="filter-btn"
-        :class="{ active: statusFilter === 'PUBLISHED' }"
-        @click="statusFilter = 'PUBLISHED'"
-      >
-        已发布 {{ statusCounts.PUBLISHED }}
-      </button>
-      <button
-        class="filter-btn"
-        :class="{ active: statusFilter === 'DRAFT' }"
-        @click="statusFilter = 'DRAFT'"
-      >
-        草稿 {{ statusCounts.DRAFT }}
-      </button>
-      <button
-        class="filter-btn"
-        :class="{ active: statusFilter === 'ARCHIVED' }"
-        @click="statusFilter = 'ARCHIVED'"
-      >
-        已归档 {{ statusCounts.ARCHIVED }}
-      </button>
-      </div>
-
-      <div class="visibility-filters">
-      <button
-        class="filter-btn"
-        :class="{ active: visibilityFilter === 'ALL' }"
-        @click="visibilityFilter = 'ALL'"
-      >
-        全可见性 {{ visibilityCounts.ALL }}
-      </button>
-      <button
-        class="filter-btn"
-        :class="{ active: visibilityFilter === 'SPACE' }"
-        @click="visibilityFilter = 'SPACE'"
-      >
-        空间可见 {{ visibilityCounts.SPACE }}
-      </button>
-      <button
-        class="filter-btn"
-        :class="{ active: visibilityFilter === 'PRIVATE' }"
-        @click="visibilityFilter = 'PRIVATE'"
-      >
-        私有 {{ visibilityCounts.PRIVATE }}
-      </button>
-      </div>
-
-      <div class="priority-filters">
-      <button class="filter-btn" :class="{ active: priorityFilter === 'ALL' }" @click="priorityFilter = 'ALL'">
-        优先级全部
-      </button>
-      <button class="filter-btn" :class="{ active: priorityFilter === 'HIGH' }" @click="priorityFilter = 'HIGH'">
-        高优先级
-      </button>
-      <button class="filter-btn" :class="{ active: priorityFilter === 'MEDIUM' }" @click="priorityFilter = 'MEDIUM'">
-        中优先级
-      </button>
-      <button class="filter-btn" :class="{ active: priorityFilter === 'LOW' }" @click="priorityFilter = 'LOW'">
-        低优先级
-      </button>
-      </div>
-
-      <div class="meta-filters">
-      <select v-model="assigneeFilter">
-        <option value="">负责人（全部）</option>
-        <option v-for="name in assigneeOptions" :key="name" :value="name">{{ name }}</option>
-      </select>
-      <select v-model="dueFilter">
-        <option value="ALL">截止日期（全部）</option>
-        <option value="HAS_DUE">有截止日期</option>
-        <option value="OVERDUE">已逾期</option>
-      </select>
-      </div>
-      <div class="todo-toggle-row">
-        <button class="filter-btn" :class="{ active: myTodoMode }" @click="toggleMyTodoMode">
-          我的待办视图
+      <div class="filter-panel">
+        <button class="filter-panel-head" @click="filtersOpen = !filtersOpen">
+          <strong>筛选器</strong>
+          <span>{{ filtersOpen ? '收起 ▾' : '展开 ▸' }}</span>
         </button>
+        <div v-show="filtersOpen">
+          <div class="status-filters">
+          <button
+            class="filter-btn"
+            :class="{ active: statusFilter === 'ALL' }"
+            @click="statusFilter = 'ALL'"
+          >
+            全部 {{ statusCounts.ALL }}
+          </button>
+          <button
+            class="filter-btn"
+            :class="{ active: statusFilter === 'PUBLISHED' }"
+            @click="statusFilter = 'PUBLISHED'"
+          >
+            已发布 {{ statusCounts.PUBLISHED }}
+          </button>
+          <button
+            class="filter-btn"
+            :class="{ active: statusFilter === 'DRAFT' }"
+            @click="statusFilter = 'DRAFT'"
+          >
+            草稿 {{ statusCounts.DRAFT }}
+          </button>
+          <button
+            class="filter-btn"
+            :class="{ active: statusFilter === 'ARCHIVED' }"
+            @click="statusFilter = 'ARCHIVED'"
+          >
+            已归档 {{ statusCounts.ARCHIVED }}
+          </button>
+          </div>
+
+          <div class="visibility-filters">
+          <button
+            class="filter-btn"
+            :class="{ active: visibilityFilter === 'ALL' }"
+            @click="visibilityFilter = 'ALL'"
+          >
+            全可见性 {{ visibilityCounts.ALL }}
+          </button>
+          <button
+            class="filter-btn"
+            :class="{ active: visibilityFilter === 'SPACE' }"
+            @click="visibilityFilter = 'SPACE'"
+          >
+            空间可见 {{ visibilityCounts.SPACE }}
+          </button>
+          <button
+            class="filter-btn"
+            :class="{ active: visibilityFilter === 'PRIVATE' }"
+            @click="visibilityFilter = 'PRIVATE'"
+          >
+            私有 {{ visibilityCounts.PRIVATE }}
+          </button>
+          </div>
+
+          <div class="priority-filters">
+          <button class="filter-btn" :class="{ active: priorityFilter === 'ALL' }" @click="priorityFilter = 'ALL'">
+            优先级全部
+          </button>
+          <button class="filter-btn" :class="{ active: priorityFilter === 'HIGH' }" @click="priorityFilter = 'HIGH'">
+            高优先级
+          </button>
+          <button class="filter-btn" :class="{ active: priorityFilter === 'MEDIUM' }" @click="priorityFilter = 'MEDIUM'">
+            中优先级
+          </button>
+          <button class="filter-btn" :class="{ active: priorityFilter === 'LOW' }" @click="priorityFilter = 'LOW'">
+            低优先级
+          </button>
+          </div>
+
+          <div class="meta-filters">
+          <select v-model="assigneeFilter">
+            <option value="">负责人（全部）</option>
+            <option v-for="name in assigneeOptions" :key="name" :value="name">{{ name }}</option>
+          </select>
+          <select v-model="dueFilter">
+            <option value="ALL">截止日期（全部）</option>
+            <option value="HAS_DUE">有截止日期</option>
+            <option value="OVERDUE">已逾期</option>
+          </select>
+          </div>
+          <div class="todo-toggle-row">
+            <button class="filter-btn" :class="{ active: myTodoMode }" @click="toggleMyTodoMode">
+              我的待办视图
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="quick-zones">
@@ -240,6 +248,7 @@
 import { computed, ref, watch } from 'vue'
 
 const QUICK_PANEL_KEY = 'ga-sidebar-quick-panels'
+const FILTER_PANEL_KEY = 'ga-sidebar-filter-panel'
 
 function loadQuickPanelsState() {
   if (typeof window === 'undefined') {
@@ -270,6 +279,24 @@ function persistQuickPanelsState(favoritesOpen, recentOpen) {
   }))
 }
 
+function loadFilterPanelState() {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  const raw = window.localStorage.getItem(FILTER_PANEL_KEY)
+  if (raw === null) {
+    return true
+  }
+  return raw !== '0'
+}
+
+function persistFilterPanelState(open) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(FILTER_PANEL_KEY, open ? '1' : '0')
+}
+
 const keyword = ref('')
 const opened = ref({})
 const statusFilter = ref('ALL')
@@ -278,6 +305,7 @@ const priorityFilter = ref('ALL')
 const assigneeFilter = ref('')
 const dueFilter = ref('ALL')
 const myTodoMode = ref(false)
+const filtersOpen = ref(loadFilterPanelState())
 const quickPanelsState = loadQuickPanelsState()
 const quickOpenFavorites = ref(quickPanelsState.favorites)
 const quickOpenRecent = ref(quickPanelsState.recent)
@@ -312,6 +340,10 @@ const emit = defineEmits(['search', 'toggle-favorite', 'move', 'reorder'])
 
 watch([quickOpenFavorites, quickOpenRecent], ([favoritesOpen, recentOpen]) => {
   persistQuickPanelsState(favoritesOpen, recentOpen)
+})
+
+watch(filtersOpen, (open) => {
+  persistFilterPanelState(open)
 })
 
 const statusFilteredDocs = computed(() => {

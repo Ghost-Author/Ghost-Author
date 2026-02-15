@@ -12,8 +12,11 @@
 
     <template v-else>
       <div class="outline-panel">
-        <div class="outline-head">页面目录</div>
-        <ul class="outline-list" v-if="outline.length">
+        <button class="panel-fold-head" @click="outlineOpen = !outlineOpen">
+          <strong>页面目录</strong>
+          <span>{{ outlineOpen ? '▾' : '▸' }}</span>
+        </button>
+        <ul class="outline-list" v-if="outlineOpen && outline.length">
           <li
             v-for="item in outline"
             :key="item.id"
@@ -24,11 +27,14 @@
             <span>{{ item.text }}</span>
           </li>
         </ul>
-        <div v-else class="outline-empty">没有可识别的标题（可用 # ## ###）</div>
+        <div v-else-if="outlineOpen" class="outline-empty">没有可识别的标题（可用 # ## ###）</div>
       </div>
 
-      <div class="version-list-head">版本历史</div>
-      <ul>
+      <button class="panel-fold-head version-list-head" @click="historyOpen = !historyOpen">
+        <strong>版本历史</strong>
+        <span>{{ historyOpen ? '▾' : '▸' }}</span>
+      </button>
+      <ul v-show="historyOpen">
         <li v-for="item in versions" :key="item.id">
           <div>
             <strong>v{{ item.versionNo }}</strong>
@@ -43,28 +49,34 @@
       </ul>
 
       <div class="diff-panel">
-        <div class="diff-toolbar">
-          <span>对比: v{{ diffFrom || '-' }} -> v{{ diffTo || '-' }}</span>
-          <button :disabled="!diffFrom || !diffTo" @click="$emit('diff')">生成 Diff</button>
-        </div>
-        <div class="diff-box" v-if="diffText">
-          <div
-            v-for="(line, idx) in diffLines"
-            :key="idx"
-            class="diff-line"
-            :class="lineClass(line)"
-          >
-            {{ line || ' ' }}
+        <button class="panel-fold-head" @click="diffOpen = !diffOpen">
+          <strong>版本对比</strong>
+          <span>{{ diffOpen ? '▾' : '▸' }}</span>
+        </button>
+        <div v-show="diffOpen">
+          <div class="diff-toolbar">
+            <span>对比: v{{ diffFrom || '-' }} -> v{{ diffTo || '-' }}</span>
+            <button :disabled="!diffFrom || !diffTo" @click="$emit('diff')">生成 Diff</button>
           </div>
+          <div class="diff-box" v-if="diffText">
+            <div
+              v-for="(line, idx) in diffLines"
+              :key="idx"
+              class="diff-line"
+              :class="lineClass(line)"
+            >
+              {{ line || ' ' }}
+            </div>
+          </div>
+          <pre class="diff-box placeholder" v-else>请选择两个版本并点击“生成 Diff”</pre>
         </div>
-        <pre class="diff-box placeholder" v-else>请选择两个版本并点击“生成 Diff”</pre>
       </div>
     </template>
   </aside>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   slug: {
@@ -93,6 +105,9 @@ const props = defineProps({
   }
 })
 
+const outlineOpen = ref(true)
+const historyOpen = ref(true)
+const diffOpen = ref(true)
 const diffLines = computed(() => props.diffText.split('\n'))
 
 function formatTime(value) {

@@ -327,6 +327,36 @@ button.tiny {
   margin-bottom: 10px;
 }
 
+.filter-panel {
+  border: 1px solid #d8e3fb;
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.filter-panel-head {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  color: #4c6290;
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.filter-panel-head strong {
+  font-size: 12px;
+}
+
+.filter-panel-head span {
+  font-size: 11px;
+  color: #768db4;
+}
+
 .status-filters {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -439,6 +469,8 @@ button.tiny {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  border-top: 1px dashed #d8e3fb;
+  padding-top: 8px;
 }
 
 .tree-section-title {
@@ -848,12 +880,27 @@ label {
   margin-bottom: 10px;
 }
 
-.outline-head,
-.version-list-head {
-  color: #51658d;
-  font-size: 12px;
-  font-weight: 700;
+.panel-fold-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #d7e3fb;
+  background: #f4f8ff;
+  color: #36598f;
+  box-shadow: none;
+  border-radius: 10px;
+  padding: 6px 8px;
   margin: 0 0 6px;
+}
+
+.panel-fold-head strong {
+  font-size: 12px;
+}
+
+.panel-fold-head span {
+  font-size: 11px;
+  color: #6b84ad;
 }
 
 .version-list-head {
@@ -908,6 +955,30 @@ label {
   margin-top: 12px;
   border-top: 1px dashed #c6d8f8;
   padding-top: 10px;
+}
+
+.doc-list-scroll::-webkit-scrollbar,
+.editor-pane::-webkit-scrollbar,
+.version-history::-webkit-scrollbar,
+.space-home::-webkit-scrollbar {
+  width: 10px;
+}
+
+.doc-list-scroll::-webkit-scrollbar-thumb,
+.editor-pane::-webkit-scrollbar-thumb,
+.version-history::-webkit-scrollbar-thumb,
+.space-home::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #c8d9f7;
+  border: 2px solid #f4f8ff;
+}
+
+.doc-list-scroll::-webkit-scrollbar-track,
+.editor-pane::-webkit-scrollbar-track,
+.version-history::-webkit-scrollbar-track,
+.space-home::-webkit-scrollbar-track {
+  background: #f4f8ff;
+  border-radius: 999px;
 }
 
 .diff-toolbar {
