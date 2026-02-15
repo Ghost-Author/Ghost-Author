@@ -678,6 +678,24 @@ const selectedOutlineItems = computed(() => {
   return props.outline.filter((item) => selected.has(item.id))
 })
 
+const selectedOutlineEntries = computed(() => {
+  const result = []
+  const seenLinks = new Set()
+  selectedOutlineItems.value.forEach((item) => {
+    const link = buildOutlineLink(item)
+    if (!link || seenLinks.has(link)) {
+      return
+    }
+    seenLinks.add(link)
+    result.push({
+      id: item.id,
+      text: item.text,
+      link
+    })
+  })
+  return result
+})
+
 const childTreeRows = computed(() => {
   const rows = []
   const openStack = []
@@ -1545,21 +1563,23 @@ async function copyOutlineLinkByItem(item) {
 }
 
 async function copySelectedOutlineLinks() {
-  if (!selectedOutlineItems.value.length) {
+  if (!selectedOutlineEntries.value.length) {
     return
   }
   const text = outlineBatchFormat.value === 'LINKS'
-    ? selectedOutlineItems.value
-      .map((item) => buildOutlineLink(item))
+    ? selectedOutlineEntries.value
+      .map((item) => item.link)
       .join('\n')
-    : selectedOutlineItems.value
-      .map((item) => `- [${item.text}](${buildOutlineLink(item)})`)
+    : selectedOutlineEntries.value
+      .map((item) => `- [${item.text}](${item.link})`)
       .join('\n')
   try {
     await navigator.clipboard.writeText(text)
+    const rawCount = selectedOutlineItems.value.length
+    const dedupedCount = selectedOutlineEntries.value.length
     emit('notify', {
       type: 'success',
-      message: `已复制 ${selectedOutlineItems.value.length} 条目录链接（${outlineBatchFormat.value === 'LINKS' ? '纯链接' : 'Markdown'}）`
+      message: `已复制 ${dedupedCount}/${rawCount} 条目录链接（${outlineBatchFormat.value === 'LINKS' ? '纯链接' : 'Markdown'}）`
     })
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
