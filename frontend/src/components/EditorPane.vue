@@ -523,6 +523,7 @@ const readInfoOpen = ref(false)
 const readPanelDock = ref('right')
 const childOpenMap = ref({})
 const READ_PANEL_DOCK_KEY = 'ga-read-panel-dock'
+const CHILD_OPEN_KEY = 'ga-read-child-open-state'
 let readScrollRaf = null
 
 const activeOutlineIndex = computed(() => {
@@ -620,7 +621,7 @@ watch(
     readPermOpen.value = false
     readChildrenOpen.value = true
     childQuery.value = ''
-    childOpenMap.value = {}
+    childOpenMap.value = loadChildOpenState(id)
   },
   { immediate: true }
 )
@@ -636,6 +637,14 @@ watch(
       }
     })
     childOpenMap.value = next
+  },
+  { deep: true }
+)
+
+watch(
+  [() => props.doc.id, childOpenMap],
+  ([id, map]) => {
+    persistChildOpenState(id, map)
   },
   { deep: true }
 )
@@ -814,6 +823,45 @@ function toggleChildOpen(slug) {
   childOpenMap.value = {
     ...childOpenMap.value,
     [slug]: !isChildOpen(slug)
+  }
+}
+
+function loadChildOpenState(docId) {
+  if (typeof window === 'undefined' || !docId) {
+    return {}
+  }
+  try {
+    const raw = window.localStorage.getItem(CHILD_OPEN_KEY)
+    if (!raw) {
+      return {}
+    }
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') {
+      return {}
+    }
+    const key = String(docId)
+    const value = parsed[key]
+    if (!value || typeof value !== 'object') {
+      return {}
+    }
+    return value
+  } catch {
+    return {}
+  }
+}
+
+function persistChildOpenState(docId, map) {
+  if (typeof window === 'undefined' || !docId) {
+    return
+  }
+  try {
+    const raw = window.localStorage.getItem(CHILD_OPEN_KEY)
+    const parsed = raw ? JSON.parse(raw) : {}
+    const safeParsed = parsed && typeof parsed === 'object' ? parsed : {}
+    safeParsed[String(docId)] = map || {}
+    window.localStorage.setItem(CHILD_OPEN_KEY, JSON.stringify(safeParsed))
+  } catch {
+    // ignore persistence failures
   }
 }
 
