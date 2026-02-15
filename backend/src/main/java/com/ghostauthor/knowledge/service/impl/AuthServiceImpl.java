@@ -26,8 +26,15 @@ public class AuthServiceImpl implements AuthService {
     @Value("${knowledge.auth.token-ttl-hours:168}")
     private long tokenTtlHours;
 
+    @Value("${knowledge.auth.max-failures:8}")
+    private int maxFailures;
+
+    @Value("${knowledge.auth.lock-minutes:10}")
+    private long lockMinutes;
+
     private final Map<String, String> users = new ConcurrentHashMap<>();
     private final Map<String, Session> sessions = new ConcurrentHashMap<>();
+    private final Map<String, FailedAttempt> failedAttempts = new ConcurrentHashMap<>();
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @PostConstruct
@@ -58,10 +65,13 @@ public class AuthServiceImpl implements AuthService {
     public AuthLoginResponse login(String username, String password) {
         String cleanUser = username == null ? "" : username.trim();
         String cleanPass = password == null ? "" : password;
+        ensureLoginNotLocked(cleanUser);
         String expected = users.get(cleanUser);
         if (expected == null || !passwordMatches(cleanPass, expected)) {
+            markLoginFailure(cleanUser);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "用户名或密码错误");
         }
+        failedAttempts.remove(cleanUser);
 
         cleanupExpiredSessions();
         String token = UUID.randomUUID().toString().replace("-", "");
@@ -99,6 +109,43 @@ public class AuthServiceImpl implements AuthService {
         sessions.entrySet().removeIf((entry) -> entry.getValue().expiresAt < now);
     }
 
+    private void ensureLoginNotLocked(String username) {
+        if (username == null || username.isBlank()) {
+            return;
+        }
+        FailedAttempt attempt = failedAttempts.get(username);
+        if (attempt == null || attempt.lockedUntil <= 0) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (attempt.lockedUntil > now) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "登录失败次数过多，请稍后再试");
+        }
+        failedAttempts.remove(username);
+    }
+
+    private void markLoginFailure(String username) {
+        if (username == null || username.isBlank()) {
+            return;
+        }
+        int limit = Math.max(2, maxFailures);
+        long lockMillis = Math.max(1, lockMinutes) * 60_000L;
+        failedAttempts.compute(username, (key, old) -> {
+            long now = System.currentTimeMillis();
+            FailedAttempt next = old == null ? new FailedAttempt() : old;
+            if (next.lockedUntil > 0 && next.lockedUntil <= now) {
+                next.count = 0;
+                next.lockedUntil = 0;
+            }
+            next.count += 1;
+            if (next.count >= limit) {
+                next.count = 0;
+                next.lockedUntil = now + lockMillis;
+            }
+            return next;
+        });
+    }
+
     private boolean passwordMatches(String rawPassword, String configuredPassword) {
         String configured = configuredPassword == null ? "" : configuredPassword.trim();
         if (configured.isEmpty()) {
@@ -115,5 +162,10 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private record Session(String username, long expiresAt) {
+    }
+
+    private static class FailedAttempt {
+        private int count;
+        private long lockedUntil;
     }
 }

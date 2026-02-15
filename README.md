@@ -90,6 +90,8 @@ backend 环境变量建议：
 - `CORS_ALLOWED_ORIGIN=https://<your-frontend-domain>`
 - `AUTH_USERS=admin:admin123,liupeng:{bcrypt}$2a$...`（账号密码，逗号分隔；支持明文和 bcrypt）
 - `AUTH_TOKEN_TTL_HOURS=168`（登录 token 有效时长，单位小时）
+- `AUTH_MAX_FAILURES=8`（连续失败多少次后临时锁定）
+- `AUTH_LOCK_MINUTES=10`（达到失败阈值后的锁定分钟数）
 - `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=70 -XX:InitialRAMPercentage=20 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError`（避免小规格实例被 OOM 杀掉）
 
 后端健康后会得到一个 Railway 域名，例如：
@@ -180,6 +182,8 @@ npm run dev
 - `CORS_ALLOWED_ORIGIN`：前端跨域地址
 - `AUTH_USERS`：登录账号密码（格式：`user1:pass1,user2:{bcrypt}$2a$...`）
 - `AUTH_TOKEN_TTL_HOURS`：登录 token 有效时长（小时）
+- `AUTH_MAX_FAILURES`：连续登录失败阈值
+- `AUTH_LOCK_MINUTES`：登录失败锁定时长（分钟）
 - `VITE_API_BASE_URL`：前端调用后端 API 基地址（Railway 前端服务建议配置）
 
 ## API 示例

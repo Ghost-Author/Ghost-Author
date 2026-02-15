@@ -32,6 +32,8 @@ knowledge:
   auth:
     users: ${AUTH_USERS:admin:admin123}
     token-ttl-hours: ${AUTH_TOKEN_TTL_HOURS:168}
+    max-failures: ${AUTH_MAX_FAILURES:8}
+    lock-minutes: ${AUTH_LOCK_MINUTES:10}
 
 management:
   endpoints:
