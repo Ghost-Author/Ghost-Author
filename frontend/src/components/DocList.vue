@@ -274,9 +274,16 @@
                           :checked="selectedSlugs.includes(node.slug)"
                           @click.stop="toggleSelected(node.slug)"
                         />
+                        <button
+                          v-if="node.hasChildren"
+                          class="node-expand-btn"
+                          @click.stop="toggleNodeExpanded(node.slug)"
+                          :aria-label="node.expanded ? '收起子页面' : '展开子页面'"
+                        >
+                          {{ node.expanded ? '▾' : '▸' }}
+                        </button>
+                        <span v-else class="node-expand-spacer"></span>
                         <span class="node-type-dot" :class="{ root: node.depth === 0 }"></span>
-                        <span class="node-branch" v-if="node.depth > 0">↳</span>
-                        <span class="node-depth-pill" v-if="node.depth > 0">L{{ node.depth }}</span>
                         <strong>{{ node.title }}</strong>
                         <span class="node-child-count" v-if="directChildrenCount[node.slug]">
                           {{ directChildrenCount[node.slug] }} 子页
@@ -368,6 +375,7 @@ const GROUP_OPEN_KEY = 'ga-sidebar-open-groups'
 const SECTION_OPEN_KEY = 'ga-sidebar-open-sections'
 const DENSITY_KEY = 'ga-sidebar-density'
 const TREE_PANEL_KEY = 'ga-sidebar-tree-panel'
+const NODE_OPEN_KEY = 'ga-sidebar-open-nodes'
 
 function loadQuickPanelsState() {
   if (typeof window === 'undefined') {
@@ -500,6 +508,32 @@ function persistTreePanelState(open) {
   window.localStorage.setItem(TREE_PANEL_KEY, open ? '1' : '0')
 }
 
+function loadNodeOpenState() {
+  if (typeof window === 'undefined') {
+    return {}
+  }
+  try {
+    const raw = window.localStorage.getItem(NODE_OPEN_KEY)
+    if (!raw) {
+      return {}
+    }
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') {
+      return {}
+    }
+    return parsed
+  } catch {
+    return {}
+  }
+}
+
+function persistNodeOpenState(state) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(NODE_OPEN_KEY, JSON.stringify(state))
+}
+
 const keyword = ref('')
 const opened = ref(loadGroupOpenState())
 const sectionOpened = ref(loadSectionOpenState())
@@ -523,6 +557,7 @@ const selectedOnlyMode = ref(false)
 const compactMode = ref(loadCompactMode())
 const batchQuickOpen = ref(false)
 const treeOpen = ref(loadTreePanelState())
+const nodeOpened = ref(loadNodeOpenState())
 
 const props = defineProps({
   docs: {
@@ -573,9 +608,20 @@ watch(treeOpen, (open) => {
   persistTreePanelState(open)
 })
 
+watch(nodeOpened, (state) => {
+  persistNodeOpenState(state)
+}, { deep: true })
+
 watch(() => props.docs, () => {
   const valid = new Set(props.docs.map((doc) => doc.slug))
   selectedSlugs.value = selectedSlugs.value.filter((slug) => valid.has(slug))
+  const next = {}
+  Object.entries(nodeOpened.value).forEach(([slug, open]) => {
+    if (valid.has(slug)) {
+      next[slug] = open
+    }
+  })
+  nodeOpened.value = next
 }, { deep: true })
 
 watch(selectedSlugs, (list) => {
@@ -724,6 +770,17 @@ watch(() => props.activeSlug, async (slug) => {
   if (!slug) {
     return
   }
+  const bySlug = new Map(props.docs.map((doc) => [doc.slug, doc]))
+  let cursor = bySlug.get(slug)
+  const visited = new Set()
+  while (cursor && cursor.parentSlug && !visited.has(cursor.parentSlug)) {
+    visited.add(cursor.parentSlug)
+    nodeOpened.value = {
+      ...nodeOpened.value,
+      [cursor.parentSlug]: true
+    }
+    cursor = bySlug.get(cursor.parentSlug)
+  }
   visibilitySections.value.forEach((section) => {
     section.groups.forEach((group) => {
       if (group.items.some((item) => item.slug === slug)) {
@@ -821,20 +878,45 @@ function resolveGroup(slug) {
 }
 
 function flattenTree(node, childrenByParent, depth) {
-  const result = [{
-    ...node,
-    depth
-  }]
-
   const children = (childrenByParent.get(node.slug) || [])
     .slice()
     .sort(sortByOrder)
+  const hasChildren = children.length > 0
+  const expanded = hasChildren ? isNodeExpanded(node.slug, depth) : false
+  const result = [{
+    ...node,
+    depth,
+    hasChildren,
+    expanded
+  }]
 
-  children.forEach((child) => {
-    result.push(...flattenTree(child, childrenByParent, depth + 1))
-  })
+  if (expanded) {
+    children.forEach((child) => {
+      result.push(...flattenTree(child, childrenByParent, depth + 1))
+    })
+  }
 
   return result
+}
+
+function isNodeExpanded(slug, depth) {
+  const current = nodeOpened.value[slug]
+  if (typeof current === 'boolean') {
+    return current
+  }
+  const defaultOpen = depth < 2
+  nodeOpened.value = {
+    ...nodeOpened.value,
+    [slug]: defaultOpen
+  }
+  return defaultOpen
+}
+
+function toggleNodeExpanded(slug) {
+  nodeOpened.value = {
+    ...nodeOpened.value,
+    [slug]: !nodeOpened.value[slug]
+  }
 }
 
 function clearSearch() {
@@ -926,6 +1008,13 @@ function onNodeKeydown(event, slug) {
   }
 
   if (key === 'ArrowRight') {
+    if (row.item.hasChildren && !row.item.expanded) {
+      nodeOpened.value = {
+        ...nodeOpened.value,
+        [slug]: true
+      }
+      return
+    }
     if (!isSectionOpen(row.sectionKey)) {
       sectionOpened.value[row.sectionKey] = true
       return
@@ -942,6 +1031,13 @@ function onNodeKeydown(event, slug) {
   }
 
   if (key === 'ArrowLeft') {
+    if (row.item.hasChildren && row.item.expanded) {
+      nodeOpened.value = {
+        ...nodeOpened.value,
+        [slug]: false
+      }
+      return
+    }
     const parentSlug = row.item.parentSlug
     if (parentSlug && visibleRowBySlug.value.has(parentSlug)) {
       emit('select', parentSlug)
@@ -1146,14 +1242,34 @@ function expandAll() {
       opened.value[group.id] = true
     })
   })
+  const parents = new Set(
+    props.docs
+      .map((doc) => (doc.parentSlug || '').trim())
+      .filter((slug) => slug.length > 0)
+  )
+  const next = {}
+  parents.forEach((slug) => {
+    next[slug] = true
+  })
+  nodeOpened.value = next
 }
 
 function collapseAll() {
   visibilitySections.value.forEach((section) => {
     section.groups.forEach((group) => {
-      opened.value[group.id] = false
+      opened.value[group.id] = true
     })
   })
+  const parents = new Set(
+    props.docs
+      .map((doc) => (doc.parentSlug || '').trim())
+      .filter((slug) => slug.length > 0)
+  )
+  const next = {}
+  parents.forEach((slug) => {
+    next[slug] = false
+  })
+  nodeOpened.value = next
 }
 
 function onDragStart(slug) {
