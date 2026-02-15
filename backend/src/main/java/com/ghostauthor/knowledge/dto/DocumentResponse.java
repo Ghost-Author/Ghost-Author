@@ -3,6 +3,7 @@ package com.ghostauthor.knowledge.dto;
 import java.time.LocalDateTime;
 import java.util.List;
 import com.ghostauthor.knowledge.entity.DocumentStatus;
+import com.ghostauthor.knowledge.entity.DocumentVisibility;
 
 public record DocumentResponse(
         Long id,
@@ -13,6 +14,7 @@ public record DocumentResponse(
         String parentSlug,
         List<String> labels,
         DocumentStatus status,
+        DocumentVisibility visibility,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

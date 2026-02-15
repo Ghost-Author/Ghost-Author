@@ -38,6 +38,17 @@
 
       <div class="meta-grid">
         <label>
+          可见性
+          <select v-model="model.visibility" :disabled="!isEditingSafe">
+            <option value="SPACE">空间可见</option>
+            <option value="PRIVATE">仅自己</option>
+          </select>
+        </label>
+        <div />
+      </div>
+
+      <div class="meta-grid">
+        <label>
           标签（逗号分隔）
           <input v-model="labelsText" :disabled="!isEditingSafe" placeholder="产品, 入门, SOP" />
         </label>
@@ -56,9 +67,14 @@
       <div class="read-meta">
         <div class="read-meta-row">
           <h3>{{ model.title || 'Untitled' }}</h3>
-          <span class="read-status" :class="(model.status || 'DRAFT').toLowerCase()">
-            {{ model.status === 'PUBLISHED' ? '已发布' : '草稿' }}
-          </span>
+          <div class="read-badges">
+            <span class="read-status" :class="(model.status || 'DRAFT').toLowerCase()">
+              {{ model.status === 'PUBLISHED' ? '已发布' : '草稿' }}
+            </span>
+            <span class="read-visibility" :class="(model.visibility || 'SPACE').toLowerCase()">
+              {{ model.visibility === 'PRIVATE' ? '仅自己' : '空间可见' }}
+            </span>
+          </div>
         </div>
         <p class="read-summary">{{ model.summary || '暂无摘要' }}</p>
         <div class="read-tags" v-if="model.labels && model.labels.length">

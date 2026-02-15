@@ -3,6 +3,7 @@ package com.ghostauthor.knowledge.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import com.ghostauthor.knowledge.entity.DocumentStatus;
+import com.ghostauthor.knowledge.entity.DocumentVisibility;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ public record DocumentCreateRequest(
         @NotBlank String content,
         @Size(max = 128) String parentSlug,
         List<@Size(max = 32) String> labels,
-        DocumentStatus status
+        DocumentStatus status,
+        DocumentVisibility visibility
 ) {
 }

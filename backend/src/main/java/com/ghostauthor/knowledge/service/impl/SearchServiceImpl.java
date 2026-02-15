@@ -69,6 +69,7 @@ public class SearchServiceImpl implements SearchService {
                         List.of(),
                         null,
                         null,
+                        null,
                         null
                 ))
                 .toList();

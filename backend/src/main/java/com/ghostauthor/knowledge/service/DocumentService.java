@@ -7,6 +7,7 @@ import com.ghostauthor.knowledge.dto.DocumentVersionDiffResponse;
 import com.ghostauthor.knowledge.dto.DocumentVersionResponse;
 import com.ghostauthor.knowledge.dto.CommentCreateRequest;
 import com.ghostauthor.knowledge.dto.CommentResponse;
+import com.ghostauthor.knowledge.dto.DocumentMoveRequest;
 
 import java.util.List;
 
@@ -18,6 +19,7 @@ public interface DocumentService {
     void delete(String slug);
     List<DocumentVersionResponse> listVersions(String slug);
     DocumentResponse restoreVersion(String slug, Integer versionNo);
+    DocumentResponse move(String slug, DocumentMoveRequest request);
     DocumentVersionDiffResponse diffVersions(String slug, Integer fromVersion, Integer toVersion);
     List<CommentResponse> listComments(String slug);
     CommentResponse addComment(String slug, CommentCreateRequest request);

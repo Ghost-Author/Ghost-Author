@@ -47,6 +47,30 @@
       </button>
     </div>
 
+    <div class="visibility-filters">
+      <button
+        class="filter-btn"
+        :class="{ active: visibilityFilter === 'ALL' }"
+        @click="visibilityFilter = 'ALL'"
+      >
+        全可见性 {{ visibilityCounts.ALL }}
+      </button>
+      <button
+        class="filter-btn"
+        :class="{ active: visibilityFilter === 'SPACE' }"
+        @click="visibilityFilter = 'SPACE'"
+      >
+        空间可见 {{ visibilityCounts.SPACE }}
+      </button>
+      <button
+        class="filter-btn"
+        :class="{ active: visibilityFilter === 'PRIVATE' }"
+        @click="visibilityFilter = 'PRIVATE'"
+      >
+        私有 {{ visibilityCounts.PRIVATE }}
+      </button>
+    </div>
+
     <div class="quick-zones">
       <div class="quick-zone">
         <h4>⭐ 收藏</h4>
@@ -81,6 +105,16 @@
 
     <div class="tree-nav">
       <div
+        class="root-drop-zone"
+        :class="{ active: dropTargetRoot }"
+        @dragover.prevent="onRootDragOver"
+        @dragleave="onRootDragLeave"
+        @drop.prevent="onDropRoot"
+      >
+        拖拽到这里设为顶级页面
+      </div>
+
+      <div
         v-for="group in groupedDocs"
         :key="group.name"
         class="tree-group"
@@ -94,8 +128,14 @@
           <li
             v-for="node in group.items"
             :key="node.slug"
-            :class="['tree-node', depthClass(node.depth), { active: activeSlug === node.slug }]"
+            :class="['tree-node', depthClass(node.depth), { active: activeSlug === node.slug, 'drag-target': dropTargetSlug === node.slug }]"
             :style="{ paddingLeft: `${10 + node.depth * 22}px` }"
+            draggable="true"
+            @dragstart="onDragStart(node.slug)"
+            @dragend="onDragEnd"
+            @dragover.prevent="onDragOver(node.slug)"
+            @dragleave="onDragLeave(node.slug)"
+            @drop.prevent="onDropNode(node.slug)"
             @click="$emit('select', node.slug)"
           >
             <div class="node-title-row">
@@ -114,6 +154,9 @@
             </div>
             <div class="node-meta-row">
               <span class="node-slug">{{ node.slug }}</span>
+              <span class="node-visibility" :class="(node.visibility || 'SPACE').toLowerCase()">
+                {{ node.visibility === 'PRIVATE' ? '私有' : '空间' }}
+              </span>
               <span class="node-status" :class="(node.status || 'DRAFT').toLowerCase()">
                 {{ node.status === 'PUBLISHED' ? '已发布' : '草稿' }}
               </span>
@@ -135,6 +178,10 @@ import { computed, ref } from 'vue'
 const keyword = ref('')
 const opened = ref({})
 const statusFilter = ref('ALL')
+const visibilityFilter = ref('ALL')
+const draggingSlug = ref('')
+const dropTargetSlug = ref('')
+const dropTargetRoot = ref(false)
 
 const props = defineProps({
   docs: {
@@ -155,13 +202,17 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['search', 'toggle-favorite'])
+const emit = defineEmits(['search', 'toggle-favorite', 'move'])
 
 const filteredDocs = computed(() => {
-  if (statusFilter.value === 'ALL') {
-    return props.docs
+  let docs = props.docs
+  if (statusFilter.value !== 'ALL') {
+    docs = docs.filter((doc) => (doc.status || 'DRAFT') === statusFilter.value)
   }
-  return props.docs.filter((doc) => (doc.status || 'DRAFT') === statusFilter.value)
+  if (visibilityFilter.value !== 'ALL') {
+    docs = docs.filter((doc) => (doc.visibility || 'SPACE') === visibilityFilter.value)
+  }
+  return docs
 })
 
 const statusCounts = computed(() => {
@@ -171,6 +222,16 @@ const statusCounts = computed(() => {
     ALL: props.docs.length,
     PUBLISHED: published,
     DRAFT: draft
+  }
+})
+
+const visibilityCounts = computed(() => {
+  const space = props.docs.filter((doc) => (doc.visibility || 'SPACE') === 'SPACE').length
+  const privateCount = props.docs.length - space
+  return {
+    ALL: props.docs.length,
+    SPACE: space,
+    PRIVATE: privateCount
   }
 })
 
@@ -276,5 +337,65 @@ function collapseAll() {
   groupedDocs.value.forEach((group) => {
     opened.value[group.name] = false
   })
+}
+
+function onDragStart(slug) {
+  draggingSlug.value = slug
+}
+
+function onDragEnd() {
+  draggingSlug.value = ''
+  dropTargetSlug.value = ''
+  dropTargetRoot.value = false
+}
+
+function onDragOver(targetSlug) {
+  if (!draggingSlug.value || draggingSlug.value === targetSlug) {
+    return
+  }
+  dropTargetRoot.value = false
+  dropTargetSlug.value = targetSlug
+}
+
+function onDragLeave(targetSlug) {
+  if (dropTargetSlug.value === targetSlug) {
+    dropTargetSlug.value = ''
+  }
+}
+
+function onDropNode(targetSlug) {
+  if (!draggingSlug.value || draggingSlug.value === targetSlug) {
+    onDragEnd()
+    return
+  }
+  emit('move', {
+    slug: draggingSlug.value,
+    parentSlug: targetSlug
+  })
+  onDragEnd()
+}
+
+function onRootDragOver() {
+  if (!draggingSlug.value) {
+    return
+  }
+  dropTargetSlug.value = ''
+  dropTargetRoot.value = true
+}
+
+function onRootDragLeave() {
+  dropTargetRoot.value = false
+}
+
+function onDropRoot() {
+  if (!draggingSlug.value) {
+    onDragEnd()
+    return
+  }
+  emit('move', {
+    slug: draggingSlug.value,
+    parentSlug: null
+  })
+  onDragEnd()
 }
 </script>

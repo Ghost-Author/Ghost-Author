@@ -5,11 +5,13 @@ import com.ghostauthor.knowledge.dto.DocumentResponse;
 import com.ghostauthor.knowledge.dto.DocumentUpdateRequest;
 import com.ghostauthor.knowledge.dto.DocumentVersionDiffResponse;
 import com.ghostauthor.knowledge.dto.DocumentVersionResponse;
+import com.ghostauthor.knowledge.dto.DocumentMoveRequest;
 import com.ghostauthor.knowledge.dto.CommentCreateRequest;
 import com.ghostauthor.knowledge.dto.CommentResponse;
 import com.ghostauthor.knowledge.entity.DocumentCommentEntity;
 import com.ghostauthor.knowledge.entity.DocumentEntity;
 import com.ghostauthor.knowledge.entity.DocumentStatus;
+import com.ghostauthor.knowledge.entity.DocumentVisibility;
 import com.ghostauthor.knowledge.entity.DocumentVersionEntity;
 import com.ghostauthor.knowledge.repository.DocumentCommentRepository;
 import com.ghostauthor.knowledge.repository.DocumentRepository;
@@ -67,6 +69,7 @@ public class DocumentServiceImpl implements DocumentService {
         entity.setParentSlug(normalizeParentSlug(request.slug(), request.parentSlug()));
         entity.setLabels(joinLabels(request.labels()));
         entity.setStatus(request.status() == null ? DocumentStatus.DRAFT : request.status());
+        entity.setVisibility(request.visibility() == null ? DocumentVisibility.SPACE : request.visibility());
         entity.setFilePath(filePath);
 
         DocumentEntity saved = documentRepository.save(entity);
@@ -89,6 +92,9 @@ public class DocumentServiceImpl implements DocumentService {
         entity.setLabels(joinLabels(request.labels()));
         if (request.status() != null) {
             entity.setStatus(request.status());
+        }
+        if (request.visibility() != null) {
+            entity.setVisibility(request.visibility());
         }
 
         DocumentEntity saved = documentRepository.save(entity);
@@ -157,6 +163,17 @@ public class DocumentServiceImpl implements DocumentService {
         searchService.indexDocument(saved.getId(), saved.getSlug(), saved.getTitle(), saved.getSummary(), version.getContent());
 
         return toResponse(saved, version.getContent());
+    }
+
+    @Override
+    @Transactional
+    public DocumentResponse move(String slug, DocumentMoveRequest request) {
+        DocumentEntity entity = documentRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+        entity.setParentSlug(normalizeParentSlug(slug, request.parentSlug()));
+        DocumentEntity saved = documentRepository.save(entity);
+        String content = fileStorageService.readMarkdown(saved.getFilePath());
+        return toResponse(saved, content);
     }
 
     @Override
@@ -232,6 +249,7 @@ public class DocumentServiceImpl implements DocumentService {
                 entity.getParentSlug(),
                 splitLabels(entity.getLabels()),
                 entity.getStatus() == null ? DocumentStatus.DRAFT : entity.getStatus(),
+                entity.getVisibility() == null ? DocumentVisibility.SPACE : entity.getVisibility(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
@@ -270,8 +288,18 @@ public class DocumentServiceImpl implements DocumentService {
         if (normalized.equals(currentSlug)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parent slug cannot be self");
         }
-        if (!documentRepository.existsBySlug(normalized)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parent document does not exist");
+        DocumentEntity cursor = documentRepository.findBySlug(normalized)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parent document does not exist"));
+
+        // Prevent cyclic nesting: current page cannot be placed under its descendants.
+        while (cursor != null && StringUtils.hasText(cursor.getParentSlug())) {
+            if (currentSlug.equals(cursor.getSlug())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parent creates cyclic hierarchy");
+            }
+            cursor = documentRepository.findBySlug(cursor.getParentSlug()).orElse(null);
+        }
+        if (cursor != null && currentSlug.equals(cursor.getSlug())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parent creates cyclic hierarchy");
         }
         return normalized;
     }

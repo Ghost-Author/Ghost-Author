@@ -28,6 +28,7 @@
         @search="searchDocs"
         @select="loadDoc"
         @toggle-favorite="toggleFavorite"
+        @move="moveDoc"
       />
 
       <EditorPane
@@ -105,6 +106,7 @@ function emptyDoc() {
     parentSlug: '',
     labels: [],
     status: 'DRAFT',
+    visibility: 'SPACE',
     content: '# 新文档\n\n开始编辑...'
   }
 }
@@ -120,6 +122,9 @@ async function loadDoc(slug) {
   currentDoc.value = data
   if (!currentDoc.value.status) {
     currentDoc.value.status = 'DRAFT'
+  }
+  if (!currentDoc.value.visibility) {
+    currentDoc.value.visibility = 'SPACE'
   }
   activeSlug.value = slug
   await loadComments(slug)
@@ -153,7 +158,8 @@ async function saveDoc(doc) {
       content: doc.content,
       parentSlug: doc.parentSlug || null,
       labels: doc.labels || [],
-      status: doc.status || 'DRAFT'
+      status: doc.status || 'DRAFT',
+      visibility: doc.visibility || 'SPACE'
     })
   } else {
     await api.post('/documents', {
@@ -163,7 +169,8 @@ async function saveDoc(doc) {
       content: doc.content,
       parentSlug: doc.parentSlug || null,
       labels: doc.labels || [],
-      status: doc.status || 'DRAFT'
+      status: doc.status || 'DRAFT',
+      visibility: doc.visibility || 'SPACE'
     })
   }
 
@@ -262,6 +269,19 @@ async function deleteComment(commentId) {
   }
   await api.delete(`/documents/${activeSlug.value}/comments/${commentId}`)
   await loadComments(activeSlug.value)
+}
+
+async function moveDoc(payload) {
+  if (!payload?.slug) {
+    return
+  }
+  await api.patch(`/documents/${payload.slug}/move`, {
+    parentSlug: payload.parentSlug || null
+  })
+  await fetchDocs()
+  if (activeSlug.value) {
+    await loadDoc(activeSlug.value)
+  }
 }
 
 function toggleFavorite(slug) {

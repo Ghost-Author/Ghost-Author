@@ -278,6 +278,13 @@ button.tiny {
   margin-bottom: 10px;
 }
 
+.visibility-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 .filter-btn {
   width: 100%;
   border: 1px solid #cfe0fb;
@@ -338,6 +345,22 @@ button.tiny {
   gap: 8px;
 }
 
+.root-drop-zone {
+  border: 1px dashed #bdd2fb;
+  border-radius: 10px;
+  background: #f4f8ff;
+  color: #5670a1;
+  font-size: 12px;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.root-drop-zone.active {
+  border-color: #2f6fec;
+  background: #e8f0ff;
+  color: #2f5ca8;
+}
+
 .tree-group {
   border: 1px solid #d8e3fb;
   border-radius: 12px;
@@ -396,6 +419,11 @@ ul {
 .doc-items li.active {
   border-color: var(--primary);
   background: var(--primary-soft);
+}
+
+.doc-items li.drag-target {
+  border-color: #2f6fec;
+  box-shadow: 0 0 0 3px #dce9ff;
 }
 
 .node-title-row {
@@ -498,6 +526,27 @@ ul {
   border: 1px solid #d7e2fb;
   border-radius: 999px;
   padding: 1px 7px;
+}
+
+.node-visibility {
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 1px 7px;
+  border: 1px solid #c8daf9;
+  background: #edf4ff;
+  color: #325a99;
+}
+
+.node-visibility.private {
+  border-color: #e0d3fb;
+  background: #f5efff;
+  color: #6a4ab5;
+}
+
+.node-visibility.space {
+  border-color: #9bd8bf;
+  background: #ebfff5;
+  color: #1a7f54;
 }
 
 .node-status {
@@ -774,6 +823,12 @@ button.small {
   gap: 8px;
 }
 
+.read-badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
 .read-meta-row h3 {
   margin: 0;
   font-size: 18px;
@@ -812,6 +867,27 @@ button.small {
   border-color: #f5c5d7;
   background: #fff2f7;
   color: #a84f77;
+}
+
+.read-visibility {
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  border: 1px solid #9bd8bf;
+  background: #ebfff5;
+  color: #1a7f54;
+}
+
+.read-visibility.private {
+  border-color: #e0d3fb;
+  background: #f5efff;
+  color: #6a4ab5;
+}
+
+.read-visibility.space {
+  border-color: #9bd8bf;
+  background: #ebfff5;
+  color: #1a7f54;
 }
 
 .comment-empty {

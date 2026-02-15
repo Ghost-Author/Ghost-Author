@@ -33,6 +33,11 @@ public class DocumentEntity {
     @Column(length = 16)
     private DocumentStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(length = 16)
+    private DocumentVisibility visibility;
+
     @Column(nullable = false, length = 512)
     private String filePath;
 
@@ -49,6 +54,9 @@ public class DocumentEntity {
         updatedAt = now;
         if (status == null) {
             status = DocumentStatus.DRAFT;
+        }
+        if (visibility == null) {
+            visibility = DocumentVisibility.SPACE;
         }
     }
 
@@ -127,5 +135,13 @@ public class DocumentEntity {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public DocumentVisibility getVisibility() {
+        return visibility;
+    }
+
+    public void setVisibility(DocumentVisibility visibility) {
+        this.visibility = visibility;
     }
 }

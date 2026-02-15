@@ -5,6 +5,7 @@ import com.ghostauthor.knowledge.dto.DocumentResponse;
 import com.ghostauthor.knowledge.dto.DocumentUpdateRequest;
 import com.ghostauthor.knowledge.dto.DocumentVersionDiffResponse;
 import com.ghostauthor.knowledge.dto.DocumentVersionResponse;
+import com.ghostauthor.knowledge.dto.DocumentMoveRequest;
 import com.ghostauthor.knowledge.dto.CommentCreateRequest;
 import com.ghostauthor.knowledge.dto.CommentResponse;
 import com.ghostauthor.knowledge.service.DocumentService;
@@ -62,6 +63,11 @@ public class DocumentController {
     @PostMapping("/{slug}/versions/{versionNo}/restore")
     public DocumentResponse restoreVersion(@PathVariable String slug, @PathVariable Integer versionNo) {
         return documentService.restoreVersion(slug, versionNo);
+    }
+
+    @PatchMapping("/{slug}/move")
+    public DocumentResponse move(@PathVariable String slug, @Valid @RequestBody DocumentMoveRequest request) {
+        return documentService.move(slug, request);
     }
 
     @GetMapping("/{slug}/versions/diff")
