@@ -253,7 +253,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { api, loadApiAuthToken, setApiAuthToken } from './api/client'
+import { api, loadApiAuthToken, setApiAuthToken, setUnauthorizedHandler } from './api/client'
 import DocList from './components/DocList.vue'
 import EditorPane from './components/EditorPane.vue'
 import SpaceHome from './components/SpaceHome.vue'
@@ -282,6 +282,7 @@ const loginForm = ref({
   password: ''
 })
 const loginError = ref('')
+const loggingOut = ref(false)
 const currentDoc = ref(emptyDoc())
 const showHome = ref(true)
 const commandOpen = ref(false)
@@ -1630,9 +1631,7 @@ async function submitLogin() {
   showToast(`欢迎回来，${username}`, 'success')
 }
 
-function logout() {
-  persistAuthSession('', 0)
-  setApiAuthToken('')
+function clearWorkspaceAfterLogout() {
   isAuthenticated.value = false
   pendingPageSlug.value = ''
   loginForm.value = {
@@ -1646,6 +1645,33 @@ function logout() {
   attachments.value = []
   templates.value = []
   openHome()
+}
+
+function forceLogoutDueToAuthFailure() {
+  if (loggingOut.value) {
+    return
+  }
+  persistAuthSession('', 0)
+  setApiAuthToken('')
+  clearWorkspaceAfterLogout()
+  showToast('登录已过期，请重新登录', 'error')
+}
+
+async function logout() {
+  if (loggingOut.value) {
+    return
+  }
+  loggingOut.value = true
+  try {
+    await api.post('/auth/logout')
+  } catch {
+    // Token may already be expired; continue local cleanup.
+  } finally {
+    persistAuthSession('', 0)
+    setApiAuthToken('')
+    clearWorkspaceAfterLogout()
+    loggingOut.value = false
+  }
 }
 
 function handleKeydown(event) {
@@ -1769,6 +1795,9 @@ async function selectCommandDoc(slug) {
 }
 
 onMounted(async () => {
+  setUnauthorizedHandler(() => {
+    forceLogoutDueToAuthFailure()
+  })
   const params = new URLSearchParams(window.location.search)
   shareTokenFromUrl.value = params.get('token') || ''
   const initialPage = params.get('page') || ''
@@ -1800,6 +1829,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  setUnauthorizedHandler(null)
   window.removeEventListener('keydown', handleKeydown)
   stopLeftResize()
   if (toastTimer) {

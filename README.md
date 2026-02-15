@@ -195,6 +195,13 @@ curl -X POST http://localhost:8080/api/auth/login \
   }'
 ```
 
+### 退出登录
+
+```bash
+curl -X POST http://localhost:8080/api/auth/logout \
+  -H "Authorization: Bearer <token>"
+```
+
 ### 创建文档
 
 ```bash

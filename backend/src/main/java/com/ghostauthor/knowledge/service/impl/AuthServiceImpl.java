@@ -81,6 +81,14 @@ public class AuthServiceImpl implements AuthService {
         return session.username;
     }
 
+    @Override
+    public void logout(String token) {
+        if (token == null || token.isBlank()) {
+            return;
+        }
+        sessions.remove(token.trim());
+    }
+
     private void cleanupExpiredSessions() {
         long now = System.currentTimeMillis();
         sessions.entrySet().removeIf((entry) -> entry.getValue().expiresAt < now);

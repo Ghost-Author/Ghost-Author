@@ -7,6 +7,20 @@ export const api = axios.create({
   baseURL: envBase || 'http://localhost:8080/api'
 })
 
+let unauthorizedHandler = null
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status
+    const requestUrl = String(error?.config?.url || '')
+    if (status === 401 && !requestUrl.includes('/auth/login') && typeof unauthorizedHandler === 'function') {
+      unauthorizedHandler()
+    }
+    return Promise.reject(error)
+  }
+)
+
 export function setApiAuthToken(token) {
   const clean = (token || '').trim()
   if (!clean) {
@@ -31,4 +45,8 @@ export function loadApiAuthToken() {
     api.defaults.headers.common.Authorization = `Bearer ${token}`
   }
   return token
+}
+
+export function setUnauthorizedHandler(handler) {
+  unauthorizedHandler = typeof handler === 'function' ? handler : null
 }

@@ -5,4 +5,5 @@ import com.ghostauthor.knowledge.dto.AuthLoginResponse;
 public interface AuthService {
     AuthLoginResponse login(String username, String password);
     String verifyToken(String token);
+    void logout(String token);
 }
