@@ -5,6 +5,8 @@ import com.ghostauthor.knowledge.service.AuthService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -16,6 +18,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class AuthServiceImpl implements AuthService {
 
+    private static final String BCRYPT_PREFIX = "{bcrypt}";
+
     @Value("${knowledge.auth.users:admin:admin123}")
     private String usersConfig;
 
@@ -24,6 +28,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final Map<String, String> users = new ConcurrentHashMap<>();
     private final Map<String, Session> sessions = new ConcurrentHashMap<>();
+    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @PostConstruct
     public void initUsers() {
@@ -54,7 +59,7 @@ public class AuthServiceImpl implements AuthService {
         String cleanUser = username == null ? "" : username.trim();
         String cleanPass = password == null ? "" : password;
         String expected = users.get(cleanUser);
-        if (expected == null || !expected.equals(cleanPass)) {
+        if (expected == null || !passwordMatches(cleanPass, expected)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "用户名或密码错误");
         }
 
@@ -92,6 +97,21 @@ public class AuthServiceImpl implements AuthService {
     private void cleanupExpiredSessions() {
         long now = System.currentTimeMillis();
         sessions.entrySet().removeIf((entry) -> entry.getValue().expiresAt < now);
+    }
+
+    private boolean passwordMatches(String rawPassword, String configuredPassword) {
+        String configured = configuredPassword == null ? "" : configuredPassword.trim();
+        if (configured.isEmpty()) {
+            return false;
+        }
+        if (configured.startsWith(BCRYPT_PREFIX)) {
+            String hash = configured.substring(BCRYPT_PREFIX.length()).trim();
+            return !hash.isEmpty() && passwordEncoder.matches(rawPassword, hash);
+        }
+        if (configured.startsWith("$2a$") || configured.startsWith("$2b$") || configured.startsWith("$2y$")) {
+            return passwordEncoder.matches(rawPassword, configured);
+        }
+        return configured.equals(rawPassword);
     }
 
     private record Session(String username, long expiresAt) {
