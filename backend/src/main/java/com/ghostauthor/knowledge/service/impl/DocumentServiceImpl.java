@@ -78,6 +78,9 @@ public class DocumentServiceImpl implements DocumentService {
         entity.setSummary(request.summary());
         entity.setParentSlug(normalizeParentSlug(request.slug(), request.parentSlug()));
         entity.setLabels(joinLabels(request.labels()));
+        entity.setOwner(normalizeOwner(request.owner()));
+        entity.setEditors(joinMembers(request.editors()));
+        entity.setViewers(joinMembers(request.viewers()));
         entity.setStatus(request.status() == null ? DocumentStatus.DRAFT : request.status());
         entity.setVisibility(request.visibility() == null ? DocumentVisibility.SPACE : request.visibility());
         entity.setLocked(Boolean.TRUE.equals(request.locked()));
@@ -102,6 +105,9 @@ public class DocumentServiceImpl implements DocumentService {
         entity.setSummary(request.summary());
         entity.setParentSlug(normalizeParentSlug(slug, request.parentSlug()));
         entity.setLabels(joinLabels(request.labels()));
+        entity.setOwner(normalizeOwner(request.owner()));
+        entity.setEditors(joinMembers(request.editors()));
+        entity.setViewers(joinMembers(request.viewers()));
         if (request.status() != null) {
             entity.setStatus(request.status());
         }
@@ -381,6 +387,9 @@ public class DocumentServiceImpl implements DocumentService {
                 content,
                 entity.getParentSlug(),
                 splitLabels(entity.getLabels()),
+                entity.getOwner(),
+                splitMembers(entity.getEditors()),
+                splitMembers(entity.getViewers()),
                 entity.getStatus() == null ? DocumentStatus.DRAFT : entity.getStatus(),
                 entity.getVisibility() == null ? DocumentVisibility.SPACE : entity.getVisibility(),
                 Boolean.TRUE.equals(entity.getLocked()),
@@ -450,6 +459,17 @@ public class DocumentServiceImpl implements DocumentService {
                 .collect(Collectors.joining(","));
     }
 
+    private String joinMembers(List<String> members) {
+        if (members == null || members.isEmpty()) {
+            return null;
+        }
+        return members.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .collect(Collectors.joining(","));
+    }
+
     private List<String> splitLabels(String labelsCsv) {
         if (!StringUtils.hasText(labelsCsv)) {
             return List.of();
@@ -458,6 +478,23 @@ public class DocumentServiceImpl implements DocumentService {
                 .map(String::trim)
                 .filter(StringUtils::hasText)
                 .toList();
+    }
+
+    private List<String> splitMembers(String membersCsv) {
+        if (!StringUtils.hasText(membersCsv)) {
+            return List.of();
+        }
+        return Arrays.stream(membersCsv.split(","))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .toList();
+    }
+
+    private String normalizeOwner(String owner) {
+        if (!StringUtils.hasText(owner)) {
+            return null;
+        }
+        return owner.trim();
     }
 
     private CommentResponse toCommentResponse(DocumentCommentEntity comment) {

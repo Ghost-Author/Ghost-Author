@@ -28,6 +28,15 @@ public class DocumentEntity {
     @Column(length = 1024)
     private String labels;
 
+    @Column(length = 64)
+    private String owner;
+
+    @Column(length = 1024)
+    private String editors;
+
+    @Column(length = 1024)
+    private String viewers;
+
     @Column(nullable = false)
     private Boolean locked;
 
@@ -131,6 +140,30 @@ public class DocumentEntity {
 
     public void setLabels(String labels) {
         this.labels = labels;
+    }
+
+    public String getOwner() {
+        return owner;
+    }
+
+    public void setOwner(String owner) {
+        this.owner = owner;
+    }
+
+    public String getEditors() {
+        return editors;
+    }
+
+    public void setEditors(String editors) {
+        this.editors = editors;
+    }
+
+    public String getViewers() {
+        return viewers;
+    }
+
+    public void setViewers(String viewers) {
+        this.viewers = viewers;
     }
 
     public DocumentStatus getStatus() {

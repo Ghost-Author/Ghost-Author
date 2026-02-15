@@ -8,8 +8,9 @@
         </div>
       </div>
       <div class="topbar-right">
+        <input v-model="currentUser" class="user-input" placeholder="当前用户（如 liupeng）" />
         <button class="secondary tiny" @click="openHome">空间首页</button>
-        <div class="topbar-badge">{{ docs.length }} pages</div>
+        <div class="topbar-badge">{{ visibleDocs.length }} pages</div>
       </div>
     </header>
 
@@ -26,7 +27,7 @@
 
     <div class="layout">
       <DocList
-        :docs="docs"
+        :docs="visibleDocs"
         :active-slug="activeSlug"
         :favorites="favorites"
         :recent="recent"
@@ -52,6 +53,8 @@
         :comments="comments"
         :attachments="attachments"
         :child-pages="childPages"
+        :current-user="currentUser"
+        :can-edit="currentCanEdit"
         @save="saveDoc"
         @delete="deleteDoc"
         @add-comment="addComment"
@@ -105,7 +108,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { api } from './api/client'
 import DocList from './components/DocList.vue'
 import EditorPane from './components/EditorPane.vue'
@@ -126,6 +129,7 @@ const diffTo = ref(null)
 const diffText = ref('')
 const favorites = ref([])
 const recent = ref([])
+const currentUser = ref('admin')
 const breadcrumbTitle = computed(() => currentDoc.value.title || 'Untitled Page')
 const breadcrumbPath = computed(() => {
   if (showHome.value) {
@@ -149,17 +153,18 @@ const childPages = computed(() => {
   if (!activeSlug.value) {
     return []
   }
-  return docs.value
+  return visibleDocs.value
     .filter((d) => d.parentSlug === activeSlug.value)
-    .sort((a, b) => a.title.localeCompare(b.title, 'zh-Hans-CN'))
+    .sort(sortByOrder)
 })
+const visibleDocs = computed(() => docs.value.filter((doc) => canViewDoc(doc)))
 const homeStats = computed(() => {
-  const published = docs.value.filter((d) => (d.status || 'DRAFT') === 'PUBLISHED').length
-  const archived = docs.value.filter((d) => (d.status || 'DRAFT') === 'ARCHIVED').length
-  const draft = docs.value.length - published - archived
-  const privateCount = docs.value.filter((d) => (d.visibility || 'SPACE') === 'PRIVATE').length
+  const published = visibleDocs.value.filter((d) => (d.status || 'DRAFT') === 'PUBLISHED').length
+  const archived = visibleDocs.value.filter((d) => (d.status || 'DRAFT') === 'ARCHIVED').length
+  const draft = visibleDocs.value.length - published - archived
+  const privateCount = visibleDocs.value.filter((d) => (d.visibility || 'SPACE') === 'PRIVATE').length
   return {
-    total: docs.value.length,
+    total: visibleDocs.value.length,
     published,
     draft,
     privateCount,
@@ -167,19 +172,19 @@ const homeStats = computed(() => {
   }
 })
 const homeRecentDocs = computed(() => {
-  const bySlug = new Map(docs.value.map((d) => [d.slug, d]))
+  const bySlug = new Map(visibleDocs.value.map((d) => [d.slug, d]))
   return recent.value.map((slug) => bySlug.get(slug)).filter(Boolean).slice(0, 8)
 })
 const homeFavoriteDocs = computed(() => {
-  const bySlug = new Map(docs.value.map((d) => [d.slug, d]))
+  const bySlug = new Map(visibleDocs.value.map((d) => [d.slug, d]))
   return favorites.value.map((slug) => bySlug.get(slug)).filter(Boolean).slice(0, 8)
 })
 const commandResults = computed(() => {
   const q = commandQuery.value.trim().toLowerCase()
   if (!q) {
-    return docs.value.slice(0, 12)
+    return visibleDocs.value.slice(0, 12)
   }
-  return docs.value
+  return visibleDocs.value
     .filter((d) => (d.title || '').toLowerCase().includes(q) || (d.slug || '').toLowerCase().includes(q))
     .slice(0, 12)
 })
@@ -201,9 +206,11 @@ const pageOutline = computed(() => {
   }
   return result
 })
+const currentCanEdit = computed(() => !currentDoc.value?.id || canEditDoc(currentDoc.value))
 
 const FAVORITES_KEY = 'ga-favorites'
 const RECENT_KEY = 'ga-recent'
+const CURRENT_USER_KEY = 'ga-current-user'
 
 function emptyDoc() {
   return {
@@ -213,9 +220,13 @@ function emptyDoc() {
     summary: '',
     parentSlug: '',
     labels: [],
+    owner: currentUser.value || 'admin',
+    editors: [],
+    viewers: [],
     status: 'DRAFT',
     visibility: 'SPACE',
     locked: false,
+    sortOrder: 0,
     content: '# 新文档\n\n开始编辑...'
   }
 }
@@ -227,7 +238,16 @@ async function fetchDocs() {
 }
 
 async function loadDoc(slug) {
+  const candidate = docs.value.find((d) => d.slug === slug)
+  if (candidate && !canViewDoc(candidate)) {
+    alert('当前用户无权限查看该页面')
+    return
+  }
   const { data } = await api.get(`/documents/${slug}`)
+  if (!canViewDoc(data)) {
+    alert('当前用户无权限查看该页面')
+    return
+  }
   currentDoc.value = data
   if (!currentDoc.value.status) {
     currentDoc.value.status = 'DRAFT'
@@ -237,6 +257,12 @@ async function loadDoc(slug) {
   }
   if (currentDoc.value.locked === undefined || currentDoc.value.locked === null) {
     currentDoc.value.locked = false
+  }
+  if (!Array.isArray(currentDoc.value.editors)) {
+    currentDoc.value.editors = []
+  }
+  if (!Array.isArray(currentDoc.value.viewers)) {
+    currentDoc.value.viewers = []
   }
   activeSlug.value = slug
   showHome.value = false
@@ -265,6 +291,10 @@ function createChildPage() {
   if (!activeSlug.value) {
     return
   }
+  if (!canEditDoc(currentDoc.value)) {
+    alert('当前用户无编辑权限，不能创建子页面')
+    return
+  }
   const parent = currentDoc.value
   activeSlug.value = ''
   currentDoc.value = {
@@ -283,6 +313,10 @@ function createChildPage() {
 }
 
 async function saveDoc(doc) {
+  if (doc.id && !canEditDoc(doc)) {
+    alert('当前用户无编辑权限')
+    return
+  }
   if (!doc.slug || !doc.title || !doc.summary || !doc.content) {
     alert('请填写完整字段')
     return
@@ -295,6 +329,9 @@ async function saveDoc(doc) {
       content: doc.content,
       parentSlug: doc.parentSlug || null,
       labels: doc.labels || [],
+      owner: doc.owner || null,
+      editors: doc.editors || [],
+      viewers: doc.viewers || [],
       status: doc.status || 'DRAFT',
       visibility: doc.visibility || 'SPACE',
       locked: !!doc.locked
@@ -307,6 +344,9 @@ async function saveDoc(doc) {
       content: doc.content,
       parentSlug: doc.parentSlug || null,
       labels: doc.labels || [],
+      owner: doc.owner || currentUser.value || 'admin',
+      editors: doc.editors || [],
+      viewers: doc.viewers || [],
       status: doc.status || 'DRAFT',
       visibility: doc.visibility || 'SPACE',
       locked: !!doc.locked
@@ -319,6 +359,11 @@ async function saveDoc(doc) {
 
 async function deleteDoc(slug) {
   if (!slug) {
+    return
+  }
+  const target = docs.value.find((d) => d.slug === slug)
+  if (target && !canEditDoc(target)) {
+    alert('当前用户无删除权限')
     return
   }
   if (!confirm(`确认删除文档 ${slug} ?`)) {
@@ -409,6 +454,9 @@ async function addComment(payload) {
   if (!activeSlug.value) {
     return
   }
+  if (!canViewDoc(currentDoc.value)) {
+    return
+  }
   await api.post(`/documents/${activeSlug.value}/comments`, payload)
   await loadComments(activeSlug.value)
 }
@@ -425,6 +473,10 @@ async function uploadAttachment(file) {
   if (!activeSlug.value || !file) {
     return
   }
+  if (!canEditDoc(currentDoc.value)) {
+    alert('当前用户无编辑权限')
+    return
+  }
   const form = new FormData()
   form.append('file', file)
   await api.post(`/documents/${activeSlug.value}/attachments`, form)
@@ -433,6 +485,10 @@ async function uploadAttachment(file) {
 
 async function deleteAttachment(attachmentId) {
   if (!activeSlug.value) {
+    return
+  }
+  if (!canEditDoc(currentDoc.value)) {
+    alert('当前用户无编辑权限')
     return
   }
   await api.delete(`/documents/${activeSlug.value}/attachments/${attachmentId}`)
@@ -474,6 +530,11 @@ async function moveDoc(payload) {
   if (!payload?.slug) {
     return
   }
+  const target = docs.value.find((d) => d.slug === payload.slug)
+  if (target && !canEditDoc(target)) {
+    alert('当前用户无编辑权限')
+    return
+  }
   await api.patch(`/documents/${payload.slug}/move`, {
     parentSlug: payload.parentSlug || null
   })
@@ -485,6 +546,11 @@ async function moveDoc(payload) {
 
 async function reorderDoc(payload) {
   if (!payload?.slug || !payload?.direction) {
+    return
+  }
+  const target = docs.value.find((d) => d.slug === payload.slug)
+  if (target && !canEditDoc(target)) {
+    alert('当前用户无编辑权限')
     return
   }
   await api.patch(`/documents/${payload.slug}/reorder`, {
@@ -511,7 +577,7 @@ function touchRecent(slug) {
 }
 
 function syncCollectionsWithDocs() {
-  const allSlugs = new Set(docs.value.map((d) => d.slug))
+  const allSlugs = new Set(visibleDocs.value.map((d) => d.slug))
   favorites.value = favorites.value.filter((s) => allSlugs.has(s))
   recent.value = recent.value.filter((s) => allSlugs.has(s))
   persistCollections()
@@ -520,15 +586,18 @@ function syncCollectionsWithDocs() {
 function persistCollections() {
   localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites.value))
   localStorage.setItem(RECENT_KEY, JSON.stringify(recent.value))
+  localStorage.setItem(CURRENT_USER_KEY, currentUser.value || 'admin')
 }
 
 function loadCollections() {
   try {
     favorites.value = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]')
     recent.value = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]')
+    currentUser.value = localStorage.getItem(CURRENT_USER_KEY) || 'admin'
   } catch {
     favorites.value = []
     recent.value = []
+    currentUser.value = 'admin'
   }
 }
 
@@ -573,4 +642,64 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
 })
+
+watch(currentUser, () => {
+  persistCollections()
+  syncCollectionsWithDocs()
+  if (activeSlug.value && !canViewDoc(currentDoc.value)) {
+    openHome()
+  }
+})
+
+function normalizeMembers(values) {
+  if (!Array.isArray(values)) {
+    return []
+  }
+  return values
+    .map((v) => (v || '').trim())
+    .filter((v) => v.length > 0)
+}
+
+function canEditDoc(doc) {
+  if (!doc) {
+    return false
+  }
+  const user = (currentUser.value || '').trim()
+  if (!user) {
+    return false
+  }
+  const owner = (doc.owner || '').trim()
+  const editors = normalizeMembers(doc.editors)
+  if (!owner && editors.length === 0) {
+    return true
+  }
+  return user === owner || editors.includes(user)
+}
+
+function canViewDoc(doc) {
+  if (!doc) {
+    return false
+  }
+  if (canEditDoc(doc)) {
+    return true
+  }
+  const user = (currentUser.value || '').trim()
+  if (!user) {
+    return false
+  }
+  const viewers = normalizeMembers(doc.viewers)
+  if (viewers.length === 0) {
+    return true
+  }
+  return viewers.includes(user)
+}
+
+function sortByOrder(a, b) {
+  const orderA = Number.isFinite(a.sortOrder) ? a.sortOrder : 0
+  const orderB = Number.isFinite(b.sortOrder) ? b.sortOrder : 0
+  if (orderA !== orderB) {
+    return orderA - orderB
+  }
+  return (a.title || '').localeCompare((b.title || ''), 'zh-Hans-CN')
+}
 </script>

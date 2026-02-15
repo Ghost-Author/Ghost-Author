@@ -4,7 +4,7 @@
       <h2>Page Editor</h2>
       <p class="section-subtitle">Markdown + 实时预览</p>
       <div class="view-switch" v-if="!isCreateMode">
-        <button class="secondary" @click="toggleEditMode">
+        <button class="secondary" @click="toggleEditMode" :disabled="!canEdit">
           {{ isEditing ? '查看预览' : '编辑页面' }}
         </button>
       </div>
@@ -70,6 +70,25 @@
         <div />
       </div>
 
+      <div class="meta-grid">
+        <label>
+          Owner
+          <input v-model="model.owner" :disabled="!isEditingSafe" placeholder="例如：liupeng" />
+        </label>
+        <label>
+          Editors（逗号分隔）
+          <input v-model="editorsText" :disabled="!isEditingSafe" placeholder="alice, bob" />
+        </label>
+      </div>
+
+      <div class="meta-grid">
+        <label>
+          Viewers（逗号分隔）
+          <input v-model="viewersText" :disabled="!isEditingSafe" placeholder="carol, david" />
+        </label>
+        <div />
+      </div>
+
       <label>
         摘要
         <input v-model="model.summary" :disabled="!isEditingSafe" />
@@ -100,6 +119,12 @@
         </p>
         <div class="read-tags" v-if="model.labels && model.labels.length">
           <span class="doc-label" v-for="label in model.labels" :key="label">{{ label }}</span>
+        </div>
+        <div class="perm-tags">
+          <span class="perm-chip owner">Owner: {{ model.owner || '-' }}</span>
+          <span class="perm-chip">Editors: {{ (model.editors || []).join(', ') || '-' }}</span>
+          <span class="perm-chip">Viewers: {{ (model.viewers || []).join(', ') || '-' }}</span>
+          <span class="perm-chip current">当前用户: {{ currentUser || '-' }}</span>
         </div>
         <div class="child-pages" v-if="childPages.length">
           <p>子页面</p>
@@ -147,18 +172,19 @@
       <button
         v-if="!isCreateMode"
         class="secondary"
+        :disabled="!canEdit"
         @click="setLockedAndSave(!model.locked)"
       >
         {{ model.locked ? '解除锁定' : '锁定页面' }}
       </button>
-      <button v-if="!isCreateMode" class="secondary" @click="$emit('create-child')">新建子页面</button>
-      <button class="danger" :disabled="isCreateMode" @click="$emit('delete', model.slug)">删除</button>
+      <button v-if="!isCreateMode" class="secondary" :disabled="!canEdit" @click="$emit('create-child')">新建子页面</button>
+      <button class="danger" :disabled="isCreateMode || !canEdit" @click="$emit('delete', model.slug)">删除</button>
     </div>
 
     <section class="comment-panel" v-if="!isCreateMode">
       <h3>附件（{{ attachments.length }}）</h3>
       <div class="attachment-actions">
-        <input ref="fileInput" type="file" @change="onSelectFile" />
+        <input ref="fileInput" type="file" :disabled="!canEdit" @change="onSelectFile" />
       </div>
       <ul class="attachment-list">
         <li v-for="item in attachments" :key="item.id">
@@ -167,8 +193,8 @@
             <span>{{ prettySize(item.fileSize) }}</span>
           </div>
           <div class="attachment-btns">
-            <button class="secondary small" @click="$emit('insert-attachment', item)">插入正文</button>
-            <button class="danger small" @click="$emit('delete-attachment', item.id)">删除</button>
+            <button class="secondary small" :disabled="!canEdit" @click="$emit('insert-attachment', item)">插入正文</button>
+            <button class="danger small" :disabled="!canEdit" @click="$emit('delete-attachment', item.id)">删除</button>
           </div>
         </li>
         <li v-if="attachments.length === 0" class="comment-empty">还没有附件。</li>
@@ -178,7 +204,7 @@
       <div class="comment-inputs">
         <input v-model="commentAuthor" placeholder="昵称（可选）" />
         <textarea v-model="commentContent" placeholder="写下你的评论..." />
-        <button @click="submitComment">发布评论</button>
+        <button :disabled="!canEdit" @click="submitComment">发布评论</button>
       </div>
 
       <ul class="comment-list">
@@ -188,7 +214,7 @@
             <span>{{ formatTime(comment.createdAt) }}</span>
           </div>
           <p>{{ comment.content }}</p>
-          <button class="danger small" @click="$emit('delete-comment', comment.id)">删除</button>
+          <button class="danger small" :disabled="!canEdit" @click="$emit('delete-comment', comment.id)">删除</button>
         </li>
         <li v-if="comments.length === 0" class="comment-empty">还没有评论，来写第一条吧。</li>
       </ul>
@@ -216,6 +242,14 @@ const props = defineProps({
   childPages: {
     type: Array,
     default: () => []
+  },
+  currentUser: {
+    type: String,
+    default: 'admin'
+  },
+  canEdit: {
+    type: Boolean,
+    default: true
   }
 })
 
@@ -243,7 +277,7 @@ const model = computed(() => props.doc)
 const isCreateMode = computed(() => !props.doc.id)
 const isLocked = computed(() => !!props.doc.locked)
 const isEditing = ref(false)
-const isEditingSafe = computed(() => isCreateMode.value || (isEditing.value && !isLocked.value))
+const isEditingSafe = computed(() => (isCreateMode.value || (isEditing.value && !isLocked.value)) && props.canEdit)
 const commentAuthor = ref('')
 const commentContent = ref('')
 const fileInput = ref(null)
@@ -327,6 +361,36 @@ const labelsText = computed({
   }
 })
 
+const editorsText = computed({
+  get() {
+    if (!Array.isArray(props.doc.editors)) {
+      return ''
+    }
+    return props.doc.editors.join(', ')
+  },
+  set(value) {
+    props.doc.editors = value
+      .split(',')
+      .map((v) => v.trim())
+      .filter((v) => v.length > 0)
+  }
+})
+
+const viewersText = computed({
+  get() {
+    if (!Array.isArray(props.doc.viewers)) {
+      return ''
+    }
+    return props.doc.viewers.join(', ')
+  },
+  set(value) {
+    props.doc.viewers = value
+      .split(',')
+      .map((v) => v.trim())
+      .filter((v) => v.length > 0)
+  }
+})
+
 function submitComment() {
   if (!commentContent.value.trim()) {
     return
@@ -352,6 +416,9 @@ function quickToggleStatus() {
 }
 
 function setLockedAndSave(nextLocked) {
+  if (!props.canEdit) {
+    return
+  }
   model.value.locked = nextLocked
   emit('save', model.value)
 }
@@ -362,6 +429,10 @@ function setStatusAndSave(nextStatus) {
 }
 
 function toggleEditMode() {
+  if (!props.canEdit) {
+    alert('当前用户无编辑权限')
+    return
+  }
   if (isLocked.value && !isEditing.value) {
     alert('当前页面已锁定，请先解除锁定再编辑')
     return

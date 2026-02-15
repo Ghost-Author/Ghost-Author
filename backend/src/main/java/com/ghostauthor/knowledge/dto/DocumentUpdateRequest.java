@@ -13,6 +13,9 @@ public record DocumentUpdateRequest(
         @NotBlank String content,
         @Size(max = 128) String parentSlug,
         List<@Size(max = 32) String> labels,
+        @Size(max = 64) String owner,
+        List<@Size(max = 32) String> editors,
+        List<@Size(max = 32) String> viewers,
         DocumentStatus status,
         DocumentVisibility visibility,
         Boolean locked
