@@ -17,6 +17,29 @@
       <span class="context-chip">负责人: {{ model.assignee || '-' }}</span>
       <span class="context-chip">截止: {{ model.dueDate || '-' }}</span>
     </div>
+    <div class="page-action-bar" v-if="!isCreateMode">
+      <div class="page-action-left">
+        <button class="secondary small" @click="copyPageLink">复制页面链接</button>
+        <button class="secondary small" @click="$emit('create-child')" :disabled="!canEdit">新建子页面</button>
+        <button class="secondary small" @click="runMenuAction('toggle-share')" :disabled="!canEdit">
+          {{ model.shareEnabled ? '关闭分享' : '开启分享' }}
+        </button>
+        <button class="secondary small" v-if="model.shareEnabled && shareLink" @click="copyShareLink">复制分享链接</button>
+      </div>
+      <div class="page-action-right">
+        <span class="page-status-pill" :class="(model.status || 'DRAFT').toLowerCase()">
+          {{ statusText(model.status) }}
+        </span>
+        <button v-if="isEditingSafe" @click="$emit('save', model)">保存</button>
+        <button
+          v-if="isEditingSafe && model.status !== 'ARCHIVED'"
+          class="secondary"
+          @click="quickToggleStatus"
+        >
+          {{ model.status === 'PUBLISHED' ? '转草稿并保存' : '发布并保存' }}
+        </button>
+      </div>
+    </div>
 
     <template v-if="isEditingSafe">
       <div class="template-bar">
@@ -1927,6 +1950,19 @@ async function copyShareLink() {
   try {
     await navigator.clipboard.writeText(props.shareLink)
     emit('notify', { type: 'success', message: '分享链接已复制' })
+  } catch {
+    emit('notify', { type: 'error', message: '复制失败，请手动复制' })
+  }
+}
+
+async function copyPageLink() {
+  if (!model.value.slug) {
+    return
+  }
+  const link = `${window.location.origin}?page=${encodeURIComponent(model.value.slug)}`
+  try {
+    await navigator.clipboard.writeText(link)
+    emit('notify', { type: 'success', message: '页面链接已复制' })
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
   }

@@ -411,6 +411,54 @@ body {
   color: #4e5f7a;
 }
 
+.page-action-bar {
+  margin-bottom: 10px;
+  border: 1px solid #d8e3fb;
+  border-radius: 12px;
+  background: #ffffffeb;
+  padding: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.page-action-left,
+.page-action-right {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.page-status-pill {
+  border: 1px solid #d4e1fb;
+  border-radius: 999px;
+  background: #fff;
+  color: #4c6290;
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
+.page-status-pill.published {
+  border-color: #9bd8bf;
+  background: #ebfff5;
+  color: #1a7f54;
+}
+
+.page-status-pill.draft {
+  border-color: #f5c5d7;
+  background: #fff2f7;
+  color: #a84f77;
+}
+
+.page-status-pill.archived {
+  border-color: #cdd5e2;
+  background: #f2f4f8;
+  color: #4e5f7a;
+}
+
 .header-actions {
   display: flex;
   gap: 6px;
@@ -2863,6 +2911,15 @@ button.small {
   .actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .page-action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-action-right {
+    justify-content: flex-end;
   }
 
   .action-group.more {
