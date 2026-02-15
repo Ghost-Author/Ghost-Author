@@ -14,9 +14,45 @@
       <div class="template-bar">
         <select v-model="selectedTemplate">
           <option value="">套用模板（可选）</option>
-          <option v-for="tpl in templates" :key="tpl.key" :value="tpl.key">{{ tpl.name }}</option>
+          <option v-for="tpl in templates" :key="tpl.id" :value="tpl.id">{{ tpl.name }}</option>
         </select>
         <button class="secondary small" :disabled="!selectedTemplate" @click="applyTemplate">应用模板</button>
+        <button class="secondary small" @click="templateCenterOpen = !templateCenterOpen">
+          {{ templateCenterOpen ? '收起模板中心' : '模板中心' }}
+        </button>
+      </div>
+
+      <div class="template-center" v-if="templateCenterOpen">
+        <h4>模板中心</h4>
+        <div class="template-form">
+          <input v-model="newTemplate.name" placeholder="模板名称" />
+          <input v-model="newTemplate.description" placeholder="模板描述（可选）" />
+          <textarea v-model="newTemplate.content" placeholder="模板内容（Markdown）" />
+          <button class="secondary small" :disabled="!canCreateTemplate" @click="createTemplate">新增模板</button>
+        </div>
+        <ul class="template-list">
+          <li v-for="tpl in templates" :key="tpl.id">
+            <template v-if="editingTemplateId === tpl.id">
+              <input v-model="editTemplate.name" />
+              <input v-model="editTemplate.description" />
+              <textarea v-model="editTemplate.content" />
+              <div class="template-item-actions">
+                <button class="secondary small" @click="saveEditTemplate">保存</button>
+                <button class="secondary small" @click="cancelEditTemplate">取消</button>
+              </div>
+            </template>
+            <template v-else>
+              <strong>{{ tpl.name }}</strong>
+              <p>{{ tpl.description || '无描述' }}</p>
+              <div class="template-item-actions">
+                <button class="secondary small" @click="applyTemplateById(tpl.id)">套用</button>
+                <button class="secondary small" @click="startEditTemplate(tpl)">编辑</button>
+                <button class="danger small" @click="$emit('delete-template', tpl.id)">删除</button>
+              </div>
+            </template>
+          </li>
+          <li v-if="templates.length === 0" class="comment-empty">还没有模板，请先新增。</li>
+        </ul>
       </div>
 
       <div class="meta-grid">
@@ -275,6 +311,10 @@ const props = defineProps({
   shareLink: {
     type: String,
     default: ''
+  },
+  templates: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -287,7 +327,10 @@ const emit = defineEmits([
   'create-child',
   'select-child',
   'toggle-share',
-  'regenerate-share'
+  'regenerate-share',
+  'create-template',
+  'update-template',
+  'delete-template'
 ])
 
 const toolbars = [
@@ -309,60 +352,22 @@ const commentAuthor = ref('')
 const commentContent = ref('')
 const fileInput = ref(null)
 const selectedTemplate = ref('')
-const templates = [
-  {
-    key: 'meeting',
-    name: '会议纪要',
-    content: `# 会议纪要
-
-## 会议主题
-
-## 时间与参会人
-- 时间：
-- 参会人：
-
-## 议题
-1. 
-2. 
-
-## 结论
-
-## 待办事项
-- [ ] 负责人：
-`
-  },
-  {
-    key: 'review',
-    name: '需求评审',
-    content: `# 需求评审
-
-## 背景
-
-## 目标
-
-## 方案说明
-
-## 风险与边界
-
-## 验收标准
-- [ ] 
-`
-  },
-  {
-    key: 'change',
-    name: '变更记录',
-    content: `# 变更记录
-
-## 变更摘要
-
-## 影响范围
-
-## 回滚方案
-
-## 验证结果
-`
-  }
-]
+const templateCenterOpen = ref(false)
+const editingTemplateId = ref(null)
+const newTemplate = ref({
+  name: '',
+  description: '',
+  content: ''
+})
+const editTemplate = ref({
+  id: null,
+  name: '',
+  description: '',
+  content: ''
+})
+const canCreateTemplate = computed(() => {
+  return !!newTemplate.value.name.trim() && !!newTemplate.value.content.trim()
+})
 
 watch(
   () => props.doc.id,
@@ -501,11 +506,70 @@ function prettySize(size) {
 }
 
 function applyTemplate() {
-  const item = templates.find((tpl) => tpl.key === selectedTemplate.value)
+  const id = Number(selectedTemplate.value)
+  const item = props.templates.find((tpl) => tpl.id === id)
   if (!item) {
     return
   }
   model.value.content = item.content
+}
+
+function applyTemplateById(id) {
+  const item = props.templates.find((tpl) => tpl.id === id)
+  if (!item) {
+    return
+  }
+  model.value.content = item.content
+  selectedTemplate.value = String(id)
+}
+
+function createTemplate() {
+  if (!canCreateTemplate.value) {
+    return
+  }
+  emit('create-template', {
+    name: newTemplate.value.name.trim(),
+    description: newTemplate.value.description.trim(),
+    content: newTemplate.value.content
+  })
+  newTemplate.value = {
+    name: '',
+    description: '',
+    content: ''
+  }
+}
+
+function startEditTemplate(template) {
+  editingTemplateId.value = template.id
+  editTemplate.value = {
+    id: template.id,
+    name: template.name || '',
+    description: template.description || '',
+    content: template.content || ''
+  }
+}
+
+function cancelEditTemplate() {
+  editingTemplateId.value = null
+  editTemplate.value = {
+    id: null,
+    name: '',
+    description: '',
+    content: ''
+  }
+}
+
+function saveEditTemplate() {
+  if (!editTemplate.value.id || !editTemplate.value.name.trim() || !editTemplate.value.content.trim()) {
+    return
+  }
+  emit('update-template', {
+    id: editTemplate.value.id,
+    name: editTemplate.value.name.trim(),
+    description: editTemplate.value.description.trim(),
+    content: editTemplate.value.content
+  })
+  cancelEditTemplate()
 }
 
 function statusText(status) {

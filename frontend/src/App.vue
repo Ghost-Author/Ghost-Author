@@ -56,6 +56,7 @@
         :current-user="currentUser"
         :can-edit="currentCanEdit"
         :share-link="currentShareLink"
+        :templates="templates"
         @save="saveDoc"
         @delete="deleteDoc"
         @add-comment="addComment"
@@ -67,6 +68,9 @@
         @select-child="loadDoc"
         @toggle-share="toggleShare"
         @regenerate-share="regenerateShare"
+        @create-template="createTemplate"
+        @update-template="updateTemplate"
+        @delete-template="deleteTemplate"
       />
 
       <VersionHistory
@@ -122,6 +126,7 @@ const docs = ref([])
 const versions = ref([])
 const comments = ref([])
 const attachments = ref([])
+const templates = ref([])
 const activeSlug = ref('')
 const currentDoc = ref(emptyDoc())
 const showHome = ref(true)
@@ -247,6 +252,11 @@ async function fetchDocs() {
   const { data } = await api.get('/documents')
   docs.value = data
   syncCollectionsWithDocs()
+}
+
+async function fetchTemplates() {
+  const { data } = await api.get('/templates')
+  templates.value = data
 }
 
 async function loadDoc(slug) {
@@ -614,6 +624,41 @@ async function regenerateShare() {
   await fetchDocs()
 }
 
+async function createTemplate(payload) {
+  if (!payload?.name || !payload?.content) {
+    return
+  }
+  await api.post('/templates', {
+    name: payload.name,
+    description: payload.description || '',
+    content: payload.content
+  })
+  await fetchTemplates()
+}
+
+async function updateTemplate(payload) {
+  if (!payload?.id || !payload?.name || !payload?.content) {
+    return
+  }
+  await api.put(`/templates/${payload.id}`, {
+    name: payload.name,
+    description: payload.description || '',
+    content: payload.content
+  })
+  await fetchTemplates()
+}
+
+async function deleteTemplate(templateId) {
+  if (!templateId) {
+    return
+  }
+  if (!confirm('确认删除该模板？')) {
+    return
+  }
+  await api.delete(`/templates/${templateId}`)
+  await fetchTemplates()
+}
+
 function toggleFavorite(slug) {
   if (favorites.value.includes(slug)) {
     favorites.value = favorites.value.filter((s) => s !== slug)
@@ -691,6 +736,7 @@ onMounted(async () => {
   const initialPage = params.get('page') || ''
   loadCollections()
   await fetchDocs()
+  await fetchTemplates()
   if (initialPage) {
     await loadDoc(initialPage)
   }
