@@ -11,19 +11,20 @@
       </div>
     </div>
 
-    <input
-      class="search-input"
-      v-model="keyword"
-      placeholder="搜索文档"
-      @keyup.enter="$emit('search', keyword)"
-    />
+    <div class="doc-list-scroll">
+      <input
+        class="search-input"
+        v-model="keyword"
+        placeholder="搜索文档"
+        @keyup.enter="$emit('search', keyword)"
+      />
 
-    <div class="search-actions">
-      <button class="search-btn" @click="$emit('search', keyword)">搜索</button>
-      <button class="search-btn clear" @click="clearSearch">清空</button>
-    </div>
+      <div class="search-actions">
+        <button class="search-btn" @click="$emit('search', keyword)">搜索</button>
+        <button class="search-btn clear" @click="clearSearch">清空</button>
+      </div>
 
-    <div class="status-filters">
+      <div class="status-filters">
       <button
         class="filter-btn"
         :class="{ active: statusFilter === 'ALL' }"
@@ -52,9 +53,9 @@
       >
         已归档 {{ statusCounts.ARCHIVED }}
       </button>
-    </div>
+      </div>
 
-    <div class="visibility-filters">
+      <div class="visibility-filters">
       <button
         class="filter-btn"
         :class="{ active: visibilityFilter === 'ALL' }"
@@ -76,9 +77,9 @@
       >
         私有 {{ visibilityCounts.PRIVATE }}
       </button>
-    </div>
+      </div>
 
-    <div class="priority-filters">
+      <div class="priority-filters">
       <button class="filter-btn" :class="{ active: priorityFilter === 'ALL' }" @click="priorityFilter = 'ALL'">
         优先级全部
       </button>
@@ -91,9 +92,9 @@
       <button class="filter-btn" :class="{ active: priorityFilter === 'LOW' }" @click="priorityFilter = 'LOW'">
         低优先级
       </button>
-    </div>
+      </div>
 
-    <div class="meta-filters">
+      <div class="meta-filters">
       <select v-model="assigneeFilter">
         <option value="">负责人（全部）</option>
         <option v-for="name in assigneeOptions" :key="name" :value="name">{{ name }}</option>
@@ -103,17 +104,20 @@
         <option value="HAS_DUE">有截止日期</option>
         <option value="OVERDUE">已逾期</option>
       </select>
-    </div>
-    <div class="todo-toggle-row">
-      <button class="filter-btn" :class="{ active: myTodoMode }" @click="toggleMyTodoMode">
-        我的待办视图
-      </button>
-    </div>
+      </div>
+      <div class="todo-toggle-row">
+        <button class="filter-btn" :class="{ active: myTodoMode }" @click="toggleMyTodoMode">
+          我的待办视图
+        </button>
+      </div>
 
-    <div class="quick-zones">
+      <div class="quick-zones">
       <div class="quick-zone">
-        <h4>⭐ 收藏</h4>
-        <ul class="quick-list">
+        <button class="quick-zone-head" @click="quickOpenFavorites = !quickOpenFavorites">
+          <h4>⭐ 收藏</h4>
+          <span>{{ quickOpenFavorites ? '▾' : '▸' }}</span>
+        </button>
+        <ul class="quick-list" v-show="quickOpenFavorites">
           <li
             v-for="doc in favoriteDocs"
             :key="`fav-${doc.slug}`"
@@ -127,8 +131,11 @@
       </div>
 
       <div class="quick-zone">
-        <h4>🕘 最近访问</h4>
-        <ul class="quick-list">
+        <button class="quick-zone-head" @click="quickOpenRecent = !quickOpenRecent">
+          <h4>🕘 最近访问</h4>
+          <span>{{ quickOpenRecent ? '▾' : '▸' }}</span>
+        </button>
+        <ul class="quick-list" v-show="quickOpenRecent">
           <li
             v-for="doc in recentDocs"
             :key="`recent-${doc.slug}`"
@@ -140,9 +147,9 @@
           <li class="quick-empty" v-if="recentDocs.length === 0">还没有访问记录</li>
         </ul>
       </div>
-    </div>
+      </div>
 
-    <div class="tree-nav">
+      <div class="tree-nav">
       <div
         class="root-drop-zone"
         :class="{ active: dropTargetRoot }"
@@ -225,6 +232,7 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
 </template>
 
@@ -239,6 +247,8 @@ const priorityFilter = ref('ALL')
 const assigneeFilter = ref('')
 const dueFilter = ref('ALL')
 const myTodoMode = ref(false)
+const quickOpenFavorites = ref(true)
+const quickOpenRecent = ref(true)
 const draggingSlug = ref('')
 const dropTargetSlug = ref('')
 const dropTargetRoot = ref(false)

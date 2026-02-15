@@ -18,13 +18,18 @@
 
 body {
   margin: 0;
-  min-height: 100vh;
+  height: 100vh;
   background:
     radial-gradient(circle at 8% 12%, #d9e9ff 0, transparent 22%),
     radial-gradient(circle at 88% 14%, #ffdce7 0, transparent 24%),
     radial-gradient(circle at 90% 90%, #dcf8e9 0, transparent 22%),
     linear-gradient(150deg, var(--bg-a), var(--bg-b) 56%, var(--bg-c));
   position: relative;
+  overflow: hidden;
+}
+
+#app {
+  height: 100%;
 }
 
 .app-shell {
@@ -32,7 +37,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .app-shell::before,
@@ -166,7 +172,8 @@ body {
   display: grid;
   grid-template-columns: 320px 1fr 340px;
   gap: 14px;
-  min-height: calc(100vh - 92px);
+  flex: 1;
+  min-height: 0;
   position: relative;
   z-index: 1;
 }
@@ -179,9 +186,29 @@ body {
   border: 1px solid var(--panel-border);
   border-radius: 16px;
   padding: 14px;
-  overflow: auto;
+  overflow: hidden;
   backdrop-filter: blur(8px);
   box-shadow: 0 12px 28px #193e8114;
+  height: 100%;
+}
+
+.doc-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.doc-list-scroll {
+  flex: 1;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.doc-list-scroll,
+.editor-pane,
+.version-history,
+.space-home {
+  overflow-y: auto;
 }
 
 .header,
@@ -368,6 +395,24 @@ button.tiny {
   margin: 0 0 6px;
   font-size: 12px;
   color: #5d7095;
+}
+
+.quick-zone-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: #5d7095;
+  padding: 0;
+  margin: 0 0 6px;
+}
+
+.quick-zone-head span {
+  color: #7a8eb2;
+  font-size: 12px;
 }
 
 .quick-list li {
@@ -1440,12 +1485,29 @@ button.small {
 }
 
 @media (max-width: 1180px) {
-  .layout {
-    grid-template-columns: 1fr;
+  body {
+    height: auto;
+    overflow: auto;
   }
 
+  #app,
   .app-shell {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+    flex: initial;
     min-height: auto;
+  }
+
+  .doc-list,
+  .editor-pane,
+  .version-history,
+  .space-home {
+    height: auto;
+    max-height: none;
   }
 
   .home-stats {
