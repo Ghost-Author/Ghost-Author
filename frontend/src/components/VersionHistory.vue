@@ -36,18 +36,29 @@
         <strong>版本历史</strong>
         <span>{{ historyOpen ? '▾' : '▸' }}</span>
       </button>
+      <input
+        v-show="historyOpen"
+        class="version-search"
+        v-model="versionKeyword"
+        placeholder="筛选版本（版本号/时间）"
+      />
       <ul v-show="historyOpen">
-        <li v-for="item in versions" :key="item.id">
+        <li v-for="item in filteredVersions" :key="item.id">
           <div>
             <strong>v{{ item.versionNo }}</strong>
             <p>{{ formatTime(item.createdAt) }}</p>
+            <div class="version-picked">
+              <span v-if="diffFrom === item.versionNo" class="pick-tag left">左侧</span>
+              <span v-if="diffTo === item.versionNo" class="pick-tag right">右侧</span>
+            </div>
           </div>
           <div class="version-actions">
-            <button class="secondary" @click="$emit('pick-left', item.versionNo)">左侧</button>
-            <button class="secondary" @click="$emit('pick-right', item.versionNo)">右侧</button>
+            <button class="secondary" :class="{ selected: diffFrom === item.versionNo }" @click="$emit('pick-left', item.versionNo)">左侧</button>
+            <button class="secondary" :class="{ selected: diffTo === item.versionNo }" @click="$emit('pick-right', item.versionNo)">右侧</button>
             <button @click="$emit('restore', item.versionNo)">回滚</button>
           </div>
         </li>
+        <li v-if="filteredVersions.length === 0" class="version-empty">没有匹配版本</li>
       </ul>
 
       <div class="diff-panel">
@@ -111,7 +122,19 @@ const outlineOpen = ref(true)
 const historyOpen = ref(true)
 const diffOpen = ref(true)
 const activeOutlineText = ref('')
+const versionKeyword = ref('')
 const diffLines = computed(() => props.diffText.split('\n'))
+const filteredVersions = computed(() => {
+  const keyword = versionKeyword.value.trim().toLowerCase()
+  if (!keyword) {
+    return props.versions
+  }
+  return props.versions.filter((item) => {
+    const versionText = `v${item.versionNo}`.toLowerCase()
+    const timeText = formatTime(item.createdAt).toLowerCase()
+    return versionText.includes(keyword) || timeText.includes(keyword)
+  })
+})
 let previewContainer = null
 let previewHeadings = []
 

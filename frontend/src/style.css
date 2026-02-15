@@ -1001,6 +1001,10 @@ label {
   margin-top: 2px;
 }
 
+.version-search {
+  margin: 0 0 8px;
+}
+
 .outline-list li {
   display: flex;
   gap: 6px;
@@ -1041,14 +1045,55 @@ label {
   gap: 6px;
 }
 
+.version-actions .secondary.selected {
+  border: 1px solid #8db1f7;
+  background: #edf4ff;
+  color: #2c5398;
+}
+
 .version-actions .secondary {
   background: linear-gradient(135deg, #66748f, #7f8ead);
   box-shadow: 0 6px 14px #60708b33;
 }
 
+.version-picked {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.pick-tag {
+  font-size: 10px;
+  border-radius: 999px;
+  padding: 1px 6px;
+  border: 1px solid #c8daf9;
+  background: #edf4ff;
+  color: #325a99;
+}
+
+.pick-tag.left {
+  border-color: #9ec6ff;
+  background: #eaf4ff;
+  color: #2f5f95;
+}
+
+.pick-tag.right {
+  border-color: #b8dfcb;
+  background: #eefff6;
+  color: #1f7b57;
+}
+
 .version-history li button {
   background: linear-gradient(140deg, #0f8f87, #3ab7a8);
   box-shadow: 0 6px 14px #0f8f8733;
+}
+
+.version-history li.version-empty {
+  justify-content: center;
+  color: #8fa1bf;
+  border-style: dashed;
+  background: #f8fbff;
+  cursor: default;
 }
 
 .diff-panel {

@@ -184,6 +184,7 @@
             <li
               v-for="node in group.items"
               :key="node.slug"
+              :data-node-slug="node.slug"
               :class="[
                 'tree-node',
                 depthClass(node.depth),
@@ -253,7 +254,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 const QUICK_PANEL_KEY = 'ga-sidebar-quick-panels'
 const FILTER_PANEL_KEY = 'ga-sidebar-filter-panel'
@@ -461,6 +462,24 @@ const visibilitySections = computed(() => {
     groups: buildGroups(sourceDocs, visibilityFilter.value)
   }]
 })
+
+watch(() => props.activeSlug, async (slug) => {
+  if (!slug) {
+    return
+  }
+  visibilitySections.value.forEach((section) => {
+    section.groups.forEach((group) => {
+      if (group.items.some((item) => item.slug === slug)) {
+        opened.value[group.id] = true
+      }
+    })
+  })
+  await nextTick()
+  const node = document.querySelector(`[data-node-slug="${slug}"]`)
+  if (node && typeof node.scrollIntoView === 'function') {
+    node.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }
+}, { immediate: true })
 
 const activeAncestorSet = computed(() => {
   if (!props.activeSlug) {
