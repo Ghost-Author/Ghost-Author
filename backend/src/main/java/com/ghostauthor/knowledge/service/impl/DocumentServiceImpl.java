@@ -78,6 +78,7 @@ public class DocumentServiceImpl implements DocumentService {
         entity.setLabels(joinLabels(request.labels()));
         entity.setStatus(request.status() == null ? DocumentStatus.DRAFT : request.status());
         entity.setVisibility(request.visibility() == null ? DocumentVisibility.SPACE : request.visibility());
+        entity.setLocked(Boolean.TRUE.equals(request.locked()));
         entity.setFilePath(filePath);
 
         DocumentEntity saved = documentRepository.save(entity);
@@ -103,6 +104,9 @@ public class DocumentServiceImpl implements DocumentService {
         }
         if (request.visibility() != null) {
             entity.setVisibility(request.visibility());
+        }
+        if (request.locked() != null) {
+            entity.setLocked(request.locked());
         }
 
         DocumentEntity saved = documentRepository.save(entity);
@@ -336,6 +340,7 @@ public class DocumentServiceImpl implements DocumentService {
                 splitLabels(entity.getLabels()),
                 entity.getStatus() == null ? DocumentStatus.DRAFT : entity.getStatus(),
                 entity.getVisibility() == null ? DocumentVisibility.SPACE : entity.getVisibility(),
+                Boolean.TRUE.equals(entity.getLocked()),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

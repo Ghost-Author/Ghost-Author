@@ -28,6 +28,9 @@ public class DocumentEntity {
     @Column(length = 1024)
     private String labels;
 
+    @Column(nullable = false)
+    private Boolean locked;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(length = 16)
@@ -57,6 +60,9 @@ public class DocumentEntity {
         }
         if (visibility == null) {
             visibility = DocumentVisibility.SPACE;
+        }
+        if (locked == null) {
+            locked = false;
         }
     }
 
@@ -143,5 +149,13 @@ public class DocumentEntity {
 
     public void setVisibility(DocumentVisibility visibility) {
         this.visibility = visibility;
+    }
+
+    public Boolean getLocked() {
+        return locked;
+    }
+
+    public void setLocked(Boolean locked) {
+        this.locked = locked;
     }
 }

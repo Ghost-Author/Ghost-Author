@@ -214,6 +214,7 @@ function emptyDoc() {
     labels: [],
     status: 'DRAFT',
     visibility: 'SPACE',
+    locked: false,
     content: '# 新文档\n\n开始编辑...'
   }
 }
@@ -232,6 +233,9 @@ async function loadDoc(slug) {
   }
   if (!currentDoc.value.visibility) {
     currentDoc.value.visibility = 'SPACE'
+  }
+  if (currentDoc.value.locked === undefined || currentDoc.value.locked === null) {
+    currentDoc.value.locked = false
   }
   activeSlug.value = slug
   showHome.value = false
@@ -291,7 +295,8 @@ async function saveDoc(doc) {
       parentSlug: doc.parentSlug || null,
       labels: doc.labels || [],
       status: doc.status || 'DRAFT',
-      visibility: doc.visibility || 'SPACE'
+      visibility: doc.visibility || 'SPACE',
+      locked: !!doc.locked
     })
   } else {
     await api.post('/documents', {
@@ -302,7 +307,8 @@ async function saveDoc(doc) {
       parentSlug: doc.parentSlug || null,
       labels: doc.labels || [],
       status: doc.status || 'DRAFT',
-      visibility: doc.visibility || 'SPACE'
+      visibility: doc.visibility || 'SPACE',
+      locked: !!doc.locked
     })
   }
 

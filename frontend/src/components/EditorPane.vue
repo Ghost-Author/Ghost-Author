@@ -4,7 +4,7 @@
       <h2>Page Editor</h2>
       <p class="section-subtitle">Markdown + 实时预览</p>
       <div class="view-switch" v-if="!isCreateMode">
-        <button class="secondary" @click="isEditing = !isEditing">
+        <button class="secondary" @click="toggleEditMode">
           {{ isEditing ? '查看预览' : '编辑页面' }}
         </button>
       </div>
@@ -53,7 +53,13 @@
             <option value="PRIVATE">仅自己</option>
           </select>
         </label>
-        <div />
+        <label>
+          页面锁定
+          <select v-model="model.locked" :disabled="!isEditingSafe">
+            <option :value="false">未锁定</option>
+            <option :value="true">锁定（只读）</option>
+          </select>
+        </label>
       </div>
 
       <div class="meta-grid">
@@ -82,6 +88,9 @@
             </span>
             <span class="read-visibility" :class="(model.visibility || 'SPACE').toLowerCase()">
               {{ model.visibility === 'PRIVATE' ? '仅自己' : '空间可见' }}
+            </span>
+            <span class="read-locked" :class="{ locked: !!model.locked }">
+              {{ model.locked ? '已锁定' : '未锁定' }}
             </span>
           </div>
         </div>
@@ -134,6 +143,13 @@
         @click="setStatusAndSave('DRAFT')"
       >
         从归档恢复
+      </button>
+      <button
+        v-if="!isCreateMode"
+        class="secondary"
+        @click="setLockedAndSave(!model.locked)"
+      >
+        {{ model.locked ? '解除锁定' : '锁定页面' }}
       </button>
       <button v-if="!isCreateMode" class="secondary" @click="$emit('create-child')">新建子页面</button>
       <button class="danger" :disabled="isCreateMode" @click="$emit('delete', model.slug)">删除</button>
@@ -225,8 +241,9 @@ const toolbars = [
 
 const model = computed(() => props.doc)
 const isCreateMode = computed(() => !props.doc.id)
+const isLocked = computed(() => !!props.doc.locked)
 const isEditing = ref(false)
-const isEditingSafe = computed(() => isCreateMode.value || isEditing.value)
+const isEditingSafe = computed(() => isCreateMode.value || (isEditing.value && !isLocked.value))
 const commentAuthor = ref('')
 const commentContent = ref('')
 const fileInput = ref(null)
@@ -334,9 +351,22 @@ function quickToggleStatus() {
   emit('save', model.value)
 }
 
+function setLockedAndSave(nextLocked) {
+  model.value.locked = nextLocked
+  emit('save', model.value)
+}
+
 function setStatusAndSave(nextStatus) {
   model.value.status = nextStatus
   emit('save', model.value)
+}
+
+function toggleEditMode() {
+  if (isLocked.value && !isEditing.value) {
+    alert('当前页面已锁定，请先解除锁定再编辑')
+    return
+  }
+  isEditing.value = !isEditing.value
 }
 
 function onSelectFile(event) {

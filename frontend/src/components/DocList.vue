@@ -166,6 +166,9 @@
                 <span class="node-visibility" :class="(node.visibility || 'SPACE').toLowerCase()">
                   {{ node.visibility === 'PRIVATE' ? '私有' : '空间' }}
                 </span>
+                <span class="node-lock" :class="{ locked: !!node.locked }">
+                  {{ node.locked ? '锁定' : '可编辑' }}
+                </span>
                 <span class="node-status" :class="(node.status || 'DRAFT').toLowerCase()">
                   {{ statusText(node.status) }}
                 </span>

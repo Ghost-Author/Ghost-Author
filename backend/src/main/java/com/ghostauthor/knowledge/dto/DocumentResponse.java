@@ -15,6 +15,7 @@ public record DocumentResponse(
         List<String> labels,
         DocumentStatus status,
         DocumentVisibility visibility,
+        Boolean locked,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

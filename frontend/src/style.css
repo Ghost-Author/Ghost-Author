@@ -587,6 +587,21 @@ ul {
   color: #325a99;
 }
 
+.node-lock {
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 1px 7px;
+  border: 1px solid #a6d6f5;
+  background: #ecf8ff;
+  color: #2d6f99;
+}
+
+.node-lock.locked {
+  border-color: #d8c5f5;
+  background: #f7f0ff;
+  color: #6f4aa8;
+}
+
 .node-status.published {
   border-color: #9bd8bf;
   background: #ebfff5;
@@ -1047,6 +1062,21 @@ button.small {
   border-color: #9bd8bf;
   background: #ebfff5;
   color: #1a7f54;
+}
+
+.read-locked {
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  border: 1px solid #a6d6f5;
+  background: #ecf8ff;
+  color: #2d6f99;
+}
+
+.read-locked.locked {
+  border-color: #d8c5f5;
+  background: #f7f0ff;
+  color: #6f4aa8;
 }
 
 .comment-empty {

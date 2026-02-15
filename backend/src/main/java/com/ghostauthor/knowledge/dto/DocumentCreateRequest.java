@@ -15,6 +15,7 @@ public record DocumentCreateRequest(
         @Size(max = 128) String parentSlug,
         List<@Size(max = 32) String> labels,
         DocumentStatus status,
-        DocumentVisibility visibility
+        DocumentVisibility visibility,
+        Boolean locked
 ) {
 }
