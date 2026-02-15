@@ -216,6 +216,13 @@ import EditorPane from './components/EditorPane.vue'
 import SpaceHome from './components/SpaceHome.vue'
 import VersionHistory from './components/VersionHistory.vue'
 
+const FAVORITES_KEY = 'ga-favorites'
+const RECENT_KEY = 'ga-recent'
+const CURRENT_USER_KEY = 'ga-current-user'
+const RIGHT_PANEL_KEY = 'ga-right-panel-open'
+const LEFT_PANE_KEY = 'ga-left-pane-width'
+const FOCUS_MODE_KEY = 'ga-focus-mode'
+
 const docs = ref([])
 const versions = ref([])
 const comments = ref([])
@@ -429,13 +436,6 @@ const currentShareLink = computed(() => {
 const layoutStyle = computed(() => ({
   '--left-col': `${leftPaneWidth.value}px`
 }))
-
-const FAVORITES_KEY = 'ga-favorites'
-const RECENT_KEY = 'ga-recent'
-const CURRENT_USER_KEY = 'ga-current-user'
-const RIGHT_PANEL_KEY = 'ga-right-panel-open'
-const LEFT_PANE_KEY = 'ga-left-pane-width'
-const FOCUS_MODE_KEY = 'ga-focus-mode'
 
 function loadRightPanelState() {
   if (typeof window === 'undefined') {
