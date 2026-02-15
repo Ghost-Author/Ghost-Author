@@ -263,6 +263,9 @@
                   <strong>页面目录（{{ outline.length }}）</strong>
                   <span>{{ readOutlineOpen ? '收起 ▾' : '展开 ▸' }}</span>
                 </button>
+                <div class="outline-default-action-tip" v-if="readOutlineOpen && outlineDefaultAction !== 'NONE'">
+                  双击默认：{{ outlineDefaultAction === 'COPY_LINK' ? '复制标题链接' : '复制标题文本' }}
+                </div>
                 <div class="read-outline-filter" v-if="readOutlineOpen && outline.length">
                   <input v-model="readOutlineQuery" placeholder="过滤目录标题" />
                   <button class="secondary tiny" @click="readOutlineQuery = ''">清空</button>
@@ -283,6 +286,7 @@
                     :class="{ active: isOutlineActive(item), done: isOutlineDone(item) }"
                     :style="{ '--outline-indent': `${(item.level - 1) * 14}px` }"
                     @click="jumpToOutline(item)"
+                    @dblclick.prevent="runOutlineDefaultAction(item)"
                     @contextmenu.prevent="openOutlineMenu($event, item)"
                   >
                     <span class="read-outline-dot">•</span>
@@ -307,6 +311,10 @@
                   >
                     {{ action.label }}
                   </button>
+                  <div class="outline-context-divider"></div>
+                  <button class="outline-context-item" @click="setOutlineDefaultAction('COPY_LINK')">设为双击默认：复制链接</button>
+                  <button class="outline-context-item" @click="setOutlineDefaultAction('COPY_TEXT')">设为双击默认：复制标题</button>
+                  <button class="outline-context-item" @click="setOutlineDefaultAction('NONE')">清除双击默认</button>
                 </div>
               </template>
 
@@ -576,6 +584,7 @@ const readChildrenOpen = ref(true)
 const readOutlineOpen = ref(true)
 const readOutlineQuery = ref('')
 const readOutlineLevelFilter = ref(null)
+const outlineDefaultAction = ref(loadOutlineDefaultAction())
 const childQuery = ref('')
 const activeOutlineText = ref('')
 const readInfoOpen = ref(false)
@@ -598,6 +607,7 @@ const CHILD_OPEN_KEY = 'ga-read-child-open-state'
 const READ_CARD_ORDER_KEY = 'ga-read-card-order'
 const READ_CARD_COLLAPSED_KEY = 'ga-read-card-collapsed'
 const READ_WIDTH_KEY = 'ga-read-width-mode'
+const OUTLINE_DEFAULT_ACTION_KEY = 'ga-outline-default-action'
 let readScrollRaf = null
 let outlineMenuRaf = null
 const readWidthModes = [
@@ -771,6 +781,10 @@ watch(readCardCollapsed, (state) => {
 
 watch(readWidthMode, (mode) => {
   persistReadWidthMode(mode)
+})
+
+watch(outlineDefaultAction, (value) => {
+  persistOutlineDefaultAction(value)
 })
 
 watch([isCreateMode, isEditingSafe], async ([createMode, editable]) => {
@@ -1171,6 +1185,24 @@ function persistReadWidthMode(mode) {
   window.localStorage.setItem(READ_WIDTH_KEY, mode)
 }
 
+function loadOutlineDefaultAction() {
+  if (typeof window === 'undefined') {
+    return 'NONE'
+  }
+  const raw = window.localStorage.getItem(OUTLINE_DEFAULT_ACTION_KEY)
+  if (raw === 'COPY_LINK' || raw === 'COPY_TEXT' || raw === 'NONE') {
+    return raw
+  }
+  return 'NONE'
+}
+
+function persistOutlineDefaultAction(value) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(OUTLINE_DEFAULT_ACTION_KEY, value)
+}
+
 function loadChildOpenState(docId) {
   if (typeof window === 'undefined' || !docId) {
     return {}
@@ -1289,7 +1321,16 @@ function isOutlineDone(item) {
 }
 
 async function copyOutlineText() {
-  const item = outlineMenu.value.item
+  await copyOutlineTextByItem(outlineMenu.value.item)
+  closeOutlineMenu()
+}
+
+async function copyOutlineLink() {
+  await copyOutlineLinkByItem(outlineMenu.value.item)
+  closeOutlineMenu()
+}
+
+async function copyOutlineTextByItem(item) {
   if (!item?.text) {
     return
   }
@@ -1298,13 +1339,10 @@ async function copyOutlineText() {
     emit('notify', { type: 'success', message: '标题文本已复制' })
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
-  } finally {
-    closeOutlineMenu()
   }
 }
 
-async function copyOutlineLink() {
-  const item = outlineMenu.value.item
+async function copyOutlineLinkByItem(item) {
   if (!item?.text) {
     return
   }
@@ -1318,8 +1356,6 @@ async function copyOutlineLink() {
     emit('notify', { type: 'success', message: '标题链接已复制' })
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
-  } finally {
-    closeOutlineMenu()
   }
 }
 
@@ -1446,6 +1482,26 @@ function selectOutlineMenuAction(actionKey) {
   if (actionKey === 'clear-level') {
     clearOutlineLevelFilter()
   }
+}
+
+function setOutlineDefaultAction(action) {
+  if (!['NONE', 'COPY_LINK', 'COPY_TEXT'].includes(action)) {
+    return
+  }
+  outlineDefaultAction.value = action
+  closeOutlineMenu()
+}
+
+function runOutlineDefaultAction(item) {
+  if (outlineDefaultAction.value === 'COPY_LINK') {
+    copyOutlineLinkByItem(item)
+    return
+  }
+  if (outlineDefaultAction.value === 'COPY_TEXT') {
+    copyOutlineTextByItem(item)
+    return
+  }
+  jumpToOutline(item)
 }
 
 watch(

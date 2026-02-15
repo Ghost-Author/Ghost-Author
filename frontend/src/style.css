@@ -1890,6 +1890,16 @@ button.small {
   white-space: nowrap;
 }
 
+.outline-default-action-tip {
+  margin-top: 8px;
+  border: 1px dashed #cddff9;
+  border-radius: 8px;
+  background: #f5f9ff;
+  color: #5f759f;
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
 .read-outline-progress {
   margin-top: 8px;
   border: 1px solid #d9e6fc;
@@ -2006,6 +2016,12 @@ button.small {
   border-color: #7ca6f6;
   background: #e6f0ff;
   color: #2b4f89;
+}
+
+.outline-context-divider {
+  height: 1px;
+  background: #e4ecfc;
+  margin: 2px 0;
 }
 
 .perm-tags {
