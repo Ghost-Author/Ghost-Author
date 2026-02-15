@@ -11,6 +11,9 @@
         <input v-model="currentUser" class="user-input" placeholder="当前用户（如 liupeng）" />
         <span class="shortcut-hint">⌘/Ctrl+K 搜索 · ⌘/Ctrl+S 保存 · Alt+1/2/3 左栏</span>
         <button class="secondary tiny" @click="openHome">空间首页</button>
+        <button class="secondary tiny" @click="toggleRightPanel">
+          {{ rightPanelOpen ? '收起右栏' : '展开右栏' }}
+        </button>
         <div class="topbar-badge">{{ visibleDocs.length }} pages</div>
       </div>
     </header>
@@ -26,7 +29,7 @@
       </template>
     </div>
 
-    <div class="layout">
+    <div class="layout" :class="{ 'right-collapsed': !rightPanelOpen }">
       <DocList
         ref="docListRef"
         :docs="visibleDocs"
@@ -86,6 +89,7 @@
       />
 
       <VersionHistory
+        v-if="rightPanelOpen"
         :slug="activeSlug"
         :versions="versions"
         :outline="pageOutline"
@@ -246,6 +250,7 @@ const diffText = ref('')
 const favorites = ref([])
 const recent = ref([])
 const currentUser = ref('admin')
+const rightPanelOpen = ref(loadRightPanelState())
 const shareTokenFromUrl = ref('')
 let toastTimer = null
 let confirmResolver = null
@@ -410,6 +415,29 @@ const currentShareLink = computed(() => {
 const FAVORITES_KEY = 'ga-favorites'
 const RECENT_KEY = 'ga-recent'
 const CURRENT_USER_KEY = 'ga-current-user'
+const RIGHT_PANEL_KEY = 'ga-right-panel-open'
+
+function loadRightPanelState() {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  const raw = window.localStorage.getItem(RIGHT_PANEL_KEY)
+  if (raw === null) {
+    return true
+  }
+  return raw !== '0'
+}
+
+function persistRightPanelState(open) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(RIGHT_PANEL_KEY, open ? '1' : '0')
+}
+
+function toggleRightPanel() {
+  rightPanelOpen.value = !rightPanelOpen.value
+}
 
 function showToast(message, type = 'info') {
   if (!message) {
@@ -1414,6 +1442,10 @@ watch(currentUser, () => {
   if (activeSlug.value && !canViewDoc(currentDoc.value)) {
     openHome()
   }
+})
+
+watch(rightPanelOpen, (open) => {
+  persistRightPanelState(open)
 })
 
 function normalizeMembers(values) {
