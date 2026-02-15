@@ -225,7 +225,7 @@ curl -X POST http://localhost:8080/api/auth/logout \
 - `EDITOR`：可创建页面；仅可修改自己可编辑的页面（owner 或 editors 包含自己）
 - `VIEWER`：只读（后端拒绝写接口）
 
-管理员可在前端「用户管理」里在线增删改用户（运行时生效，重启后以 `AUTH_USERS` 为准）。
+管理员可在前端「用户管理」里在线增删改用户（写入后端数据库；挂载 `/app/data` 后重启可保留）。
 
 ### 管理用户（ADMIN）
 
