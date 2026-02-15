@@ -9,6 +9,9 @@
           {{ batchMode ? '退出批量' : '批量操作' }}
         </button>
         <span class="batch-count" v-if="batchMode">已选 {{ selectedSlugs.length }}</span>
+        <button class="secondary tiny" v-if="batchMode" :class="{ active: selectedOnlyMode }" @click="selectedOnlyMode = !selectedOnlyMode">
+          仅看已选
+        </button>
         <button class="secondary tiny" v-if="batchMode" @click="selectAllVisible">全选</button>
         <button class="secondary tiny" v-if="batchMode" @click="invertSelection">反选</button>
         <button class="secondary tiny" v-if="batchMode" @click="clearSelected">清空</button>
@@ -399,6 +402,7 @@ const dropTargetRoot = ref(false)
 const quickMenuSlug = ref('')
 const batchMode = ref(false)
 const selectedSlugs = ref([])
+const selectedOnlyMode = ref(false)
 
 const props = defineProps({
   docs: {
@@ -450,6 +454,7 @@ const statusFilteredDocs = computed(() => {
 })
 
 const propertyFilteredDocs = computed(() => {
+  const selectedSet = new Set(selectedSlugs.value)
   return statusFilteredDocs.value.filter((doc) => {
     const priorityPass = priorityFilter.value === 'ALL' || (doc.priority || 'MEDIUM') === priorityFilter.value
     const assigneePass = !assigneeFilter.value || (doc.assignee || '') === assigneeFilter.value
@@ -460,7 +465,8 @@ const propertyFilteredDocs = computed(() => {
       duePass = !!doc.dueDate && doc.dueDate < new Date().toISOString().slice(0, 10)
     }
     const todoPass = !myTodoMode.value || ((doc.assignee || '') === assigneeFilter.value && (doc.status || 'DRAFT') !== 'ARCHIVED')
-    return priorityPass && assigneePass && duePass && todoPass
+    const selectedPass = !selectedOnlyMode.value || selectedSet.has(doc.slug)
+    return priorityPass && assigneePass && duePass && todoPass && selectedPass
   })
 })
 
@@ -655,6 +661,7 @@ function toggleBatchMode() {
   quickMenuSlug.value = ''
   if (!batchMode.value) {
     selectedSlugs.value = []
+    selectedOnlyMode.value = false
   }
 }
 
