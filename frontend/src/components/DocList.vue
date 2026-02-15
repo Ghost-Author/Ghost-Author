@@ -257,6 +257,7 @@ import { computed, ref, watch } from 'vue'
 
 const QUICK_PANEL_KEY = 'ga-sidebar-quick-panels'
 const FILTER_PANEL_KEY = 'ga-sidebar-filter-panel'
+const GROUP_OPEN_KEY = 'ga-sidebar-open-groups'
 
 function loadQuickPanelsState() {
   if (typeof window === 'undefined') {
@@ -305,8 +306,34 @@ function persistFilterPanelState(open) {
   window.localStorage.setItem(FILTER_PANEL_KEY, open ? '1' : '0')
 }
 
+function loadGroupOpenState() {
+  if (typeof window === 'undefined') {
+    return {}
+  }
+  try {
+    const raw = window.localStorage.getItem(GROUP_OPEN_KEY)
+    if (!raw) {
+      return {}
+    }
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') {
+      return {}
+    }
+    return parsed
+  } catch {
+    return {}
+  }
+}
+
+function persistGroupOpenState(state) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(GROUP_OPEN_KEY, JSON.stringify(state))
+}
+
 const keyword = ref('')
-const opened = ref({})
+const opened = ref(loadGroupOpenState())
 const statusFilter = ref('ALL')
 const visibilityFilter = ref('ALL')
 const priorityFilter = ref('ALL')
@@ -353,6 +380,10 @@ watch([quickOpenFavorites, quickOpenRecent], ([favoritesOpen, recentOpen]) => {
 watch(filtersOpen, (open) => {
   persistFilterPanelState(open)
 })
+
+watch(opened, (value) => {
+  persistGroupOpenState(value)
+}, { deep: true })
 
 const statusFilteredDocs = computed(() => {
   if (statusFilter.value === 'ALL') {

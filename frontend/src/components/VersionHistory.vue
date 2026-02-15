@@ -78,7 +78,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const props = defineProps({
   slug: {
@@ -112,6 +112,42 @@ const historyOpen = ref(true)
 const diffOpen = ref(true)
 const activeOutlineText = ref('')
 const diffLines = computed(() => props.diffText.split('\n'))
+let previewContainer = null
+let previewHeadings = []
+
+function syncActiveOutlineByScroll() {
+  if (!previewContainer || previewHeadings.length === 0) {
+    return
+  }
+  const topOffset = 84
+  let current = previewHeadings[0]
+  for (const item of previewHeadings) {
+    if ((item.node.offsetTop - previewContainer.scrollTop) <= topOffset) {
+      current = item
+      continue
+    }
+    break
+  }
+  activeOutlineText.value = current.text
+}
+
+function bindPreviewScroll() {
+  if (previewContainer) {
+    previewContainer.removeEventListener('scroll', syncActiveOutlineByScroll)
+  }
+  previewContainer = document.querySelector('.preview-only')
+  if (!previewContainer) {
+    previewHeadings = []
+    return
+  }
+  const nodes = Array.from(previewContainer.querySelectorAll('h1, h2, h3, h4'))
+  previewHeadings = nodes.map((node) => ({
+    node,
+    text: (node.textContent || '').trim()
+  })).filter((item) => item.text.length > 0)
+  previewContainer.addEventListener('scroll', syncActiveOutlineByScroll, { passive: true })
+  syncActiveOutlineByScroll()
+}
 
 function formatTime(value) {
   if (!value) {
@@ -153,4 +189,23 @@ function scrollToHeading(text) {
   activeOutlineText.value = text
   target.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
+
+watch(() => props.slug, () => {
+  activeOutlineText.value = ''
+  nextTick(() => bindPreviewScroll())
+})
+
+watch(() => props.outline, () => {
+  nextTick(() => bindPreviewScroll())
+}, { deep: true })
+
+onMounted(() => {
+  nextTick(() => bindPreviewScroll())
+})
+
+onBeforeUnmount(() => {
+  if (previewContainer) {
+    previewContainer.removeEventListener('scroll', syncActiveOutlineByScroll)
+  }
+})
 </script>
