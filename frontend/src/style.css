@@ -80,6 +80,21 @@ body {
   white-space: nowrap;
 }
 
+.crumb-link {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: #4f6790;
+  font-weight: 600;
+  padding: 0;
+  border-radius: 0;
+}
+
+.crumb-link:hover {
+  color: #2f5ca8;
+  text-decoration: underline;
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -907,6 +922,12 @@ button.small {
   font-size: 13px;
 }
 
+.read-times {
+  margin: 6px 0 0;
+  color: #7a8eb3;
+  font-size: 12px;
+}
+
 .read-tags {
   display: flex;
   gap: 6px;
@@ -945,6 +966,34 @@ button.small {
 .child-pages li span {
   color: #6f82a8;
   font-size: 11px;
+}
+
+.child-status {
+  font-style: normal;
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 1px 7px;
+  border: 1px solid #c8daf9;
+  background: #edf4ff;
+  color: #325a99;
+}
+
+.child-status.published {
+  border-color: #9bd8bf;
+  background: #ebfff5;
+  color: #1a7f54;
+}
+
+.child-status.draft {
+  border-color: #f5c5d7;
+  background: #fff2f7;
+  color: #a84f77;
+}
+
+.child-status.archived {
+  border-color: #cdd5e2;
+  background: #f2f4f8;
+  color: #4e5f7a;
 }
 
 .child-pages li:hover {

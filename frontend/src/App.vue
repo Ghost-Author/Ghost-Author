@@ -20,7 +20,7 @@
       <template v-for="item in breadcrumbPath" :key="item.slug || item.title">
         <span>/</span>
         <strong v-if="item.slug === activeSlug">{{ item.title }}</strong>
-        <span v-else>{{ item.title }}</span>
+        <button v-else class="crumb-link" @click="openBreadcrumb(item.slug)">{{ item.title }}</button>
       </template>
     </div>
 
@@ -453,6 +453,14 @@ function openHome() {
   diffFrom.value = null
   diffTo.value = null
   diffText.value = ''
+}
+
+function openBreadcrumb(slug) {
+  if (!slug || slug === 'home') {
+    openHome()
+    return
+  }
+  loadDoc(slug)
 }
 
 async function moveDoc(payload) {

@@ -86,6 +86,9 @@
           </div>
         </div>
         <p class="read-summary">{{ model.summary || '暂无摘要' }}</p>
+        <p class="read-times" v-if="model.updatedAt || model.createdAt">
+          更新于 {{ formatTime(model.updatedAt) }} · 创建于 {{ formatTime(model.createdAt) }}
+        </p>
         <div class="read-tags" v-if="model.labels && model.labels.length">
           <span class="doc-label" v-for="label in model.labels" :key="label">{{ label }}</span>
         </div>
@@ -99,6 +102,7 @@
             >
               <strong>{{ item.title }}</strong>
               <span>{{ item.slug }}</span>
+              <em class="child-status" :class="(item.status || 'DRAFT').toLowerCase()">{{ statusText(item.status) }}</em>
             </li>
           </ul>
         </div>
