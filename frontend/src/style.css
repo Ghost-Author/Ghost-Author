@@ -535,6 +535,15 @@ body {
   color: #9a600c;
 }
 
+.page-action-shortcuts {
+  font-size: 11px;
+  color: #7185ab;
+  border: 1px dashed #d3e1fb;
+  border-radius: 999px;
+  background: #f7faff;
+  padding: 3px 8px;
+}
+
 .section-subtitle {
   margin: 2px 0 0;
   color: var(--text-muted);
@@ -2968,6 +2977,10 @@ button.small {
 
   .page-action-right {
     justify-content: flex-end;
+  }
+
+  .page-action-shortcuts {
+    display: none;
   }
 
   .action-group.more {

@@ -48,6 +48,7 @@
         <span class="page-dirty-tip" :class="{ dirty: hasUnsavedChanges }">
           {{ hasUnsavedChanges ? '有改动待保存' : '内容已同步' }}
         </span>
+        <span class="page-action-shortcuts">Alt+F 收藏 · Alt+L 链接 · Alt+H 分享</span>
         <button v-if="isEditingSafe" @click="$emit('save', model)">保存</button>
         <button
           v-if="isEditingSafe && model.status !== 'ARCHIVED'"
@@ -1272,6 +1273,9 @@ function onGlobalKeydown(event) {
   if (event.defaultPrevented) {
     return
   }
+  if (handlePageActionShortcuts(event)) {
+    return
+  }
   if (outlineMenu.value.open) {
     handleOutlineMenuKeydown(event)
     return
@@ -1312,6 +1316,43 @@ function onGlobalKeydown(event) {
       }
     })
   }
+}
+
+function handlePageActionShortcuts(event) {
+  if (isCreateMode.value) {
+    return false
+  }
+  if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+    return false
+  }
+  const target = event.target
+  if (isInteractiveTarget(target)) {
+    return false
+  }
+  const key = (event.key || '').toLowerCase()
+  if (key === 'f') {
+    if (!model.value.slug) {
+      return false
+    }
+    event.preventDefault()
+    emit('toggle-favorite', model.value.slug)
+    emit('notify', { type: 'success', message: props.isFavorite ? '已取消收藏' : '已加入收藏' })
+    return true
+  }
+  if (key === 'l') {
+    event.preventDefault()
+    copyPageLink()
+    return true
+  }
+  if (key === 'h') {
+    if (!props.canEdit) {
+      return false
+    }
+    event.preventDefault()
+    runMenuAction('toggle-share')
+    return true
+  }
+  return false
 }
 
 function isInteractiveTarget(target) {
