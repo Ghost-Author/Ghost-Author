@@ -21,6 +21,6 @@ knowledge:
   storage:
     base-dir: ${DOCS_BASE_DIR:data/docs}
   search:
-    enabled: ${SEARCH_ENABLED:true}
+    enabled: ${SEARCH_ENABLED:false}
   cors:
     allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:5173}

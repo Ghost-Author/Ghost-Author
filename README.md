@@ -88,6 +88,7 @@ backend 环境变量建议：
 - `SEARCH_URIS=http://<your-es-host>:9200`（如果启用搜索）
 - `DOCS_BASE_DIR=/app/storage/docs`
 - `CORS_ALLOWED_ORIGIN=https://<your-frontend-domain>`
+- `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=70 -XX:InitialRAMPercentage=20 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError`（避免小规格实例被 OOM 杀掉）
 
 后端健康后会得到一个 Railway 域名，例如：
 
