@@ -1965,6 +1965,18 @@ button.small {
   margin-top: 6px;
 }
 
+.child-filter {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.child-filter input {
+  margin: 0;
+}
+
 .child-pages li {
   border: 1px solid #dce8fc;
   border-radius: 10px;

@@ -285,9 +285,13 @@
                 <span>{{ readChildrenOpen ? '收起 ▾' : '展开 ▸' }}</span>
               </button>
               <div class="child-pages" v-if="readChildrenOpen">
+                <div class="child-filter">
+                  <input v-model="childQuery" placeholder="过滤子页面" />
+                  <button class="secondary tiny" @click="childQuery = ''">清空</button>
+                </div>
                 <ul>
                   <li
-                    v-for="item in childTreeRows"
+                    v-for="item in filteredChildTreeRows"
                     :key="item.slug"
                     :style="{ '--child-indent': `${item.depth * 16}px` }"
                     @click="$emit('select-child', item.slug)"
@@ -312,6 +316,7 @@
                     </div>
                   </li>
                 </ul>
+                <div class="comment-empty" v-if="filteredChildTreeRows.length === 0">没有匹配的子页面</div>
               </div>
             </section>
           </div>
@@ -512,6 +517,7 @@ const readPermOpen = ref(false)
 const readChildrenOpen = ref(true)
 const readOutlineOpen = ref(true)
 const readOutlineQuery = ref('')
+const childQuery = ref('')
 const activeOutlineText = ref('')
 const readInfoOpen = ref(false)
 const readPanelDock = ref('right')
@@ -565,6 +571,30 @@ const childTreeRows = computed(() => {
   }
   return rows
 })
+
+const filteredChildTreeRows = computed(() => {
+  const q = childQuery.value.trim().toLowerCase()
+  if (!q) {
+    return childTreeRows.value
+  }
+
+  const bySlug = new Map(props.childPages.map((item) => [item.slug, item]))
+  const include = new Set()
+  props.childPages.forEach((item) => {
+    const matched = (item.title || '').toLowerCase().includes(q) || (item.slug || '').toLowerCase().includes(q)
+    if (!matched) {
+      return
+    }
+    include.add(item.slug)
+    let parent = item.parentSlug
+    while (parent && bySlug.has(parent)) {
+      include.add(parent)
+      parent = bySlug.get(parent)?.parentSlug
+    }
+  })
+
+  return childTreeRows.value.filter((item) => include.has(item.slug))
+})
 const newTemplate = ref({
   name: '',
   description: '',
@@ -589,6 +619,7 @@ watch(
     readInfoOpen.value = false
     readPermOpen.value = false
     readChildrenOpen.value = true
+    childQuery.value = ''
     childOpenMap.value = {}
   },
   { immediate: true }
