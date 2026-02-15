@@ -113,12 +113,12 @@
           <option v-for="tpl in templates" :key="tpl.id" :value="tpl.id">{{ tpl.name }}</option>
         </select>
         <button class="secondary small" :disabled="!selectedTemplate" @click="applyTemplate">应用模板</button>
-        <button class="secondary small" @click="templateCenterOpen = !templateCenterOpen">
+        <button class="secondary small" v-if="canManageTemplates" @click="templateCenterOpen = !templateCenterOpen">
           {{ templateCenterOpen ? '收起模板中心' : '模板中心' }}
         </button>
       </div>
 
-      <div class="template-center" v-if="templateCenterOpen">
+      <div class="template-center" v-if="canManageTemplates && templateCenterOpen">
         <h4>模板中心</h4>
         <div class="template-form">
           <input v-model="newTemplate.name" placeholder="模板名称" />
@@ -683,6 +683,10 @@ const props = defineProps({
   canEdit: {
     type: Boolean,
     default: true
+  },
+  canManageTemplates: {
+    type: Boolean,
+    default: false
   },
   shareLink: {
     type: String,

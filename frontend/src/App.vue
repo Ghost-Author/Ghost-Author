@@ -121,6 +121,7 @@
           :child-pages="childPages"
           :current-user="currentUser"
           :can-edit="currentCanEdit"
+          :can-manage-templates="canManageTemplates"
           :share-link="currentShareLink"
           :templates="templates"
           @save="saveDoc"
@@ -511,7 +512,17 @@ const pageOutline = computed(() => {
   }
   return result
 })
-const currentCanEdit = computed(() => !currentDoc.value?.id || canEditDoc(currentDoc.value))
+const currentCanEdit = computed(() => {
+  const role = (currentUserRole.value || '').trim().toUpperCase()
+  if (role === 'VIEWER') {
+    return false
+  }
+  if (!currentDoc.value?.id) {
+    return role === 'ADMIN' || role === 'EDITOR'
+  }
+  return canEditDoc(currentDoc.value)
+})
+const canManageTemplates = computed(() => currentUserRole.value === 'ADMIN')
 const currentShareLink = computed(() => {
   if (!activeSlug.value || !currentDoc.value?.shareEnabled || !currentDoc.value?.shareToken) {
     return ''
@@ -918,7 +929,7 @@ function slugPartFromText(text) {
 }
 
 async function saveDoc(doc) {
-  if (doc.id && !canEditDoc(doc)) {
+  if ((doc.id && !canEditDoc(doc)) || (!doc.id && !currentCanEdit.value)) {
     showToast('当前用户无编辑权限', 'error')
     return
   }
@@ -1474,6 +1485,10 @@ async function regenerateShare() {
 }
 
 async function createTemplate(payload) {
+  if (!canManageTemplates.value) {
+    showToast('仅管理员可管理模板', 'error')
+    return
+  }
   if (!payload?.name || !payload?.content) {
     return
   }
@@ -1487,6 +1502,10 @@ async function createTemplate(payload) {
 }
 
 async function updateTemplate(payload) {
+  if (!canManageTemplates.value) {
+    showToast('仅管理员可管理模板', 'error')
+    return
+  }
   if (!payload?.id || !payload?.name || !payload?.content) {
     return
   }
@@ -1500,6 +1519,10 @@ async function updateTemplate(payload) {
 }
 
 async function deleteTemplate(templateId) {
+  if (!canManageTemplates.value) {
+    showToast('仅管理员可管理模板', 'error')
+    return
+  }
   if (!templateId) {
     return
   }
@@ -1908,6 +1931,13 @@ function normalizeMembers(values) {
 function canEditDoc(doc) {
   if (!doc) {
     return false
+  }
+  const role = (currentUserRole.value || '').trim().toUpperCase()
+  if (role === 'VIEWER') {
+    return false
+  }
+  if (role === 'ADMIN') {
+    return true
   }
   const user = (currentUser.value || '').trim()
   if (!user) {
