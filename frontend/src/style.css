@@ -894,6 +894,28 @@ button.small {
   margin-top: 8px;
 }
 
+.child-pages {
+  margin-top: 10px;
+  border-top: 1px dashed #d1dff8;
+  padding-top: 8px;
+}
+
+.child-pages p {
+  margin: 0 0 6px;
+  color: #5b7199;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.child-pages li {
+  font-size: 12px;
+  color: #385786;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: #f5f9ff;
+  margin-bottom: 4px;
+}
+
 .read-status {
   font-size: 11px;
   border-radius: 999px;

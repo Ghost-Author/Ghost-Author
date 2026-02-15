@@ -88,6 +88,12 @@
         <div class="read-tags" v-if="model.labels && model.labels.length">
           <span class="doc-label" v-for="label in model.labels" :key="label">{{ label }}</span>
         </div>
+        <div class="child-pages" v-if="childPages.length">
+          <p>子页面</p>
+          <ul>
+            <li v-for="item in childPages" :key="item.slug">{{ item.title }}</li>
+          </ul>
+        </div>
       </div>
       <div class="preview-only">
         <MdPreview :model-value="model.content" />
@@ -103,6 +109,7 @@
       >
         {{ model.status === 'PUBLISHED' ? '转为草稿并保存' : '发布并保存' }}
       </button>
+      <button v-if="!isCreateMode" class="secondary" @click="$emit('create-child')">新建子页面</button>
       <button class="danger" :disabled="isCreateMode" @click="$emit('delete', model.slug)">删除</button>
     </div>
 
@@ -163,10 +170,14 @@ const props = defineProps({
   attachments: {
     type: Array,
     default: () => []
+  },
+  childPages: {
+    type: Array,
+    default: () => []
   }
 })
 
-const emit = defineEmits(['add-comment', 'delete-comment', 'upload-attachment', 'delete-attachment', 'insert-attachment'])
+const emit = defineEmits(['add-comment', 'delete-comment', 'upload-attachment', 'delete-attachment', 'insert-attachment', 'create-child'])
 
 const toolbars = [
   'bold', 'underline', 'italic', '-',

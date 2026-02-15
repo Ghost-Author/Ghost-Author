@@ -14,8 +14,11 @@
       <span>🏠 Space</span>
       <span>/</span>
       <span>Knowledge</span>
-      <span>/</span>
-      <strong>{{ breadcrumbTitle }}</strong>
+      <template v-for="item in breadcrumbPath" :key="item.slug || item.title">
+        <span>/</span>
+        <strong v-if="item.slug === activeSlug">{{ item.title }}</strong>
+        <span v-else>{{ item.title }}</span>
+      </template>
     </div>
 
     <div class="layout">
@@ -35,6 +38,7 @@
         :doc="currentDoc"
         :comments="comments"
         :attachments="attachments"
+        :child-pages="childPages"
         @save="saveDoc"
         @delete="deleteDoc"
         @add-comment="addComment"
@@ -42,6 +46,7 @@
         @upload-attachment="uploadAttachment"
         @delete-attachment="deleteAttachment"
         @insert-attachment="insertAttachment"
+        @create-child="createChildPage"
       />
 
       <VersionHistory
@@ -80,6 +85,29 @@ const diffText = ref('')
 const favorites = ref([])
 const recent = ref([])
 const breadcrumbTitle = computed(() => currentDoc.value.title || 'Untitled Page')
+const breadcrumbPath = computed(() => {
+  if (!activeSlug.value) {
+    return [{ slug: '', title: breadcrumbTitle.value }]
+  }
+  const bySlug = new Map(docs.value.map((d) => [d.slug, d]))
+  const path = []
+  let cursor = bySlug.get(activeSlug.value)
+  const visited = new Set()
+  while (cursor && !visited.has(cursor.slug)) {
+    visited.add(cursor.slug)
+    path.unshift({ slug: cursor.slug, title: cursor.title || cursor.slug })
+    cursor = cursor.parentSlug ? bySlug.get(cursor.parentSlug) : null
+  }
+  return path.length ? path : [{ slug: activeSlug.value, title: breadcrumbTitle.value }]
+})
+const childPages = computed(() => {
+  if (!activeSlug.value) {
+    return []
+  }
+  return docs.value
+    .filter((d) => d.parentSlug === activeSlug.value)
+    .sort((a, b) => a.title.localeCompare(b.title, 'zh-Hans-CN'))
+})
 const pageOutline = computed(() => {
   const content = currentDoc.value?.content || ''
   const lines = content.split('\n')
@@ -144,6 +172,27 @@ async function loadDoc(slug) {
 function createNewDoc() {
   activeSlug.value = ''
   currentDoc.value = emptyDoc()
+  versions.value = []
+  comments.value = []
+  attachments.value = []
+  diffFrom.value = null
+  diffTo.value = null
+  diffText.value = ''
+}
+
+function createChildPage() {
+  if (!activeSlug.value) {
+    return
+  }
+  const parent = currentDoc.value
+  activeSlug.value = ''
+  currentDoc.value = {
+    ...emptyDoc(),
+    parentSlug: parent.slug,
+    title: `${parent.title || parent.slug} - 子页面`,
+    slug: `${parent.slug}-child-${Date.now().toString().slice(-6)}`,
+    content: `# ${parent.title || parent.slug} 子页面\n\n`
+  }
   versions.value = []
   comments.value = []
   attachments.value = []
