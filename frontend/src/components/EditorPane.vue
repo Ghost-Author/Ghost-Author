@@ -283,6 +283,7 @@
                     :class="{ active: isOutlineActive(item), done: isOutlineDone(item) }"
                     :style="{ '--outline-indent': `${(item.level - 1) * 14}px` }"
                     @click="jumpToOutline(item)"
+                    @contextmenu.prevent="openOutlineMenu($event, item)"
                   >
                     <span class="read-outline-dot">•</span>
                     <span>{{ item.text }}</span>
@@ -290,6 +291,16 @@
                 </ul>
                 <div class="comment-empty" v-else-if="readOutlineOpen && outline.length">没有匹配的目录标题</div>
                 <div class="comment-empty" v-else-if="readOutlineOpen">没有可识别标题（# ## ###）</div>
+                <div
+                  v-if="outlineMenu.open"
+                  class="outline-context-menu"
+                  :style="{ left: `${outlineMenu.x}px`, top: `${outlineMenu.y}px` }"
+                >
+                  <button class="outline-context-item" @click="copyOutlineText">复制标题文本</button>
+                  <button class="outline-context-item" @click="copyOutlineLink">复制标题链接</button>
+                  <button class="outline-context-item" @click="filterOutlineByLevel">仅看同级标题</button>
+                  <button class="outline-context-item" @click="clearOutlineLevelFilter">显示全部标题</button>
+                </div>
               </template>
 
               <template v-else-if="card.key === 'permission'">
@@ -557,6 +568,7 @@ const readPermOpen = ref(false)
 const readChildrenOpen = ref(true)
 const readOutlineOpen = ref(true)
 const readOutlineQuery = ref('')
+const readOutlineLevelFilter = ref(null)
 const childQuery = ref('')
 const activeOutlineText = ref('')
 const readInfoOpen = ref(false)
@@ -566,6 +578,12 @@ const readCardCollapsed = ref(loadReadCardCollapsed())
 const readWidthMode = ref(loadReadWidthMode())
 const readCardRefs = ref({})
 const childOpenMap = ref({})
+const outlineMenu = ref({
+  open: false,
+  x: 0,
+  y: 0,
+  item: null
+})
 const READ_PANEL_DOCK_KEY = 'ga-read-panel-dock'
 const CHILD_OPEN_KEY = 'ga-read-child-open-state'
 const READ_CARD_ORDER_KEY = 'ga-read-card-order'
@@ -600,10 +618,13 @@ const readProgressPercent = computed(() => {
 
 const filteredOutline = computed(() => {
   const q = readOutlineQuery.value.trim().toLowerCase()
+  const source = readOutlineLevelFilter.value
+    ? props.outline.filter((item) => item.level === readOutlineLevelFilter.value)
+    : props.outline
   if (!q) {
-    return props.outline
+    return source
   }
-  return props.outline.filter((item) => (item.text || '').toLowerCase().includes(q))
+  return source.filter((item) => (item.text || '').toLowerCase().includes(q))
 })
 
 const childTreeRows = computed(() => {
@@ -693,6 +714,8 @@ watch(
     readInfoOpen.value = false
     readPermOpen.value = false
     readChildrenOpen.value = true
+    readOutlineLevelFilter.value = null
+    outlineMenu.value = { open: false, x: 0, y: 0, item: null }
     childQuery.value = ''
     childOpenMap.value = loadChildOpenState(id)
   },
@@ -746,6 +769,7 @@ watch([isCreateMode, isEditingSafe], async ([createMode, editable]) => {
 }, { immediate: true })
 
 function onGlobalClick(event) {
+  outlineMenu.value.open = false
   if (!actionMenuRef.value) {
     return
   }
@@ -1177,6 +1201,15 @@ function jumpToOutline(item) {
   target.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
+function openOutlineMenu(event, item) {
+  outlineMenu.value = {
+    open: true,
+    x: event.clientX,
+    y: event.clientY,
+    item
+  }
+}
+
 function onReadScroll() {
   if (readScrollRaf !== null || isEditingSafe.value || !readPreviewRef.value) {
     return
@@ -1220,10 +1253,75 @@ function isOutlineDone(item) {
   return activeOutlineIndex.value >= 0 && index >= 0 && index < activeOutlineIndex.value
 }
 
+async function copyOutlineText() {
+  const item = outlineMenu.value.item
+  if (!item?.text) {
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(item.text)
+    emit('notify', { type: 'success', message: '标题文本已复制' })
+  } catch {
+    emit('notify', { type: 'error', message: '复制失败，请手动复制' })
+  } finally {
+    outlineMenu.value.open = false
+  }
+}
+
+async function copyOutlineLink() {
+  const item = outlineMenu.value.item
+  if (!item?.text) {
+    return
+  }
+  const headingId = findHeadingIdByText(item.text) || headingSlug(item.text)
+  const base = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''
+  const pagePart = model.value.slug ? `?page=${encodeURIComponent(model.value.slug)}` : ''
+  const hashPart = headingId ? `#${encodeURIComponent(headingId)}` : ''
+  const link = `${base}${pagePart}${hashPart}`
+  try {
+    await navigator.clipboard.writeText(link)
+    emit('notify', { type: 'success', message: '标题链接已复制' })
+  } catch {
+    emit('notify', { type: 'error', message: '复制失败，请手动复制' })
+  } finally {
+    outlineMenu.value.open = false
+  }
+}
+
+function filterOutlineByLevel() {
+  const item = outlineMenu.value.item
+  readOutlineLevelFilter.value = item?.level || null
+  outlineMenu.value.open = false
+}
+
+function clearOutlineLevelFilter() {
+  readOutlineLevelFilter.value = null
+  outlineMenu.value.open = false
+}
+
+function findHeadingIdByText(text) {
+  const container = readPreviewRef.value
+  if (!container || !text) {
+    return ''
+  }
+  const headings = Array.from(container.querySelectorAll('h1, h2, h3, h4'))
+  const found = headings.find((node) => normalizeText(node.textContent) === normalizeText(text))
+  return found?.id || ''
+}
+
+function headingSlug(text) {
+  return (text || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\u4e00-\u9fa5\s-]/g, '')
+    .replace(/\s+/g, '-')
+}
+
 watch(
   () => props.doc.id,
   () => {
     readOutlineQuery.value = ''
+    readOutlineLevelFilter.value = null
     activeOutlineText.value = ''
     if (typeof window === 'undefined') {
       return

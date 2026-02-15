@@ -1970,6 +1970,38 @@ button.small {
   font-size: 10px;
 }
 
+.outline-context-menu {
+  position: fixed;
+  z-index: 40;
+  border: 1px solid #d5e2fb;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 22px #1f4d9329;
+  padding: 6px;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.outline-context-item {
+  width: 100%;
+  border: 1px solid #dce7fb;
+  background: #f8fbff;
+  color: #45608c;
+  box-shadow: none;
+  text-align: left;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.outline-context-item:hover {
+  border-color: #9dbaf8;
+  background: #ebf3ff;
+  color: #2f5ca8;
+}
+
 .perm-tags {
   display: flex;
   gap: 6px;
