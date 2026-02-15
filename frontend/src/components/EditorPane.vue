@@ -125,6 +125,29 @@
         <div />
       </div>
 
+      <div class="meta-grid">
+        <label>
+          优先级
+          <select v-model="model.priority" :disabled="!isEditingSafe">
+            <option value="LOW">低</option>
+            <option value="MEDIUM">中</option>
+            <option value="HIGH">高</option>
+          </select>
+        </label>
+        <label>
+          截止日期
+          <input type="date" v-model="model.dueDate" :disabled="!isEditingSafe" />
+        </label>
+      </div>
+
+      <div class="meta-grid">
+        <label>
+          负责人
+          <input v-model="model.assignee" :disabled="!isEditingSafe" placeholder="例如：liupeng" />
+        </label>
+        <div />
+      </div>
+
       <label>
         摘要
         <input v-model="model.summary" :disabled="!isEditingSafe" />
@@ -162,6 +185,9 @@
           <span class="perm-chip">Viewers: {{ (model.viewers || []).join(', ') || '-' }}</span>
           <span class="perm-chip current">当前用户: {{ currentUser || '-' }}</span>
           <span class="perm-chip share">{{ model.shareEnabled ? '分享已开启' : '未开启分享' }}</span>
+          <span class="perm-chip priority">优先级: {{ priorityText(model.priority) }}</span>
+          <span class="perm-chip">负责人: {{ model.assignee || '-' }}</span>
+          <span class="perm-chip">截止: {{ model.dueDate || '-' }}</span>
         </div>
         <div class="share-bar" v-if="model.shareEnabled && shareLink">
           <input :value="shareLink" readonly />
@@ -580,5 +606,15 @@ function statusText(status) {
     return '已归档'
   }
   return '草稿'
+}
+
+function priorityText(priority) {
+  if (priority === 'HIGH') {
+    return '高'
+  }
+  if (priority === 'LOW') {
+    return '低'
+  }
+  return '中'
 }
 </script>

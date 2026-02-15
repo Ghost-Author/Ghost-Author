@@ -78,6 +78,33 @@
       </button>
     </div>
 
+    <div class="priority-filters">
+      <button class="filter-btn" :class="{ active: priorityFilter === 'ALL' }" @click="priorityFilter = 'ALL'">
+        优先级全部
+      </button>
+      <button class="filter-btn" :class="{ active: priorityFilter === 'HIGH' }" @click="priorityFilter = 'HIGH'">
+        高优先级
+      </button>
+      <button class="filter-btn" :class="{ active: priorityFilter === 'MEDIUM' }" @click="priorityFilter = 'MEDIUM'">
+        中优先级
+      </button>
+      <button class="filter-btn" :class="{ active: priorityFilter === 'LOW' }" @click="priorityFilter = 'LOW'">
+        低优先级
+      </button>
+    </div>
+
+    <div class="meta-filters">
+      <select v-model="assigneeFilter">
+        <option value="">负责人（全部）</option>
+        <option v-for="name in assigneeOptions" :key="name" :value="name">{{ name }}</option>
+      </select>
+      <select v-model="dueFilter">
+        <option value="ALL">截止日期（全部）</option>
+        <option value="HAS_DUE">有截止日期</option>
+        <option value="OVERDUE">已逾期</option>
+      </select>
+    </div>
+
     <div class="quick-zones">
       <div class="quick-zone">
         <h4>⭐ 收藏</h4>
@@ -176,8 +203,15 @@
                 <span class="node-status" :class="(node.status || 'DRAFT').toLowerCase()">
                   {{ statusText(node.status) }}
                 </span>
+                <span class="node-priority" :class="(node.priority || 'MEDIUM').toLowerCase()">
+                  {{ priorityText(node.priority) }}
+                </span>
               </div>
               <p>{{ node.summary }}</p>
+              <div class="label-row">
+                <span class="node-owner">👤 {{ node.assignee || '-' }}</span>
+                <span class="node-owner">⏰ {{ node.dueDate || '-' }}</span>
+              </div>
               <div class="label-row" v-if="node.labels && node.labels.length">
                 <span class="doc-label" v-for="label in node.labels.slice(0, 3)" :key="label">{{ label }}</span>
               </div>
@@ -196,6 +230,9 @@ const keyword = ref('')
 const opened = ref({})
 const statusFilter = ref('ALL')
 const visibilityFilter = ref('ALL')
+const priorityFilter = ref('ALL')
+const assigneeFilter = ref('')
+const dueFilter = ref('ALL')
 const draggingSlug = ref('')
 const dropTargetSlug = ref('')
 const dropTargetRoot = ref(false)
@@ -228,6 +265,28 @@ const statusFilteredDocs = computed(() => {
   return props.docs.filter((doc) => (doc.status || 'DRAFT') === statusFilter.value)
 })
 
+const propertyFilteredDocs = computed(() => {
+  return statusFilteredDocs.value.filter((doc) => {
+    const priorityPass = priorityFilter.value === 'ALL' || (doc.priority || 'MEDIUM') === priorityFilter.value
+    const assigneePass = !assigneeFilter.value || (doc.assignee || '') === assigneeFilter.value
+    let duePass = true
+    if (dueFilter.value === 'HAS_DUE') {
+      duePass = !!doc.dueDate
+    } else if (dueFilter.value === 'OVERDUE') {
+      duePass = !!doc.dueDate && doc.dueDate < new Date().toISOString().slice(0, 10)
+    }
+    return priorityPass && assigneePass && duePass
+  })
+})
+
+const assigneeOptions = computed(() => {
+  return Array.from(new Set(
+    props.docs
+      .map((doc) => (doc.assignee || '').trim())
+      .filter((name) => name.length > 0)
+  )).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
+})
+
 const statusCounts = computed(() => {
   const published = props.docs.filter((doc) => (doc.status || 'DRAFT') === 'PUBLISHED').length
   const archived = props.docs.filter((doc) => (doc.status || 'DRAFT') === 'ARCHIVED').length
@@ -256,17 +315,17 @@ const visibilitySections = computed(() => {
       {
         key: 'SPACE',
         title: '空间页面',
-        groups: buildGroups(statusFilteredDocs.value.filter((doc) => (doc.visibility || 'SPACE') === 'SPACE'), 'SPACE')
+        groups: buildGroups(propertyFilteredDocs.value.filter((doc) => (doc.visibility || 'SPACE') === 'SPACE'), 'SPACE')
       },
       {
         key: 'PRIVATE',
         title: '私有页面',
-        groups: buildGroups(statusFilteredDocs.value.filter((doc) => (doc.visibility || 'SPACE') === 'PRIVATE'), 'PRIVATE')
+        groups: buildGroups(propertyFilteredDocs.value.filter((doc) => (doc.visibility || 'SPACE') === 'PRIVATE'), 'PRIVATE')
       }
     ].filter((section) => section.groups.length > 0)
   }
 
-  const sourceDocs = statusFilteredDocs.value.filter((doc) => (doc.visibility || 'SPACE') === visibilityFilter.value)
+  const sourceDocs = propertyFilteredDocs.value.filter((doc) => (doc.visibility || 'SPACE') === visibilityFilter.value)
   const title = visibilityFilter.value === 'PRIVATE' ? '私有页面' : '空间页面'
   return [{
     key: visibilityFilter.value,
@@ -379,6 +438,16 @@ function statusText(status) {
     return '已归档'
   }
   return '草稿'
+}
+
+function priorityText(priority) {
+  if (priority === 'HIGH') {
+    return '高优先'
+  }
+  if (priority === 'LOW') {
+    return '低优先'
+  }
+  return '中优先'
 }
 
 function sortByOrder(a, b) {

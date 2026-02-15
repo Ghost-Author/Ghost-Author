@@ -238,6 +238,9 @@ function emptyDoc() {
     owner: currentUser.value || 'admin',
     editors: [],
     viewers: [],
+    priority: 'MEDIUM',
+    dueDate: '',
+    assignee: '',
     status: 'DRAFT',
     visibility: 'SPACE',
     locked: false,
@@ -291,6 +294,15 @@ async function loadDoc(slug) {
   }
   if (!Array.isArray(currentDoc.value.viewers)) {
     currentDoc.value.viewers = []
+  }
+  if (!currentDoc.value.priority) {
+    currentDoc.value.priority = 'MEDIUM'
+  }
+  if (!currentDoc.value.assignee) {
+    currentDoc.value.assignee = ''
+  }
+  if (!currentDoc.value.dueDate) {
+    currentDoc.value.dueDate = ''
   }
   activeSlug.value = slug
   showHome.value = false
@@ -360,11 +372,12 @@ async function saveDoc(doc) {
       owner: doc.owner || null,
       editors: doc.editors || [],
       viewers: doc.viewers || [],
+      priority: doc.priority || 'MEDIUM',
+      dueDate: doc.dueDate || null,
+      assignee: doc.assignee || null,
       status: doc.status || 'DRAFT',
       visibility: doc.visibility || 'SPACE',
-      locked: !!doc.locked,
-      shareEnabled: !!doc.shareEnabled,
-      shareToken: doc.shareToken || null
+      locked: !!doc.locked
     })
   } else {
     await api.post('/documents', {
@@ -377,11 +390,12 @@ async function saveDoc(doc) {
       owner: doc.owner || currentUser.value || 'admin',
       editors: doc.editors || [],
       viewers: doc.viewers || [],
+      priority: doc.priority || 'MEDIUM',
+      dueDate: doc.dueDate || null,
+      assignee: doc.assignee || null,
       status: doc.status || 'DRAFT',
       visibility: doc.visibility || 'SPACE',
-      locked: !!doc.locked,
-      shareEnabled: !!doc.shareEnabled,
-      shareToken: doc.shareToken || null
+      locked: !!doc.locked
     })
   }
 

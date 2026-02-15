@@ -1,6 +1,7 @@
 package com.ghostauthor.knowledge.dto;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import com.ghostauthor.knowledge.entity.DocumentStatus;
 import com.ghostauthor.knowledge.entity.DocumentVisibility;
@@ -16,6 +17,9 @@ public record DocumentResponse(
         String owner,
         List<String> editors,
         List<String> viewers,
+        String priority,
+        LocalDate dueDate,
+        String assignee,
         DocumentStatus status,
         DocumentVisibility visibility,
         Boolean locked,

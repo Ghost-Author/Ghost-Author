@@ -83,6 +83,9 @@ public class DocumentServiceImpl implements DocumentService {
         entity.setOwner(normalizeOwner(request.owner()));
         entity.setEditors(joinMembers(request.editors()));
         entity.setViewers(joinMembers(request.viewers()));
+        entity.setPriority(normalizePriority(request.priority()));
+        entity.setDueDate(request.dueDate());
+        entity.setAssignee(normalizeAssignee(request.assignee()));
         entity.setStatus(request.status() == null ? DocumentStatus.DRAFT : request.status());
         entity.setVisibility(request.visibility() == null ? DocumentVisibility.SPACE : request.visibility());
         entity.setLocked(Boolean.TRUE.equals(request.locked()));
@@ -110,6 +113,9 @@ public class DocumentServiceImpl implements DocumentService {
         entity.setOwner(normalizeOwner(request.owner()));
         entity.setEditors(joinMembers(request.editors()));
         entity.setViewers(joinMembers(request.viewers()));
+        entity.setPriority(normalizePriority(request.priority()));
+        entity.setDueDate(request.dueDate());
+        entity.setAssignee(normalizeAssignee(request.assignee()));
         if (request.status() != null) {
             entity.setStatus(request.status());
         }
@@ -414,6 +420,9 @@ public class DocumentServiceImpl implements DocumentService {
                 entity.getOwner(),
                 splitMembers(entity.getEditors()),
                 splitMembers(entity.getViewers()),
+                entity.getPriority(),
+                entity.getDueDate(),
+                entity.getAssignee(),
                 entity.getStatus() == null ? DocumentStatus.DRAFT : entity.getStatus(),
                 entity.getVisibility() == null ? DocumentVisibility.SPACE : entity.getVisibility(),
                 Boolean.TRUE.equals(entity.getLocked()),
@@ -521,6 +530,24 @@ public class DocumentServiceImpl implements DocumentService {
             return null;
         }
         return owner.trim();
+    }
+
+    private String normalizeAssignee(String assignee) {
+        if (!StringUtils.hasText(assignee)) {
+            return null;
+        }
+        return assignee.trim();
+    }
+
+    private String normalizePriority(String priority) {
+        if (!StringUtils.hasText(priority)) {
+            return null;
+        }
+        String normalized = priority.trim().toUpperCase();
+        if (!normalized.equals("LOW") && !normalized.equals("MEDIUM") && !normalized.equals("HIGH")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Priority must be LOW, MEDIUM or HIGH");
+        }
+        return normalized;
     }
 
     private CommentResponse toCommentResponse(DocumentCommentEntity comment) {

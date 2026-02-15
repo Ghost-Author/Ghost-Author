@@ -1,6 +1,7 @@
 package com.ghostauthor.knowledge.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -36,6 +37,14 @@ public class DocumentEntity {
 
     @Column(length = 1024)
     private String viewers;
+
+    @Column(length = 16)
+    private String priority;
+
+    private LocalDate dueDate;
+
+    @Column(length = 64)
+    private String assignee;
 
     @Column(nullable = false)
     private Boolean locked;
@@ -173,6 +182,30 @@ public class DocumentEntity {
 
     public void setViewers(String viewers) {
         this.viewers = viewers;
+    }
+
+    public String getPriority() {
+        return priority;
+    }
+
+    public void setPriority(String priority) {
+        this.priority = priority;
+    }
+
+    public LocalDate getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(LocalDate dueDate) {
+        this.dueDate = dueDate;
+    }
+
+    public String getAssignee() {
+        return assignee;
+    }
+
+    public void setAssignee(String assignee) {
+        this.assignee = assignee;
     }
 
     public DocumentStatus getStatus() {

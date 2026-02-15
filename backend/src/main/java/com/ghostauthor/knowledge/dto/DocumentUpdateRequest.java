@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Size;
 import com.ghostauthor.knowledge.entity.DocumentStatus;
 import com.ghostauthor.knowledge.entity.DocumentVisibility;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public record DocumentUpdateRequest(
@@ -16,6 +17,9 @@ public record DocumentUpdateRequest(
         @Size(max = 64) String owner,
         List<@Size(max = 32) String> editors,
         List<@Size(max = 32) String> viewers,
+        @Size(max = 16) String priority,
+        LocalDate dueDate,
+        @Size(max = 64) String assignee,
         DocumentStatus status,
         DocumentVisibility visibility,
         Boolean locked
