@@ -1011,6 +1011,10 @@ function clearBatchSelection() {
   selectedOnlyMode.value = false
 }
 
+function toggleCompactMode() {
+  compactMode.value = !compactMode.value
+}
+
 function toggleMyTodoMode() {
   if (!myTodoMode.value && !assigneeFilter.value) {
     assigneeFilter.value = props.currentUser || ''
@@ -1153,6 +1157,9 @@ function onDropRoot() {
 defineExpose({
   setMyTodoFilter,
   clearMyTodoFilter,
-  clearBatchSelection
+  clearBatchSelection,
+  expandAll,
+  collapseAll,
+  toggleCompactMode
 })
 </script>

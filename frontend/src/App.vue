@@ -9,6 +9,7 @@
       </div>
       <div class="topbar-right">
         <input v-model="currentUser" class="user-input" placeholder="当前用户（如 liupeng）" />
+        <span class="shortcut-hint">⌘/Ctrl+K 搜索 · ⌘/Ctrl+S 保存 · Alt+1/2/3 左栏</span>
         <button class="secondary tiny" @click="openHome">空间首页</button>
         <div class="topbar-badge">{{ visibleDocs.length }} pages</div>
       </div>
@@ -983,18 +984,48 @@ function loadCollections() {
 }
 
 function handleKeydown(event) {
+  const target = event.target
+  const tagName = (target?.tagName || '').toUpperCase()
+  const typingElement = target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(tagName)
+
   const isCommand = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k'
   if (isCommand) {
     event.preventDefault()
     commandOpen.value = true
     return
   }
-  const isSave = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's'
-  if (!isSave) {
+
+  const isExpandTree = event.altKey && !event.ctrlKey && !event.metaKey && event.key === '1'
+  if (isExpandTree) {
+    event.preventDefault()
+    docListRef.value?.expandAll()
     return
   }
-  event.preventDefault()
-  saveDoc(currentDoc.value)
+
+  const isCollapseTree = event.altKey && !event.ctrlKey && !event.metaKey && event.key === '2'
+  if (isCollapseTree) {
+    event.preventDefault()
+    docListRef.value?.collapseAll()
+    return
+  }
+
+  const isToggleDensity = event.altKey && !event.ctrlKey && !event.metaKey && event.key === '3'
+  if (isToggleDensity) {
+    event.preventDefault()
+    docListRef.value?.toggleCompactMode()
+    return
+  }
+
+  const isSave = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's'
+  if (isSave) {
+    event.preventDefault()
+    saveDoc(currentDoc.value)
+    return
+  }
+
+  if (typingElement) {
+    return
+  }
 }
 
 function closeCommand() {

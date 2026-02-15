@@ -161,6 +161,16 @@ body {
   gap: 8px;
 }
 
+.shortcut-hint {
+  border: 1px dashed #c9daf8;
+  background: #f5f9ff;
+  color: #5e759e;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .user-input {
   width: 170px;
   margin: 0;
@@ -2114,6 +2124,10 @@ button.small {
 
   .home-stats {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .shortcut-hint {
+    display: none;
   }
 
   .actions {
