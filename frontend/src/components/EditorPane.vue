@@ -1,7 +1,12 @@
 <template>
   <div ref="editorPaneRef" class="editor-pane">
     <div class="pane-head">
-      <h2>Page Editor</h2>
+      <div class="pane-title-wrap">
+        <h2>Page Editor</h2>
+        <span class="save-state-pill" :class="{ dirty: hasUnsavedChanges }">
+          {{ hasUnsavedChanges ? '未保存更改' : '已保存' }}
+        </span>
+      </div>
       <div class="view-switch" v-if="!isCreateMode">
         <button class="secondary" @click="toggleEditMode" :disabled="!canEdit">
           {{ isEditing ? '查看预览' : '编辑页面' }}
@@ -29,6 +34,9 @@
       <div class="page-action-right">
         <span class="page-status-pill" :class="(model.status || 'DRAFT').toLowerCase()">
           {{ statusText(model.status) }}
+        </span>
+        <span class="page-dirty-tip" :class="{ dirty: hasUnsavedChanges }">
+          {{ hasUnsavedChanges ? '有改动待保存' : '内容已同步' }}
         </span>
         <button v-if="isEditingSafe" @click="$emit('save', model)">保存</button>
         <button
@@ -641,10 +649,12 @@ const OUTLINE_BATCH_SEPARATOR_KEY = 'ga-outline-batch-separator'
 const OUTLINE_BATCH_LEVEL_KEY = 'ga-outline-batch-level'
 
 const model = computed(() => props.doc)
+const lastSavedSignature = ref(buildDocSignature(props.doc))
 const isCreateMode = computed(() => !props.doc.id)
 const isLocked = computed(() => !!props.doc.locked)
 const isEditing = ref(false)
 const isEditingSafe = computed(() => (isCreateMode.value || (isEditing.value && !isLocked.value)) && props.canEdit)
+const hasUnsavedChanges = computed(() => buildDocSignature(model.value) !== lastSavedSignature.value)
 const commentAuthor = ref('')
 const commentContent = ref('')
 const editorPaneRef = ref(null)
@@ -866,8 +876,16 @@ watch(
     outlineMenu.value = { open: false, x: 0, y: 0, item: null, activeIndex: 0 }
     childQuery.value = ''
     childOpenMap.value = loadChildOpenState(id)
+    lastSavedSignature.value = buildDocSignature(props.doc)
   },
   { immediate: true }
+)
+
+watch(
+  () => props.doc.updatedAt,
+  () => {
+    lastSavedSignature.value = buildDocSignature(props.doc)
+  }
 )
 
 watch(
@@ -1061,6 +1079,29 @@ function submitComment() {
   })
   commentAuthor.value = ''
   commentContent.value = ''
+}
+
+function buildDocSignature(doc) {
+  if (!doc) {
+    return ''
+  }
+  return JSON.stringify({
+    slug: doc.slug || '',
+    title: doc.title || '',
+    summary: doc.summary || '',
+    parentSlug: doc.parentSlug || '',
+    content: doc.content || '',
+    labels: Array.isArray(doc.labels) ? doc.labels : [],
+    owner: doc.owner || '',
+    editors: Array.isArray(doc.editors) ? doc.editors : [],
+    viewers: Array.isArray(doc.viewers) ? doc.viewers : [],
+    priority: doc.priority || '',
+    dueDate: doc.dueDate || '',
+    assignee: doc.assignee || '',
+    status: doc.status || '',
+    visibility: doc.visibility || '',
+    locked: !!doc.locked
+  })
 }
 
 function formatTime(value) {
