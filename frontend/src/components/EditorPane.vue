@@ -268,6 +268,10 @@
                 </div>
                 <div class="outline-batch-actions" v-if="readOutlineOpen && selectedOutlineItems.length">
                   <span>已选 {{ selectedOutlineItems.length }} 项</span>
+                  <select v-model="outlineBatchFormat">
+                    <option value="MARKDOWN">Markdown 列表</option>
+                    <option value="LINKS">纯链接</option>
+                  </select>
                   <button class="secondary tiny" @click="copySelectedOutlineLinks">复制已选链接</button>
                   <button class="secondary tiny" @click="clearOutlineSelection">清空选择</button>
                 </div>
@@ -595,6 +599,7 @@ const readOutlineOpen = ref(true)
 const readOutlineQuery = ref('')
 const readOutlineLevelFilter = ref(null)
 const outlineDefaultAction = ref(loadOutlineDefaultAction())
+const outlineBatchFormat = ref(loadOutlineBatchFormat())
 const selectedOutlineIds = ref([])
 const lastSelectedOutlineId = ref('')
 const outlineCursorId = ref('')
@@ -622,6 +627,7 @@ const READ_CARD_ORDER_KEY = 'ga-read-card-order'
 const READ_CARD_COLLAPSED_KEY = 'ga-read-card-collapsed'
 const READ_WIDTH_KEY = 'ga-read-width-mode'
 const OUTLINE_DEFAULT_ACTION_KEY = 'ga-outline-default-action'
+const OUTLINE_BATCH_FORMAT_KEY = 'ga-outline-batch-format'
 let readScrollRaf = null
 let outlineMenuRaf = null
 const readWidthModes = [
@@ -836,6 +842,10 @@ watch(readWidthMode, (mode) => {
 
 watch(outlineDefaultAction, (value) => {
   persistOutlineDefaultAction(value)
+})
+
+watch(outlineBatchFormat, (value) => {
+  persistOutlineBatchFormat(value)
 })
 
 watch([isCreateMode, isEditingSafe], async ([createMode, editable]) => {
@@ -1257,6 +1267,24 @@ function persistOutlineDefaultAction(value) {
   window.localStorage.setItem(OUTLINE_DEFAULT_ACTION_KEY, value)
 }
 
+function loadOutlineBatchFormat() {
+  if (typeof window === 'undefined') {
+    return 'MARKDOWN'
+  }
+  const raw = window.localStorage.getItem(OUTLINE_BATCH_FORMAT_KEY)
+  if (raw === 'MARKDOWN' || raw === 'LINKS') {
+    return raw
+  }
+  return 'MARKDOWN'
+}
+
+function persistOutlineBatchFormat(value) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(OUTLINE_BATCH_FORMAT_KEY, value)
+}
+
 function loadChildOpenState(docId) {
   if (typeof window === 'undefined' || !docId) {
     return {}
@@ -1520,12 +1548,19 @@ async function copySelectedOutlineLinks() {
   if (!selectedOutlineItems.value.length) {
     return
   }
-  const text = selectedOutlineItems.value
-    .map((item) => `${item.text} - ${buildOutlineLink(item)}`)
-    .join('\n')
+  const text = outlineBatchFormat.value === 'LINKS'
+    ? selectedOutlineItems.value
+      .map((item) => buildOutlineLink(item))
+      .join('\n')
+    : selectedOutlineItems.value
+      .map((item) => `- [${item.text}](${buildOutlineLink(item)})`)
+      .join('\n')
   try {
     await navigator.clipboard.writeText(text)
-    emit('notify', { type: 'success', message: `已复制 ${selectedOutlineItems.value.length} 条目录链接` })
+    emit('notify', {
+      type: 'success',
+      message: `已复制 ${selectedOutlineItems.value.length} 条目录链接（${outlineBatchFormat.value === 'LINKS' ? '纯链接' : 'Markdown'}）`
+    })
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
   }

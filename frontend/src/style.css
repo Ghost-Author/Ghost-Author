@@ -1914,6 +1914,13 @@ button.small {
   color: #5f759f;
 }
 
+.outline-batch-actions select {
+  margin: 0;
+  min-width: 118px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
 .read-outline-progress {
   margin-top: 8px;
   border: 1px solid #d9e6fc;
