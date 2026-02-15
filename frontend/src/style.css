@@ -1253,6 +1253,11 @@ label {
   color: #6b84ad;
 }
 
+.panel-fold-head.compact {
+  padding: 5px 8px;
+  margin-top: 8px;
+}
+
 .version-list-head {
   margin-top: 2px;
 }
@@ -1683,43 +1688,70 @@ button.small {
 }
 
 .child-pages {
-  margin-top: 10px;
-  border-top: 1px dashed #d1dff8;
-  padding-top: 8px;
-}
-
-.child-pages p {
-  margin: 0 0 6px;
-  color: #5b7199;
-  font-size: 12px;
-  font-weight: 700;
+  border: 1px solid #dbe6fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px 8px 8px 10px;
+  margin-top: 6px;
 }
 
 .child-pages li {
-  font-size: 12px;
-  color: #385786;
-  padding: 6px 8px;
-  border-radius: 8px;
-  background: #f5f9ff;
-  margin-bottom: 4px;
-  border: 1px solid #d9e5fb;
+  border: 1px solid #dce8fc;
+  border-radius: 10px;
+  background: #fff;
+  padding: 7px;
+  margin-bottom: 6px;
   cursor: pointer;
+  position: relative;
+}
+
+.child-pages li::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  bottom: -7px;
+  border-left: 1px dashed #cbdbfa;
+}
+
+.child-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.child-tree-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  border: 2px solid #8eb3f5;
+  background: #fff;
+  box-shadow: 0 0 0 2px #edf4ff;
 }
 
 .child-pages li strong {
-  display: block;
+  font-size: 13px;
+  color: #2f4f83;
 }
 
 .child-pages li span {
-  color: #6f82a8;
+  color: #7184a8;
   font-size: 11px;
+}
+
+.child-extra {
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .child-status {
   font-style: normal;
-  font-size: 11px;
+  font-size: 10px;
   border-radius: 999px;
-  padding: 1px 7px;
+  padding: 1px 6px;
   border: 1px solid #c8daf9;
   background: #edf4ff;
   color: #325a99;
@@ -1741,6 +1773,29 @@ button.small {
   border-color: #cdd5e2;
   background: #f2f4f8;
   color: #4e5f7a;
+}
+
+.child-priority,
+.child-due {
+  font-style: normal;
+  font-size: 10px;
+  border-radius: 999px;
+  padding: 1px 6px;
+  border: 1px solid #d9e4fb;
+  background: #f5f9ff;
+  color: #4f6691;
+}
+
+.child-priority.high {
+  border-color: #ffb4b4;
+  background: #fff1f1;
+  color: #b34040;
+}
+
+.child-priority.low {
+  border-color: #cde8c8;
+  background: #effcee;
+  color: #3b7f3e;
 }
 
 .child-pages li:hover {

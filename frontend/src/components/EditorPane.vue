@@ -210,7 +210,11 @@
         <div class="read-tags" v-if="model.labels && model.labels.length">
           <span class="doc-label" v-for="label in model.labels" :key="label">{{ label }}</span>
         </div>
-        <div class="perm-tags">
+        <button class="panel-fold-head section-fold-head compact" @click="readPermOpen = !readPermOpen">
+          <strong>权限与访问</strong>
+          <span>{{ readPermOpen ? '收起 ▾' : '展开 ▸' }}</span>
+        </button>
+        <div class="perm-tags" v-show="readPermOpen">
           <span class="perm-chip owner">Owner: {{ model.owner || '-' }}</span>
           <span class="perm-chip">Editors: {{ (model.editors || []).join(', ') || '-' }}</span>
           <span class="perm-chip">Viewers: {{ (model.viewers || []).join(', ') || '-' }}</span>
@@ -220,21 +224,31 @@
           <span class="perm-chip">负责人: {{ model.assignee || '-' }}</span>
           <span class="perm-chip">截止: {{ model.dueDate || '-' }}</span>
         </div>
-        <div class="share-bar" v-if="model.shareEnabled && shareLink">
+        <div class="share-bar" v-if="model.shareEnabled && shareLink && readPermOpen">
           <input :value="shareLink" readonly />
           <button class="secondary small" @click="copyShareLink">复制链接</button>
         </div>
-        <div class="child-pages" v-if="childPages.length">
-          <p>子页面</p>
+        <button class="panel-fold-head section-fold-head compact" v-if="childPages.length" @click="readChildrenOpen = !readChildrenOpen">
+          <strong>子页面导航（{{ childPages.length }}）</strong>
+          <span>{{ readChildrenOpen ? '收起 ▾' : '展开 ▸' }}</span>
+        </button>
+        <div class="child-pages" v-if="childPages.length && readChildrenOpen">
           <ul>
             <li
               v-for="item in childPages"
               :key="item.slug"
               @click="$emit('select-child', item.slug)"
             >
-              <strong>{{ item.title }}</strong>
-              <span>{{ item.slug }}</span>
-              <em class="child-status" :class="(item.status || 'DRAFT').toLowerCase()">{{ statusText(item.status) }}</em>
+              <div class="child-main">
+                <span class="child-tree-dot"></span>
+                <strong>{{ item.title }}</strong>
+                <span>{{ item.slug }}</span>
+              </div>
+              <div class="child-extra">
+                <em class="child-status" :class="(item.status || 'DRAFT').toLowerCase()">{{ statusText(item.status) }}</em>
+                <em class="child-priority" :class="(item.priority || 'MEDIUM').toLowerCase()">优先级: {{ priorityText(item.priority) }}</em>
+                <em class="child-due">截止: {{ item.dueDate || '-' }}</em>
+              </div>
             </li>
           </ul>
         </div>
@@ -422,6 +436,8 @@ const commentsOpen = ref(true)
 const basicMetaOpen = ref(true)
 const permissionMetaOpen = ref(true)
 const taskMetaOpen = ref(true)
+const readPermOpen = ref(false)
+const readChildrenOpen = ref(true)
 const newTemplate = ref({
   name: '',
   description: '',
@@ -443,6 +459,8 @@ watch(
     // Existing docs default to preview-only view; new docs default to edit.
     isEditing.value = !id
     actionMenuOpen.value = false
+    readPermOpen.value = false
+    readChildrenOpen.value = true
   },
   { immediate: true }
 )
