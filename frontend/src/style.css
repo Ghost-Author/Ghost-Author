@@ -1979,6 +1979,10 @@ button.small {
   background: #edf4ff;
 }
 
+.read-outline-list li.cursor {
+  box-shadow: 0 0 0 2px #d6e6ff inset;
+}
+
 .read-outline-list li.done {
   border-color: #b8dfcb;
   background: #effdf6;

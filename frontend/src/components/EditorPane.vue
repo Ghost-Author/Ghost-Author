@@ -288,7 +288,12 @@
                   <li
                     v-for="item in filteredOutline"
                     :key="item.id"
-                    :class="{ active: isOutlineActive(item), done: isOutlineDone(item), selected: isOutlineSelected(item) }"
+                    :class="{
+                      active: isOutlineActive(item),
+                      done: isOutlineDone(item),
+                      selected: isOutlineSelected(item),
+                      cursor: outlineCursorId === item.id
+                    }"
                     :style="{ '--outline-indent': `${(item.level - 1) * 14}px` }"
                     @click="onOutlineItemClick($event, item)"
                     @dblclick.prevent="runOutlineDefaultAction(item)"
@@ -592,6 +597,8 @@ const readOutlineLevelFilter = ref(null)
 const outlineDefaultAction = ref(loadOutlineDefaultAction())
 const selectedOutlineIds = ref([])
 const lastSelectedOutlineId = ref('')
+const outlineCursorId = ref('')
+const outlineRangeAnchorId = ref('')
 const childQuery = ref('')
 const activeOutlineText = ref('')
 const readInfoOpen = ref(false)
@@ -755,6 +762,8 @@ watch(
     readOutlineLevelFilter.value = null
     selectedOutlineIds.value = []
     lastSelectedOutlineId.value = ''
+    outlineCursorId.value = ''
+    outlineRangeAnchorId.value = ''
     outlineMenu.value = { open: false, x: 0, y: 0, item: null, activeIndex: 0 }
     childQuery.value = ''
     childOpenMap.value = loadChildOpenState(id)
@@ -770,9 +779,25 @@ watch(
     if (lastSelectedOutlineId.value && !valid.has(lastSelectedOutlineId.value)) {
       lastSelectedOutlineId.value = ''
     }
+    if (outlineCursorId.value && !valid.has(outlineCursorId.value)) {
+      outlineCursorId.value = ''
+    }
+    if (outlineRangeAnchorId.value && !valid.has(outlineRangeAnchorId.value)) {
+      outlineRangeAnchorId.value = ''
+    }
   },
   { deep: true }
 )
+
+watch(filteredOutline, (items) => {
+  if (!items.length) {
+    outlineCursorId.value = ''
+    return
+  }
+  if (!items.some((item) => item.id === outlineCursorId.value)) {
+    outlineCursorId.value = items[0].id
+  }
+})
 
 watch(
   () => props.childPages,
@@ -1080,6 +1105,9 @@ function onGlobalKeydown(event) {
   if (isCreateMode.value || isEditingSafe.value) {
     return
   }
+  if (handleOutlineListKeydown(event)) {
+    return
+  }
   if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) {
     return
   }
@@ -1291,6 +1319,7 @@ function onOutlineItemClick(event, item) {
   if (!item?.id) {
     return
   }
+  outlineCursorId.value = item.id
   const isToggle = event.metaKey || event.ctrlKey
   const isRange = event.shiftKey
   if (isRange && lastSelectedOutlineId.value) {
@@ -1301,6 +1330,7 @@ function onOutlineItemClick(event, item) {
       const left = Math.min(start, end)
       const right = Math.max(start, end)
       selectedOutlineIds.value = idList.slice(left, right + 1)
+      outlineRangeAnchorId.value = lastSelectedOutlineId.value
       jumpToOutline(item)
       return
     }
@@ -1314,10 +1344,12 @@ function onOutlineItemClick(event, item) {
     }
     selectedOutlineIds.value = Array.from(selected)
     lastSelectedOutlineId.value = item.id
+    outlineRangeAnchorId.value = ''
     return
   }
   selectedOutlineIds.value = [item.id]
   lastSelectedOutlineId.value = item.id
+  outlineRangeAnchorId.value = ''
   jumpToOutline(item)
 }
 
@@ -1328,6 +1360,66 @@ function isOutlineSelected(item) {
 function clearOutlineSelection() {
   selectedOutlineIds.value = []
   lastSelectedOutlineId.value = ''
+  outlineRangeAnchorId.value = ''
+}
+
+function handleOutlineListKeydown(event) {
+  if (!readInfoOpen.value || !readOutlineOpen.value || !filteredOutline.value.length) {
+    return false
+  }
+  if (event.metaKey || event.ctrlKey || event.altKey) {
+    return false
+  }
+  if (!['ArrowUp', 'ArrowDown', 'Enter'].includes(event.key)) {
+    return false
+  }
+  event.preventDefault()
+  const list = filteredOutline.value
+  let currentId = outlineCursorId.value || lastSelectedOutlineId.value || list[0].id
+  let currentIndex = list.findIndex((item) => item.id === currentId)
+  if (currentIndex < 0) {
+    currentIndex = 0
+    currentId = list[0].id
+  }
+  if (event.key === 'Enter') {
+    const item = list[currentIndex]
+    if (item) {
+      selectedOutlineIds.value = [item.id]
+      lastSelectedOutlineId.value = item.id
+      jumpToOutline(item)
+    }
+    return true
+  }
+  const delta = event.key === 'ArrowDown' ? 1 : -1
+  const nextIndex = Math.min(Math.max(0, currentIndex + delta), list.length - 1)
+  const nextItem = list[nextIndex]
+  if (!nextItem) {
+    return true
+  }
+  outlineCursorId.value = nextItem.id
+  if (event.shiftKey) {
+    const anchorId = outlineRangeAnchorId.value || lastSelectedOutlineId.value || currentId
+    outlineRangeAnchorId.value = anchorId
+    selectedOutlineIds.value = collectOutlineRangeIds(anchorId, nextItem.id, list)
+  } else {
+    selectedOutlineIds.value = [nextItem.id]
+    lastSelectedOutlineId.value = nextItem.id
+    outlineRangeAnchorId.value = ''
+  }
+  jumpToOutline(nextItem)
+  return true
+}
+
+function collectOutlineRangeIds(startId, endId, list) {
+  const ids = list.map((item) => item.id)
+  const start = ids.indexOf(startId)
+  const end = ids.indexOf(endId)
+  if (start < 0 || end < 0) {
+    return endId ? [endId] : []
+  }
+  const left = Math.min(start, end)
+  const right = Math.max(start, end)
+  return ids.slice(left, right + 1)
 }
 
 function openOutlineMenu(event, item) {
