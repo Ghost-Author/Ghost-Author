@@ -221,6 +221,67 @@ body {
   margin-bottom: 10px;
 }
 
+.editor-pane .pane-head {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: #ffffffde;
+  border: 1px solid #d8e3fb;
+  border-radius: 12px;
+  padding: 8px 10px;
+  backdrop-filter: blur(6px);
+}
+
+.page-context-bar {
+  margin-bottom: 10px;
+  border: 1px solid #d8e3fb;
+  border-radius: 12px;
+  background: #f8fbff;
+  padding: 8px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.context-chip {
+  border: 1px solid #d4e1fb;
+  border-radius: 999px;
+  background: #fff;
+  color: #4c6290;
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.context-chip.mode {
+  border-color: #b8d8ff;
+  background: #eef6ff;
+  color: #2d5f9c;
+}
+
+.context-chip.slug {
+  border-color: #d7e2fb;
+  background: #f4f8ff;
+  color: #5a6f95;
+}
+
+.context-chip.status.published {
+  border-color: #9bd8bf;
+  background: #ebfff5;
+  color: #1a7f54;
+}
+
+.context-chip.status.draft {
+  border-color: #f5c5d7;
+  background: #fff2f7;
+  color: #a84f77;
+}
+
+.context-chip.status.archived {
+  border-color: #cdd5e2;
+  background: #f2f4f8;
+  color: #4e5f7a;
+}
+
 .header-actions {
   display: flex;
   gap: 6px;
@@ -936,6 +997,11 @@ label {
 
 .outline-list li:hover {
   background: #f1f6ff;
+}
+
+.outline-list li.active {
+  background: #eaf3ff;
+  border: 1px solid #c3d9ff;
 }
 
 .outline-dot {

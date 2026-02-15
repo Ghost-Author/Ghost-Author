@@ -9,6 +9,15 @@
         </button>
       </div>
     </div>
+    <div class="page-context-bar" v-if="!isCreateMode">
+      <span class="context-chip mode">{{ isEditingSafe ? '编辑模式' : '阅读模式' }}</span>
+      <span class="context-chip slug">slug: {{ model.slug || '-' }}</span>
+      <span class="context-chip" v-if="model.parentSlug">父级: {{ model.parentSlug }}</span>
+      <span class="context-chip status" :class="(model.status || 'DRAFT').toLowerCase()">{{ statusText(model.status) }}</span>
+      <span class="context-chip visibility">{{ model.visibility === 'PRIVATE' ? '仅自己可见' : '空间可见' }}</span>
+      <span class="context-chip">负责人: {{ model.assignee || '-' }}</span>
+      <span class="context-chip">截止: {{ model.dueDate || '-' }}</span>
+    </div>
 
     <template v-if="isEditingSafe">
       <div class="template-bar">

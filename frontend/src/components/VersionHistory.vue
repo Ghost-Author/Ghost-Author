@@ -20,6 +20,7 @@
           <li
             v-for="item in outline"
             :key="item.id"
+            :class="{ active: activeOutlineText === item.text }"
             :style="{ paddingLeft: `${(item.level - 1) * 12}px` }"
             :title="item.text"
             @click="scrollToHeading(item.text)"
@@ -109,6 +110,7 @@ const props = defineProps({
 const outlineOpen = ref(true)
 const historyOpen = ref(true)
 const diffOpen = ref(true)
+const activeOutlineText = ref('')
 const diffLines = computed(() => props.diffText.split('\n'))
 
 function formatTime(value) {
@@ -148,6 +150,7 @@ function scrollToHeading(text) {
   if (!target) {
     return
   }
+  activeOutlineText.value = text
   target.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 </script>
