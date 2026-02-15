@@ -30,6 +30,8 @@
 ├── backend
 │   ├── src/main/java/com/ghostauthor/knowledge
 │   └── src/main/resources/application.yml
+├── Dockerfile
+├── Dockerfile.backend
 ├── frontend
 │   ├── src
 │   ├── nginx.conf
@@ -53,22 +55,27 @@ docker compose up -d --build
 
 ## 在 Railway 部署（推荐云部署方案）
 
-建议在 Railway 建 2 个服务：
+建议在 Railway 建 2 个服务（都指向同一个 GitHub 仓库）：
 
 1. `backend`（Spring Boot）
 2. `frontend`（Vue + Nginx）
 
 可选第 3 个服务：`elasticsearch`（如需全文搜索）
 
-仓库根目录提供了通用 `railway.toml`（Dockerfile 构建策略）。  
-在 Railway 控制台里，分别给两个服务设置不同 Root Directory 即可。
+仓库根目录已提供：
 
-### 1) 部署 backend 服务
+- `Dockerfile`（前端镜像）
+- `Dockerfile.backend`（后端镜像）
+
+如果你在 Railway 里找不到 `Source` 页面，可直接在每个服务的 `Variables` 配置 `RAILWAY_DOCKERFILE_PATH`。
+
+### 1) 部署 backend 服务（无需改 Root Directory）
 
 - New Service -> Deploy from GitHub Repo
-- Root Directory 设为：`backend`
 - Builder 使用：`Dockerfile`
 - Start Command 留空（使用镜像默认 `ENTRYPOINT`）
+- 在 Variables 增加：
+  - `RAILWAY_DOCKERFILE_PATH=Dockerfile.backend`
 
 建议为 backend 挂载 Volume：
 
@@ -86,12 +93,13 @@ backend 环境变量建议：
 
 - `https://ghost-backend-production.up.railway.app`
 
-### 2) 部署 frontend 服务
+### 2) 部署 frontend 服务（无需改 Root Directory）
 
 - New Service -> Deploy from GitHub Repo
-- Root Directory 设为：`frontend`
 - Builder 使用：`Dockerfile`
 - Start Command 留空（使用 Nginx 默认启动）
+- 在 Variables 增加：
+  - `RAILWAY_DOCKERFILE_PATH=Dockerfile`
 
 前端环境变量（必须）：
 
@@ -120,6 +128,9 @@ backend 环境变量建议：
 
 3. 出现 CORS 报错  
 把 backend 的 `CORS_ALLOWED_ORIGIN` 设为 frontend 实际域名（含 `https://`）。
+
+4. 构建日志提示 `Dockerfile does not exist`  
+在服务 Variables 里设置 `RAILWAY_DOCKERFILE_PATH`：前端为 `Dockerfile`，后端为 `Dockerfile.backend`。
 
 ## 本地开发
 
