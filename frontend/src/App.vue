@@ -802,6 +802,34 @@ async function handleDocBulkAction(payload) {
     return
   }
 
+  if (payload.action === 'BULK_UNFAVORITE') {
+    favorites.value = favorites.value.filter((slug) => !slugs.includes(slug))
+    persistCollections()
+    return
+  }
+
+  if (payload.action === 'BULK_MOVE_ROOT') {
+    let updated = 0
+    let skipped = 0
+    for (const slug of slugs) {
+      const target = docs.value.find((d) => d.slug === slug)
+      if (!target || !canEditDoc(target)) {
+        skipped += 1
+        continue
+      }
+      await api.patch(`/documents/${slug}/move`, {
+        parentSlug: null
+      })
+      updated += 1
+    }
+    await fetchDocs()
+    if (activeSlug.value && slugs.includes(activeSlug.value)) {
+      await loadDoc(activeSlug.value)
+    }
+    alert(`批量移到顶级完成：成功 ${updated}，跳过 ${skipped}`)
+    return
+  }
+
   const nextStatus = payload.action === 'BULK_ARCHIVE'
     ? 'ARCHIVED'
     : payload.action === 'BULK_UNARCHIVE'

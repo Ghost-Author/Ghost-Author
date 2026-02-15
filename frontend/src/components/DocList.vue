@@ -8,9 +8,11 @@
         <button class="secondary tiny" :class="{ active: batchMode }" @click="toggleBatchMode">
           {{ batchMode ? '退出批量' : '批量操作' }}
         </button>
+        <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_MOVE_ROOT')">移到顶级</button>
         <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_ARCHIVE')">归档</button>
         <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_UNARCHIVE')">恢复</button>
         <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_FAVORITE')">收藏</button>
+        <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_UNFAVORITE')">取消收藏</button>
         <button class="secondary tiny" @click="expandAll">展开</button>
         <button class="secondary tiny" @click="collapseAll">折叠</button>
         <button @click="$emit('create')">+ 新建</button>
