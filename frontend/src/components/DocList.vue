@@ -196,12 +196,16 @@
       </div>
 
       <div v-for="section in visibilitySections" :key="section.key" class="tree-section">
-        <div class="tree-section-title">{{ section.title }}</div>
-        <div
-          v-for="group in section.groups"
-          :key="group.id"
-          class="tree-group"
-        >
+        <button class="tree-section-head" @click="toggleSection(section.key)">
+          <span>{{ isSectionOpen(section.key) ? '▾' : '▸' }} {{ section.title }}</span>
+          <em>{{ section.groups.reduce((sum, group) => sum + group.items.length, 0) }}</em>
+        </button>
+        <div v-show="isSectionOpen(section.key)">
+          <div
+            v-for="group in section.groups"
+            :key="group.id"
+            class="tree-group"
+          >
           <button class="tree-group-head" @click="toggleGroup(group.id)">
             <span>{{ opened[group.id] ? '▾' : '▸' }} {{ group.name }}</span>
             <em>{{ group.items.length }}</em>
@@ -310,6 +314,7 @@
               </div>
             </li>
           </ul>
+          </div>
         </div>
       </div>
     </div>
@@ -323,6 +328,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 const QUICK_PANEL_KEY = 'ga-sidebar-quick-panels'
 const FILTER_PANEL_KEY = 'ga-sidebar-filter-panel'
 const GROUP_OPEN_KEY = 'ga-sidebar-open-groups'
+const SECTION_OPEN_KEY = 'ga-sidebar-open-sections'
 
 function loadQuickPanelsState() {
   if (typeof window === 'undefined') {
@@ -397,8 +403,35 @@ function persistGroupOpenState(state) {
   window.localStorage.setItem(GROUP_OPEN_KEY, JSON.stringify(state))
 }
 
+function loadSectionOpenState() {
+  if (typeof window === 'undefined') {
+    return {}
+  }
+  try {
+    const raw = window.localStorage.getItem(SECTION_OPEN_KEY)
+    if (!raw) {
+      return {}
+    }
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') {
+      return {}
+    }
+    return parsed
+  } catch {
+    return {}
+  }
+}
+
+function persistSectionOpenState(state) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(SECTION_OPEN_KEY, JSON.stringify(state))
+}
+
 const keyword = ref('')
 const opened = ref(loadGroupOpenState())
+const sectionOpened = ref(loadSectionOpenState())
 const statusFilter = ref('ALL')
 const visibilityFilter = ref('ALL')
 const priorityFilter = ref('ALL')
@@ -452,6 +485,10 @@ watch(filtersOpen, (open) => {
 
 watch(opened, (value) => {
   persistGroupOpenState(value)
+}, { deep: true })
+
+watch(sectionOpened, (value) => {
+  persistSectionOpenState(value)
 }, { deep: true })
 
 watch(() => props.docs, () => {
@@ -836,6 +873,14 @@ function clearMyTodoFilter() {
 
 function toggleGroup(name) {
   opened.value[name] = !opened.value[name]
+}
+
+function isSectionOpen(sectionKey) {
+  return sectionOpened.value[sectionKey] !== false
+}
+
+function toggleSection(sectionKey) {
+  sectionOpened.value[sectionKey] = !isSectionOpen(sectionKey)
 }
 
 function depthClass(depth) {

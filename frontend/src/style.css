@@ -550,7 +550,11 @@ button.tiny {
   isolation: isolate;
 }
 
-.tree-section-title {
+.tree-section-head {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 12px;
   color: #5a6f97;
   font-weight: 700;
@@ -563,6 +567,17 @@ button.tiny {
   border-radius: 10px;
   background: #f4f8ffdc;
   backdrop-filter: blur(6px);
+  box-shadow: none;
+}
+
+.tree-section-head em {
+  font-style: normal;
+  background: #fff;
+  color: #4d6692;
+  border: 1px solid #c8daf9;
+  border-radius: 999px;
+  padding: 0 7px;
+  font-size: 11px;
 }
 
 .root-drop-zone {
