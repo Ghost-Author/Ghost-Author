@@ -75,6 +75,10 @@
           v-else
           :doc="currentDoc"
           :is-favorite="!!activeSlug && favorites.includes(activeSlug)"
+          :prev-sibling-slug="siblingNav.prevSlug"
+          :prev-sibling-title="siblingNav.prevTitle"
+          :next-sibling-slug="siblingNav.nextSlug"
+          :next-sibling-title="siblingNav.nextTitle"
           :outline="pageOutline"
           :comments="comments"
           :attachments="attachments"
@@ -94,6 +98,7 @@
           @create-child-with-template="createChildPageWithTemplate"
           @select-child="loadDoc"
           @open-parent="loadDoc"
+          @open-sibling="loadDoc"
           @toggle-favorite="toggleFavorite"
           @toggle-share="toggleShare"
           @regenerate-share="regenerateShare"
@@ -328,6 +333,32 @@ const childPages = computed(() => {
   }
   walk(activeSlug.value, 0)
   return result
+})
+const siblingNav = computed(() => {
+  if (!activeSlug.value) {
+    return { prevSlug: '', prevTitle: '', nextSlug: '', nextTitle: '' }
+  }
+  const current = visibleDocs.value.find((doc) => doc.slug === activeSlug.value)
+  if (!current) {
+    return { prevSlug: '', prevTitle: '', nextSlug: '', nextTitle: '' }
+  }
+  const parent = current.parentSlug || ''
+  const siblings = visibleDocs.value
+    .filter((doc) => (doc.parentSlug || '') === parent)
+    .slice()
+    .sort(sortByOrder)
+  const index = siblings.findIndex((doc) => doc.slug === activeSlug.value)
+  if (index < 0) {
+    return { prevSlug: '', prevTitle: '', nextSlug: '', nextTitle: '' }
+  }
+  const prev = siblings[index - 1]
+  const next = siblings[index + 1]
+  return {
+    prevSlug: prev?.slug || '',
+    prevTitle: prev?.title || '',
+    nextSlug: next?.slug || '',
+    nextTitle: next?.title || ''
+  }
 })
 const visibleDocs = computed(() => docs.value.filter((doc) => canViewDoc(doc)))
 const homeStats = computed(() => {

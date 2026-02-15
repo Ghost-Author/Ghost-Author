@@ -26,6 +26,22 @@
     </div>
     <div class="page-action-bar" v-if="!isCreateMode">
       <div class="page-action-left">
+        <button
+          class="secondary small"
+          v-if="prevSiblingSlug"
+          @click="$emit('open-sibling', prevSiblingSlug)"
+          :title="`上一个同级：${prevSiblingTitle || prevSiblingSlug}`"
+        >
+          ← 上一个同级
+        </button>
+        <button
+          class="secondary small"
+          v-if="nextSiblingSlug"
+          @click="$emit('open-sibling', nextSiblingSlug)"
+          :title="`下一个同级：${nextSiblingTitle || nextSiblingSlug}`"
+        >
+          下一个同级 →
+        </button>
         <button class="secondary small" v-if="model.parentSlug" @click="$emit('open-parent', model.parentSlug)">
           返回父页面
         </button>
@@ -62,7 +78,7 @@
         <span class="page-dirty-tip" :class="{ dirty: hasUnsavedChanges }">
           {{ hasUnsavedChanges ? '有改动待保存' : '内容已同步' }}
         </span>
-        <span class="page-action-shortcuts">Alt+P 父级 · Alt+F 收藏 · Alt+L 链接 · Alt+H 分享 · Alt+S 保存</span>
+        <span class="page-action-shortcuts">Alt+[ / Alt+] 同级 · Alt+P 父级 · Alt+F 收藏 · Alt+L 链接 · Alt+H 分享 · Alt+S 保存</span>
         <span class="page-leave-tip" v-if="hasUnsavedChanges">关闭页面前会提示保存</span>
         <button v-if="isEditingSafe" :disabled="!hasUnsavedChanges" @click="$emit('save', model)">保存</button>
         <button
@@ -609,6 +625,22 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  prevSiblingSlug: {
+    type: String,
+    default: ''
+  },
+  prevSiblingTitle: {
+    type: String,
+    default: ''
+  },
+  nextSiblingSlug: {
+    type: String,
+    default: ''
+  },
+  nextSiblingTitle: {
+    type: String,
+    default: ''
+  },
   outline: {
     type: Array,
     default: () => []
@@ -653,6 +685,7 @@ const emit = defineEmits([
   'create-child-with-template',
   'select-child',
   'open-parent',
+  'open-sibling',
   'toggle-favorite',
   'toggle-share',
   'regenerate-share',
@@ -1363,6 +1396,22 @@ function handlePageActionShortcuts(event) {
     return false
   }
   const key = (event.key || '').toLowerCase()
+  if (key === '[') {
+    if (!props.prevSiblingSlug) {
+      return false
+    }
+    event.preventDefault()
+    emit('open-sibling', props.prevSiblingSlug)
+    return true
+  }
+  if (key === ']') {
+    if (!props.nextSiblingSlug) {
+      return false
+    }
+    event.preventDefault()
+    emit('open-sibling', props.nextSiblingSlug)
+    return true
+  }
   if (key === 'p') {
     if (!model.value.parentSlug) {
       return false
