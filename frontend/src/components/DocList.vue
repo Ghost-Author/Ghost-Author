@@ -114,59 +114,62 @@
         拖拽到这里设为顶级页面
       </div>
 
-      <div
-        v-for="group in groupedDocs"
-        :key="group.name"
-        class="tree-group"
-      >
-        <button class="tree-group-head" @click="toggleGroup(group.name)">
-          <span>{{ opened[group.name] ? '▾' : '▸' }} {{ group.name }}</span>
-          <em>{{ group.items.length }}</em>
-        </button>
+      <div v-for="section in visibilitySections" :key="section.key" class="tree-section">
+        <div class="tree-section-title">{{ section.title }}</div>
+        <div
+          v-for="group in section.groups"
+          :key="group.id"
+          class="tree-group"
+        >
+          <button class="tree-group-head" @click="toggleGroup(group.id)">
+            <span>{{ opened[group.id] ? '▾' : '▸' }} {{ group.name }}</span>
+            <em>{{ group.items.length }}</em>
+          </button>
 
-        <ul class="doc-items" v-show="opened[group.name]">
-          <li
-            v-for="node in group.items"
-            :key="node.slug"
-            :class="['tree-node', depthClass(node.depth), { active: activeSlug === node.slug, 'drag-target': dropTargetSlug === node.slug }]"
-            :style="{ paddingLeft: `${10 + node.depth * 22}px` }"
-            draggable="true"
-            @dragstart="onDragStart(node.slug)"
-            @dragend="onDragEnd"
-            @dragover.prevent="onDragOver(node.slug)"
-            @dragleave="onDragLeave(node.slug)"
-            @drop.prevent="onDropNode(node.slug)"
-            @click="$emit('select', node.slug)"
-          >
-            <div class="node-title-row">
-              <div class="node-title-main">
-                <span class="node-branch" v-if="node.depth > 0">└</span>
-                <span class="node-depth-pill" v-if="node.depth > 0">L{{ node.depth }}</span>
-                <strong>{{ node.title }}</strong>
+          <ul class="doc-items" v-show="opened[group.id]">
+            <li
+              v-for="node in group.items"
+              :key="node.slug"
+              :class="['tree-node', depthClass(node.depth), { active: activeSlug === node.slug, 'drag-target': dropTargetSlug === node.slug }]"
+              :style="{ paddingLeft: `${10 + node.depth * 22}px` }"
+              draggable="true"
+              @dragstart="onDragStart(node.slug)"
+              @dragend="onDragEnd"
+              @dragover.prevent="onDragOver(node.slug)"
+              @dragleave="onDragLeave(node.slug)"
+              @drop.prevent="onDropNode(node.slug)"
+              @click="$emit('select', node.slug)"
+            >
+              <div class="node-title-row">
+                <div class="node-title-main">
+                  <span class="node-branch" v-if="node.depth > 0">└</span>
+                  <span class="node-depth-pill" v-if="node.depth > 0">L{{ node.depth }}</span>
+                  <strong>{{ node.title }}</strong>
+                </div>
+                <button
+                  class="fav-toggle"
+                  :class="{ active: favorites.includes(node.slug) }"
+                  @click.stop="$emit('toggle-favorite', node.slug)"
+                >
+                  {{ favorites.includes(node.slug) ? '★' : '☆' }}
+                </button>
               </div>
-              <button
-                class="fav-toggle"
-                :class="{ active: favorites.includes(node.slug) }"
-                @click.stop="$emit('toggle-favorite', node.slug)"
-              >
-                {{ favorites.includes(node.slug) ? '★' : '☆' }}
-              </button>
-            </div>
-            <div class="node-meta-row">
-              <span class="node-slug">{{ node.slug }}</span>
-              <span class="node-visibility" :class="(node.visibility || 'SPACE').toLowerCase()">
-                {{ node.visibility === 'PRIVATE' ? '私有' : '空间' }}
-              </span>
-              <span class="node-status" :class="(node.status || 'DRAFT').toLowerCase()">
-                {{ node.status === 'PUBLISHED' ? '已发布' : '草稿' }}
-              </span>
-            </div>
-            <p>{{ node.summary }}</p>
-            <div class="label-row" v-if="node.labels && node.labels.length">
-              <span class="doc-label" v-for="label in node.labels.slice(0, 3)" :key="label">{{ label }}</span>
-            </div>
-          </li>
-        </ul>
+              <div class="node-meta-row">
+                <span class="node-slug">{{ node.slug }}</span>
+                <span class="node-visibility" :class="(node.visibility || 'SPACE').toLowerCase()">
+                  {{ node.visibility === 'PRIVATE' ? '私有' : '空间' }}
+                </span>
+                <span class="node-status" :class="(node.status || 'DRAFT').toLowerCase()">
+                  {{ node.status === 'PUBLISHED' ? '已发布' : '草稿' }}
+                </span>
+              </div>
+              <p>{{ node.summary }}</p>
+              <div class="label-row" v-if="node.labels && node.labels.length">
+                <span class="doc-label" v-for="label in node.labels.slice(0, 3)" :key="label">{{ label }}</span>
+              </div>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -204,15 +207,11 @@ const props = defineProps({
 
 const emit = defineEmits(['search', 'toggle-favorite', 'move'])
 
-const filteredDocs = computed(() => {
-  let docs = props.docs
-  if (statusFilter.value !== 'ALL') {
-    docs = docs.filter((doc) => (doc.status || 'DRAFT') === statusFilter.value)
+const statusFilteredDocs = computed(() => {
+  if (statusFilter.value === 'ALL') {
+    return props.docs
   }
-  if (visibilityFilter.value !== 'ALL') {
-    docs = docs.filter((doc) => (doc.visibility || 'SPACE') === visibilityFilter.value)
-  }
-  return docs
+  return props.docs.filter((doc) => (doc.status || 'DRAFT') === statusFilter.value)
 })
 
 const statusCounts = computed(() => {
@@ -235,8 +234,32 @@ const visibilityCounts = computed(() => {
   }
 })
 
-const groupedDocs = computed(() => {
-  const sourceDocs = filteredDocs.value
+const visibilitySections = computed(() => {
+  if (visibilityFilter.value === 'ALL') {
+    return [
+      {
+        key: 'SPACE',
+        title: '空间页面',
+        groups: buildGroups(statusFilteredDocs.value.filter((doc) => (doc.visibility || 'SPACE') === 'SPACE'), 'SPACE')
+      },
+      {
+        key: 'PRIVATE',
+        title: '私有页面',
+        groups: buildGroups(statusFilteredDocs.value.filter((doc) => (doc.visibility || 'SPACE') === 'PRIVATE'), 'PRIVATE')
+      }
+    ].filter((section) => section.groups.length > 0)
+  }
+
+  const sourceDocs = statusFilteredDocs.value.filter((doc) => (doc.visibility || 'SPACE') === visibilityFilter.value)
+  const title = visibilityFilter.value === 'PRIVATE' ? '私有页面' : '空间页面'
+  return [{
+    key: visibilityFilter.value,
+    title,
+    groups: buildGroups(sourceDocs, visibilityFilter.value)
+  }]
+})
+
+function buildGroups(sourceDocs, sectionKey) {
   const docsBySlug = new Map(sourceDocs.map((doc) => [doc.slug, doc]))
   const childrenByParent = new Map()
 
@@ -253,22 +276,24 @@ const groupedDocs = computed(() => {
 
   roots.forEach((root) => {
     const groupName = resolveGroup(root.slug)
-    if (!map.has(groupName)) {
-      map.set(groupName, [])
-      if (opened.value[groupName] === undefined) {
-        opened.value[groupName] = true
+    const groupId = `${sectionKey}:${groupName}`
+    if (!map.has(groupId)) {
+      map.set(groupId, { name: groupName, items: [] })
+      if (opened.value[groupId] === undefined) {
+        opened.value[groupId] = true
       }
     }
-    map.get(groupName).push(...flattenTree(root, childrenByParent, 0))
+    map.get(groupId).items.push(...flattenTree(root, childrenByParent, 0))
   })
 
   return Array.from(map.entries())
-    .map(([name, items]) => ({
-      name,
-      items
+    .map(([id, group]) => ({
+      id,
+      name: group.name,
+      items: group.items
     }))
     .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'))
-})
+}
 
 const favoriteDocs = computed(() => {
   const bySlug = new Map(props.docs.map((d) => [d.slug, d]))
@@ -328,14 +353,18 @@ function depthClass(depth) {
 }
 
 function expandAll() {
-  groupedDocs.value.forEach((group) => {
-    opened.value[group.name] = true
+  visibilitySections.value.forEach((section) => {
+    section.groups.forEach((group) => {
+      opened.value[group.id] = true
+    })
   })
 }
 
 function collapseAll() {
-  groupedDocs.value.forEach((group) => {
-    opened.value[group.name] = false
+  visibilitySections.value.forEach((section) => {
+    section.groups.forEach((group) => {
+      opened.value[group.id] = false
+    })
   })
 }
 

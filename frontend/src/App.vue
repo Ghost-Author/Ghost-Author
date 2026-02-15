@@ -7,7 +7,10 @@
           <strong>Knowledge Space</strong>
         </div>
       </div>
-      <div class="topbar-badge">{{ docs.length }} pages</div>
+      <div class="topbar-right">
+        <button class="secondary tiny" @click="openHome">空间首页</button>
+        <div class="topbar-badge">{{ docs.length }} pages</div>
+      </div>
     </header>
 
     <div class="breadcrumb">
@@ -34,7 +37,16 @@
         @move="moveDoc"
       />
 
+      <SpaceHome
+        v-if="showHome"
+        :stats="homeStats"
+        :recent-docs="homeRecentDocs"
+        :favorite-docs="homeFavoriteDocs"
+        @create="createNewDoc"
+        @select="loadDoc"
+      />
       <EditorPane
+        v-else
         :doc="currentDoc"
         :comments="comments"
         :attachments="attachments"
@@ -71,6 +83,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from './api/client'
 import DocList from './components/DocList.vue'
 import EditorPane from './components/EditorPane.vue'
+import SpaceHome from './components/SpaceHome.vue'
 import VersionHistory from './components/VersionHistory.vue'
 
 const docs = ref([])
@@ -79,6 +92,7 @@ const comments = ref([])
 const attachments = ref([])
 const activeSlug = ref('')
 const currentDoc = ref(emptyDoc())
+const showHome = ref(true)
 const diffFrom = ref(null)
 const diffTo = ref(null)
 const diffText = ref('')
@@ -86,6 +100,9 @@ const favorites = ref([])
 const recent = ref([])
 const breadcrumbTitle = computed(() => currentDoc.value.title || 'Untitled Page')
 const breadcrumbPath = computed(() => {
+  if (showHome.value) {
+    return [{ slug: 'home', title: 'Home' }]
+  }
   if (!activeSlug.value) {
     return [{ slug: '', title: breadcrumbTitle.value }]
   }
@@ -107,6 +124,24 @@ const childPages = computed(() => {
   return docs.value
     .filter((d) => d.parentSlug === activeSlug.value)
     .sort((a, b) => a.title.localeCompare(b.title, 'zh-Hans-CN'))
+})
+const homeStats = computed(() => {
+  const published = docs.value.filter((d) => (d.status || 'DRAFT') === 'PUBLISHED').length
+  const privateCount = docs.value.filter((d) => (d.visibility || 'SPACE') === 'PRIVATE').length
+  return {
+    total: docs.value.length,
+    published,
+    draft: docs.value.length - published,
+    privateCount
+  }
+})
+const homeRecentDocs = computed(() => {
+  const bySlug = new Map(docs.value.map((d) => [d.slug, d]))
+  return recent.value.map((slug) => bySlug.get(slug)).filter(Boolean).slice(0, 8)
+})
+const homeFavoriteDocs = computed(() => {
+  const bySlug = new Map(docs.value.map((d) => [d.slug, d]))
+  return favorites.value.map((slug) => bySlug.get(slug)).filter(Boolean).slice(0, 8)
 })
 const pageOutline = computed(() => {
   const content = currentDoc.value?.content || ''
@@ -160,6 +195,7 @@ async function loadDoc(slug) {
     currentDoc.value.visibility = 'SPACE'
   }
   activeSlug.value = slug
+  showHome.value = false
   await loadComments(slug)
   await loadAttachments(slug)
   touchRecent(slug)
@@ -170,6 +206,7 @@ async function loadDoc(slug) {
 }
 
 function createNewDoc() {
+  showHome.value = false
   activeSlug.value = ''
   currentDoc.value = emptyDoc()
   versions.value = []
@@ -248,7 +285,7 @@ async function deleteDoc(slug) {
   comments.value = []
   attachments.value = []
   persistCollections()
-  createNewDoc()
+  openHome()
 }
 
 async function loadVersions(slug) {
@@ -365,6 +402,18 @@ function insertAttachment(attachment) {
     ? `\n![${attachment.fileName}](${attachment.fullUrl})\n`
     : `\n[${attachment.fileName}](${attachment.fullUrl})\n`
   currentDoc.value.content = (currentDoc.value.content || '') + markdown
+}
+
+function openHome() {
+  showHome.value = true
+  activeSlug.value = ''
+  currentDoc.value = emptyDoc()
+  comments.value = []
+  attachments.value = []
+  versions.value = []
+  diffFrom.value = null
+  diffTo.value = null
+  diffText.value = ''
 }
 
 async function moveDoc(payload) {
