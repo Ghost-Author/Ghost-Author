@@ -187,9 +187,14 @@
     </template>
 
     <template v-else>
-      <div class="read-meta">
+      <div class="read-mode-head">
+        <h3>{{ model.title || 'Untitled' }}</h3>
+        <button class="secondary small" @click="readInfoOpen = !readInfoOpen">
+          {{ readInfoOpen ? '隐藏页面信息' : '显示页面信息' }}
+        </button>
+      </div>
+      <div class="read-meta" v-show="readInfoOpen">
         <div class="read-meta-row">
-          <h3>{{ model.title || 'Untitled' }}</h3>
           <div class="read-badges">
             <span class="read-status" :class="(model.status || 'DRAFT').toLowerCase()">
               {{ statusText(model.status) }}
@@ -439,6 +444,7 @@ const permissionMetaOpen = ref(true)
 const taskMetaOpen = ref(true)
 const readPermOpen = ref(false)
 const readChildrenOpen = ref(true)
+const readInfoOpen = ref(false)
 const newTemplate = ref({
   name: '',
   description: '',
@@ -460,6 +466,7 @@ watch(
     // Existing docs default to preview-only view; new docs default to edit.
     isEditing.value = !id
     actionMenuOpen.value = false
+    readInfoOpen.value = false
     readPermOpen.value = false
     readChildrenOpen.value = true
   },

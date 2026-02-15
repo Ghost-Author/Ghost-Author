@@ -1711,6 +1711,20 @@ button.small {
   min-height: 420px;
 }
 
+.read-mode-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.read-mode-head h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #294c86;
+}
+
 .read-meta {
   border: 1px solid #d7e3fb;
   border-radius: 12px;
@@ -1730,12 +1744,7 @@ button.small {
   display: flex;
   gap: 6px;
   align-items: center;
-}
-
-.read-meta-row h3 {
-  margin: 0;
-  font-size: 18px;
-  color: #294c86;
+  margin-left: auto;
 }
 
 .read-summary {
