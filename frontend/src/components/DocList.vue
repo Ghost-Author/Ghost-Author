@@ -33,19 +33,20 @@
     </div>
 
     <div class="doc-list-scroll" :class="{ compact: compactMode }" @click="quickMenuSlug = ''">
-      <input
-        class="search-input"
-        v-model="keyword"
-        placeholder="搜索文档"
-        @keyup.enter="$emit('search', keyword)"
-      />
+      <div class="sidebar-top-tools">
+        <input
+          class="search-input"
+          v-model="keyword"
+          placeholder="搜索文档"
+          @keyup.enter="$emit('search', keyword)"
+        />
 
-      <div class="search-actions">
-        <button class="search-btn" @click="$emit('search', keyword)">搜索</button>
-        <button class="search-btn clear" @click="clearSearch">清空</button>
-      </div>
+        <div class="search-actions">
+          <button class="search-btn" @click="$emit('search', keyword)">搜索</button>
+          <button class="search-btn clear" @click="clearSearch">清空</button>
+        </div>
 
-      <div class="filter-panel">
+        <div class="filter-panel">
         <button class="filter-panel-head" @click="filtersOpen = !filtersOpen">
           <strong>筛选器</strong>
           <span>{{ filtersOpen ? '收起 ▾' : '展开 ▸' }}</span>
@@ -138,9 +139,9 @@
             </button>
           </div>
         </div>
-      </div>
+        </div>
 
-      <div class="batch-quick-panel" v-if="batchMode">
+        <div class="batch-quick-panel" v-if="batchMode">
         <button class="batch-quick-head" @click="batchQuickOpen = !batchQuickOpen">
           <strong>批量快速筛选</strong>
           <span>{{ batchQuickOpen ? '收起 ▾' : '展开 ▸' }}</span>
@@ -159,53 +160,55 @@
           <button class="secondary tiny" @click="selectByAssigneeMe">选我负责</button>
           <button class="secondary tiny" @click="selectByEditableMe">选我可编辑</button>
         </div>
-      </div>
+        </div>
 
-      <div class="quick-zones">
-      <div class="quick-zone">
-        <button class="quick-zone-head" @click="quickOpenFavorites = !quickOpenFavorites">
-          <div class="quick-zone-title">
-            <h4>⭐ 收藏</h4>
-            <em>{{ favoriteDocs.length }}</em>
+        <div class="quick-zones">
+          <div class="quick-zone">
+            <button class="quick-zone-head" @click="quickOpenFavorites = !quickOpenFavorites">
+              <div class="quick-zone-title">
+                <h4>⭐ 收藏</h4>
+                <em>{{ favoriteDocs.length }}</em>
+              </div>
+              <span>{{ quickOpenFavorites ? '▾' : '▸' }}</span>
+            </button>
+            <ul class="quick-list" v-show="quickOpenFavorites">
+              <li
+                v-for="doc in favoriteDocs"
+                :key="`fav-${doc.slug}`"
+                :class="{ active: activeSlug === doc.slug }"
+                @click="$emit('select', doc.slug)"
+              >
+                <span>{{ doc.title }}</span>
+              </li>
+              <li class="quick-empty" v-if="favoriteDocs.length === 0">还没有收藏页面</li>
+            </ul>
           </div>
-          <span>{{ quickOpenFavorites ? '▾' : '▸' }}</span>
-        </button>
-        <ul class="quick-list" v-show="quickOpenFavorites">
-          <li
-            v-for="doc in favoriteDocs"
-            :key="`fav-${doc.slug}`"
-            :class="{ active: activeSlug === doc.slug }"
-            @click="$emit('select', doc.slug)"
-          >
-            <span>{{ doc.title }}</span>
-          </li>
-          <li class="quick-empty" v-if="favoriteDocs.length === 0">还没有收藏页面</li>
-        </ul>
-      </div>
 
-      <div class="quick-zone">
-        <button class="quick-zone-head" @click="quickOpenRecent = !quickOpenRecent">
-          <div class="quick-zone-title">
-            <h4>🕘 最近访问</h4>
-            <em>{{ recentDocs.length }}</em>
+          <div class="quick-zone">
+            <button class="quick-zone-head" @click="quickOpenRecent = !quickOpenRecent">
+              <div class="quick-zone-title">
+                <h4>🕘 最近访问</h4>
+                <em>{{ recentDocs.length }}</em>
+              </div>
+              <span>{{ quickOpenRecent ? '▾' : '▸' }}</span>
+            </button>
+            <ul class="quick-list" v-show="quickOpenRecent">
+              <li
+                v-for="doc in recentDocs"
+                :key="`recent-${doc.slug}`"
+                :class="{ active: activeSlug === doc.slug }"
+                @click="$emit('select', doc.slug)"
+              >
+                <span>{{ doc.title }}</span>
+              </li>
+              <li class="quick-empty" v-if="recentDocs.length === 0">还没有访问记录</li>
+            </ul>
           </div>
-          <span>{{ quickOpenRecent ? '▾' : '▸' }}</span>
-        </button>
-        <ul class="quick-list" v-show="quickOpenRecent">
-          <li
-            v-for="doc in recentDocs"
-            :key="`recent-${doc.slug}`"
-            :class="{ active: activeSlug === doc.slug }"
-            @click="$emit('select', doc.slug)"
-          >
-            <span>{{ doc.title }}</span>
-          </li>
-          <li class="quick-empty" v-if="recentDocs.length === 0">还没有访问记录</li>
-        </ul>
-      </div>
+        </div>
       </div>
 
-      <div class="tree-nav">
+      <div class="tree-scroll-region">
+        <div class="tree-nav">
         <button class="tree-nav-head" @click="treeOpen = !treeOpen">
           <span>{{ treeOpen ? '▾' : '▸' }} 页面树</span>
           <em>{{ totalVisibleNodes }}</em>
@@ -349,6 +352,7 @@
             </div>
           </div>
           <div v-if="totalVisibleNodes === 0" class="quick-empty">当前筛选条件下没有页面</div>
+        </div>
         </div>
       </div>
   </div>

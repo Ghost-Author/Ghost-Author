@@ -211,9 +211,24 @@ body {
 .doc-list-scroll {
   flex: 1;
   min-height: 0;
-  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.sidebar-top-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tree-scroll-region {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  padding-right: 4px;
 }
 
 .doc-list-scroll.compact .doc-items li {
@@ -258,7 +273,6 @@ body {
   font-size: 11px;
 }
 
-.doc-list-scroll,
 .editor-pane,
 .version-history,
 .space-home {
@@ -1465,14 +1479,14 @@ label {
   padding-top: 10px;
 }
 
-.doc-list-scroll::-webkit-scrollbar,
+.tree-scroll-region::-webkit-scrollbar,
 .editor-pane::-webkit-scrollbar,
 .version-history::-webkit-scrollbar,
 .space-home::-webkit-scrollbar {
   width: 10px;
 }
 
-.doc-list-scroll::-webkit-scrollbar-thumb,
+.tree-scroll-region::-webkit-scrollbar-thumb,
 .editor-pane::-webkit-scrollbar-thumb,
 .version-history::-webkit-scrollbar-thumb,
 .space-home::-webkit-scrollbar-thumb {
@@ -1481,7 +1495,7 @@ label {
   border: 2px solid #f4f8ff;
 }
 
-.doc-list-scroll::-webkit-scrollbar-track,
+.tree-scroll-region::-webkit-scrollbar-track,
 .editor-pane::-webkit-scrollbar-track,
 .version-history::-webkit-scrollbar-track,
 .space-home::-webkit-scrollbar-track {
