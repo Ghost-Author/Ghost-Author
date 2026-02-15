@@ -190,6 +190,17 @@
       <div class="read-mode-head">
         <h3>{{ model.title || 'Untitled' }}</h3>
         <div class="read-mode-actions">
+          <div class="read-width-presets">
+            <button
+              v-for="mode in readWidthModes"
+              :key="mode.key"
+              class="secondary tiny"
+              :class="{ active: readWidthMode === mode.key }"
+              @click="setReadWidthMode(mode.key)"
+            >
+              {{ mode.label }}
+            </button>
+          </div>
           <span class="read-shortcut-tip">快捷键 1/2/3/4</span>
           <button class="secondary small" @click="resetReadSidebarLayout">
             恢复默认布局
@@ -346,7 +357,11 @@
             </section>
           </div>
         </aside>
-        <div ref="readPreviewRef" class="preview-only read-preview">
+        <div
+          ref="readPreviewRef"
+          class="preview-only read-preview"
+          :class="`read-width-${readWidthMode}`"
+        >
           <MdPreview :model-value="model.content" />
         </div>
       </div>
@@ -548,13 +563,20 @@ const readInfoOpen = ref(false)
 const readPanelDock = ref('right')
 const readCardOrder = ref(loadReadCardOrder())
 const readCardCollapsed = ref(loadReadCardCollapsed())
+const readWidthMode = ref(loadReadWidthMode())
 const readCardRefs = ref({})
 const childOpenMap = ref({})
 const READ_PANEL_DOCK_KEY = 'ga-read-panel-dock'
 const CHILD_OPEN_KEY = 'ga-read-child-open-state'
 const READ_CARD_ORDER_KEY = 'ga-read-card-order'
 const READ_CARD_COLLAPSED_KEY = 'ga-read-card-collapsed'
+const READ_WIDTH_KEY = 'ga-read-width-mode'
 let readScrollRaf = null
+const readWidthModes = [
+  { key: 'compact', label: '紧凑' },
+  { key: 'standard', label: '标准' },
+  { key: 'comfortable', label: '舒适' }
+]
 
 const activeOutlineIndex = computed(() => {
   const activeKey = normalizeText(activeOutlineText.value)
@@ -707,6 +729,10 @@ watch(readCardOrder, (order) => {
 watch(readCardCollapsed, (state) => {
   persistReadCardCollapsed(state)
 }, { deep: true })
+
+watch(readWidthMode, (mode) => {
+  persistReadWidthMode(mode)
+})
 
 watch([isCreateMode, isEditingSafe], async ([createMode, editable]) => {
   if (!createMode || !editable) {
@@ -945,6 +971,14 @@ function setReadCardRef(cardKey, el) {
 function resetReadSidebarLayout() {
   readCardOrder.value = normalizeReadCardOrder([])
   readCardCollapsed.value = {}
+  readWidthMode.value = 'standard'
+}
+
+function setReadWidthMode(mode) {
+  if (!readWidthModes.some((item) => item.key === mode)) {
+    return
+  }
+  readWidthMode.value = mode
 }
 
 function onGlobalKeydown(event) {
@@ -1065,6 +1099,24 @@ function persistReadCardCollapsed(state) {
   } catch {
     // ignore persistence failures
   }
+}
+
+function loadReadWidthMode() {
+  if (typeof window === 'undefined') {
+    return 'standard'
+  }
+  const raw = window.localStorage.getItem(READ_WIDTH_KEY)
+  if (raw === 'compact' || raw === 'standard' || raw === 'comfortable') {
+    return raw
+  }
+  return 'standard'
+}
+
+function persistReadWidthMode(mode) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(READ_WIDTH_KEY, mode)
 }
 
 function loadChildOpenState(docId) {

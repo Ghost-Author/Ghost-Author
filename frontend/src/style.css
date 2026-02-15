@@ -1715,6 +1715,21 @@ button.small {
   min-width: 0;
 }
 
+.read-preview.read-width-compact .md-editor-preview-wrapper {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.read-preview.read-width-standard .md-editor-preview-wrapper {
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.read-preview.read-width-comfortable .md-editor-preview-wrapper {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
 .read-mode-head {
   display: flex;
   align-items: center;
@@ -1727,6 +1742,18 @@ button.small {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.read-width-presets {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.read-width-presets .tiny.active {
+  border-color: #8db1f7;
+  background: #edf4ff;
+  color: #2c5398;
 }
 
 .read-shortcut-tip {
@@ -2615,10 +2642,19 @@ button.small {
 
   .read-mode-actions {
     width: 100%;
+    flex-wrap: wrap;
   }
 
   .read-shortcut-tip {
     display: none;
+  }
+
+  .read-width-presets {
+    width: 100%;
+  }
+
+  .read-width-presets .tiny {
+    flex: 1;
   }
 
   .read-mode-actions .small {
