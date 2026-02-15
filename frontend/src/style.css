@@ -1969,7 +1969,7 @@ button.small {
   border: 1px solid #dce8fc;
   border-radius: 10px;
   background: #fff;
-  padding: 7px;
+  padding: 7px 7px 7px calc(7px + var(--child-indent, 0px));
   margin-bottom: 6px;
   cursor: pointer;
   position: relative;
@@ -1988,6 +1988,23 @@ button.small {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.child-expand {
+  border: 1px solid #d0def9;
+  background: #fff;
+  color: #5d739e;
+  box-shadow: none;
+  border-radius: 6px;
+  padding: 0 5px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.child-expand.placeholder {
+  border-color: transparent;
+  background: transparent;
+  color: #aab8d4;
 }
 
 .child-tree-dot {

@@ -273,9 +273,30 @@ const childPages = computed(() => {
   if (!activeSlug.value) {
     return []
   }
-  return visibleDocs.value
-    .filter((d) => d.parentSlug === activeSlug.value)
-    .sort(sortByOrder)
+  const byParent = new Map()
+  visibleDocs.value.forEach((doc) => {
+    if (!doc.parentSlug) {
+      return
+    }
+    if (!byParent.has(doc.parentSlug)) {
+      byParent.set(doc.parentSlug, [])
+    }
+    byParent.get(doc.parentSlug).push(doc)
+  })
+  const result = []
+  const walk = (parentSlug, depth) => {
+    const children = (byParent.get(parentSlug) || []).slice().sort(sortByOrder)
+    children.forEach((child) => {
+      result.push({
+        ...child,
+        depth,
+        childCount: (byParent.get(child.slug) || []).length
+      })
+      walk(child.slug, depth + 1)
+    })
+  }
+  walk(activeSlug.value, 0)
+  return result
 })
 const visibleDocs = computed(() => docs.value.filter((doc) => canViewDoc(doc)))
 const homeStats = computed(() => {

@@ -287,11 +287,20 @@
               <div class="child-pages" v-if="readChildrenOpen">
                 <ul>
                   <li
-                    v-for="item in childPages"
+                    v-for="item in childTreeRows"
                     :key="item.slug"
+                    :style="{ '--child-indent': `${item.depth * 16}px` }"
                     @click="$emit('select-child', item.slug)"
                   >
                     <div class="child-main">
+                      <button
+                        v-if="item.childCount > 0"
+                        class="child-expand"
+                        @click.stop="toggleChildOpen(item.slug)"
+                      >
+                        {{ isChildOpen(item.slug) ? '▾' : '▸' }}
+                      </button>
+                      <span v-else class="child-expand placeholder">·</span>
                       <span class="child-tree-dot"></span>
                       <strong>{{ item.title }}</strong>
                       <span>{{ item.slug }}</span>
@@ -506,6 +515,7 @@ const readOutlineQuery = ref('')
 const activeOutlineText = ref('')
 const readInfoOpen = ref(false)
 const readPanelDock = ref('right')
+const childOpenMap = ref({})
 const READ_PANEL_DOCK_KEY = 'ga-read-panel-dock'
 let readScrollRaf = null
 
@@ -536,6 +546,25 @@ const filteredOutline = computed(() => {
   }
   return props.outline.filter((item) => (item.text || '').toLowerCase().includes(q))
 })
+
+const childTreeRows = computed(() => {
+  const rows = []
+  const openStack = []
+  for (const item of props.childPages) {
+    while (openStack.length > item.depth) {
+      openStack.pop()
+    }
+    const ancestorsOpen = openStack.every(Boolean)
+    if (!ancestorsOpen) {
+      openStack.push(false)
+      continue
+    }
+    rows.push(item)
+    const open = item.childCount > 0 ? isChildOpen(item.slug) : true
+    openStack.push(open)
+  }
+  return rows
+})
 const newTemplate = ref({
   name: '',
   description: '',
@@ -560,8 +589,24 @@ watch(
     readInfoOpen.value = false
     readPermOpen.value = false
     readChildrenOpen.value = true
+    childOpenMap.value = {}
   },
   { immediate: true }
+)
+
+watch(
+  () => props.childPages,
+  (items) => {
+    const valid = new Set((items || []).map((item) => item.slug))
+    const next = {}
+    Object.entries(childOpenMap.value).forEach(([slug, open]) => {
+      if (valid.has(slug)) {
+        next[slug] = open
+      }
+    })
+    childOpenMap.value = next
+  },
+  { deep: true }
 )
 
 watch([isCreateMode, isEditingSafe], async ([createMode, editable]) => {
@@ -727,6 +772,17 @@ function toggleReadDock() {
   readPanelDock.value = readPanelDock.value === 'right' ? 'left' : 'right'
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(READ_PANEL_DOCK_KEY, readPanelDock.value)
+  }
+}
+
+function isChildOpen(slug) {
+  return childOpenMap.value[slug] !== false
+}
+
+function toggleChildOpen(slug) {
+  childOpenMap.value = {
+    ...childOpenMap.value,
+    [slug]: !isChildOpen(slug)
   }
 }
 
