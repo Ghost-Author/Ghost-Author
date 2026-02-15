@@ -2,6 +2,8 @@ package com.ghostauthor.knowledge.controller;
 
 import com.ghostauthor.knowledge.dto.AuthLoginRequest;
 import com.ghostauthor.knowledge.dto.AuthLoginResponse;
+import com.ghostauthor.knowledge.dto.AuthUserResponse;
+import com.ghostauthor.knowledge.dto.AuthUserUpsertRequest;
 import com.ghostauthor.knowledge.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -13,12 +15,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+
+    private static final String ROLE_ADMIN = "ADMIN";
 
     private final AuthService authService;
 
@@ -49,5 +57,33 @@ public class AuthController {
             return;
         }
         authService.logout(header.substring(7));
+    }
+
+    @GetMapping("/users")
+    public List<AuthUserResponse> listUsers(HttpServletRequest request) {
+        requireAdmin(request);
+        return authService.listUsers();
+    }
+
+    @PostMapping("/users")
+    public AuthUserResponse upsertUser(@Valid @RequestBody AuthUserUpsertRequest request, HttpServletRequest httpRequest) {
+        requireAdmin(httpRequest);
+        return authService.upsertUser(request.username(), request.role(), request.password());
+    }
+
+    @DeleteMapping("/users/{username}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteUser(@PathVariable String username, HttpServletRequest request) {
+        requireAdmin(request);
+        authService.deleteUser(username);
+    }
+
+    private void requireAdmin(HttpServletRequest request) {
+        Object roleAttr = request.getAttribute("authRole");
+        String role = roleAttr == null ? "" : String.valueOf(roleAttr).trim().toUpperCase();
+        if (ROLE_ADMIN.equals(role)) {
+            return;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅管理员可管理用户");
     }
 }

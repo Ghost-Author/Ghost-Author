@@ -252,6 +252,73 @@ body {
   color: #8a4f6a;
 }
 
+.user-admin-panel {
+  width: min(760px, 92vw);
+}
+
+.user-admin-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-admin-head p {
+  margin: 0;
+  color: #5d7399;
+  font-size: 12px;
+}
+
+.user-admin-form {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1.2fr 1.2fr 0.8fr auto;
+  gap: 8px;
+}
+
+.user-admin-list {
+  margin-top: 10px;
+  max-height: 280px;
+  overflow: auto;
+  border: 1px solid #d8e3fb;
+  border-radius: 12px;
+  background: #fbfdff;
+  padding: 8px;
+}
+
+.user-admin-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px dashed #dbe6fc;
+}
+
+.user-admin-list li:last-child {
+  border-bottom: none;
+}
+
+.user-admin-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-role {
+  border: 1px solid #d2def8;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  color: #3e628f;
+  background: #f0f6ff;
+}
+
+.user-admin-actions {
+  display: flex;
+  gap: 6px;
+}
+
 .shortcut-hint {
   border: 1px dashed #c9daf8;
   background: #f5f9ff;

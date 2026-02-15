@@ -2,6 +2,7 @@ package com.ghostauthor.knowledge.service.impl;
 
 import com.ghostauthor.knowledge.dto.AuthLoginResponse;
 import com.ghostauthor.knowledge.dto.AuthSession;
+import com.ghostauthor.knowledge.dto.AuthUserResponse;
 import com.ghostauthor.knowledge.service.AuthService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -123,6 +126,64 @@ public class AuthServiceImpl implements AuthService {
             return;
         }
         sessions.remove(token.trim());
+    }
+
+    @Override
+    public List<AuthUserResponse> listUsers() {
+        return users.entrySet().stream()
+                .map((entry) -> new AuthUserResponse(entry.getKey(), entry.getValue().role))
+                .sorted(Comparator.comparing(AuthUserResponse::username))
+                .toList();
+    }
+
+    @Override
+    public AuthUserResponse upsertUser(String username, String role, String password) {
+        String cleanUser = username == null ? "" : username.trim();
+        if (cleanUser.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "用户名不能为空");
+        }
+        String cleanRole = normalizeRole(role);
+        if (cleanRole == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "角色非法");
+        }
+        UserCredential existing = users.get(cleanUser);
+        if (existing != null
+                && ROLE_ADMIN.equals(existing.role)
+                && !ROLE_ADMIN.equals(cleanRole)
+                && users.values().stream().filter((u) -> ROLE_ADMIN.equals(u.role)).count() <= 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "至少保留一个 ADMIN 用户");
+        }
+
+        users.compute(cleanUser, (key, old) -> {
+            String nextPassword = old == null ? "" : old.password;
+            String providedPassword = password == null ? "" : password.trim();
+            if (!providedPassword.isEmpty()) {
+                nextPassword = providedPassword;
+            }
+            if (nextPassword.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "新建用户必须提供密码");
+            }
+            return new UserCredential(nextPassword, cleanRole);
+        });
+        return new AuthUserResponse(cleanUser, cleanRole);
+    }
+
+    @Override
+    public void deleteUser(String username) {
+        String cleanUser = username == null ? "" : username.trim();
+        if (cleanUser.isEmpty()) {
+            return;
+        }
+        UserCredential removed = users.remove(cleanUser);
+        if (removed == null) {
+            return;
+        }
+        if (ROLE_ADMIN.equals(removed.role) && users.values().stream().noneMatch((u) -> ROLE_ADMIN.equals(u.role))) {
+            users.put(cleanUser, removed);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "至少保留一个 ADMIN 用户");
+        }
+        sessions.entrySet().removeIf((entry) -> cleanUser.equals(entry.getValue().username));
+        failedAttempts.remove(cleanUser);
     }
 
     private void cleanupExpiredSessions() {

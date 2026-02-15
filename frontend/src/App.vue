@@ -51,6 +51,7 @@
         <button class="secondary tiny" :class="{ active: focusMode }" @click="toggleFocusMode">
           {{ focusMode ? '退出专注' : '专注模式' }}
         </button>
+        <button v-if="canManageUsers" class="secondary tiny" @click="openUserAdmin">用户管理</button>
         <button class="secondary tiny" @click="logout">退出登录</button>
         <div class="topbar-badge">{{ visibleDocs.length }} pages</div>
       </div>
@@ -253,6 +254,42 @@
         </div>
       </div>
     </div>
+
+    <div v-if="userAdminOpen" class="confirm-overlay" @click.self="userAdminOpen = false">
+      <div class="confirm-panel user-admin-panel">
+        <h4>用户管理</h4>
+        <div class="user-admin-head">
+          <p>仅管理员可见。支持 `ADMIN / EDITOR / VIEWER`。</p>
+          <button class="secondary tiny" @click="loadAuthUsers">刷新</button>
+        </div>
+        <div class="user-admin-form">
+          <input v-model.trim="authUserForm.username" placeholder="用户名" />
+          <input v-model="authUserForm.password" placeholder="密码（留空则不改）" />
+          <select v-model="authUserForm.role">
+            <option value="ADMIN">ADMIN</option>
+            <option value="EDITOR">EDITOR</option>
+            <option value="VIEWER">VIEWER</option>
+          </select>
+          <button :disabled="authUserLoading" @click="saveAuthUser">保存用户</button>
+        </div>
+        <ul class="user-admin-list">
+          <li v-for="item in authUsers" :key="item.username">
+            <div class="user-admin-item">
+              <strong>{{ item.username }}</strong>
+              <span class="user-role">{{ item.role }}</span>
+            </div>
+            <div class="user-admin-actions">
+              <button class="secondary tiny" :disabled="authUserLoading" @click="prefillAuthUser(item)">编辑</button>
+              <button class="danger tiny" :disabled="authUserLoading" @click="deleteAuthUser(item.username)">删除</button>
+            </div>
+          </li>
+          <li v-if="authUsers.length === 0" class="bulk-result-empty">暂无用户</li>
+        </ul>
+        <div class="confirm-actions">
+          <button class="secondary" @click="userAdminOpen = false">关闭</button>
+        </div>
+      </div>
+    </div>
     </template>
   </div>
 </template>
@@ -291,6 +328,14 @@ const loginForm = ref({
 })
 const loginError = ref('')
 const loggingOut = ref(false)
+const userAdminOpen = ref(false)
+const authUsers = ref([])
+const authUserLoading = ref(false)
+const authUserForm = ref({
+  username: '',
+  password: '',
+  role: 'EDITOR'
+})
 const currentDoc = ref(emptyDoc())
 const showHome = ref(true)
 const commandOpen = ref(false)
@@ -523,6 +568,7 @@ const currentCanEdit = computed(() => {
   return canEditDoc(currentDoc.value)
 })
 const canManageTemplates = computed(() => currentUserRole.value === 'ADMIN')
+const canManageUsers = computed(() => currentUserRole.value === 'ADMIN')
 const currentShareLink = computed(() => {
   if (!activeSlug.value || !currentDoc.value?.shareEnabled || !currentDoc.value?.shareToken) {
     return ''
@@ -1666,6 +1712,85 @@ async function submitLogin() {
   await bootstrapWorkspace(pendingPageSlug.value)
   pendingPageSlug.value = ''
   showToast(`欢迎回来，${username}`, 'success')
+}
+
+async function loadAuthUsers() {
+  if (!canManageUsers.value) {
+    return
+  }
+  authUserLoading.value = true
+  try {
+    const { data } = await api.get('/auth/users')
+    authUsers.value = Array.isArray(data) ? data : []
+  } finally {
+    authUserLoading.value = false
+  }
+}
+
+async function openUserAdmin() {
+  if (!canManageUsers.value) {
+    return
+  }
+  userAdminOpen.value = true
+  await loadAuthUsers()
+}
+
+function prefillAuthUser(item) {
+  authUserForm.value = {
+    username: item.username || '',
+    password: '',
+    role: item.role || 'EDITOR'
+  }
+}
+
+async function saveAuthUser() {
+  const username = (authUserForm.value.username || '').trim()
+  const role = String(authUserForm.value.role || 'EDITOR').trim().toUpperCase()
+  if (!username || !role) {
+    showToast('请填写用户名和角色', 'error')
+    return
+  }
+  authUserLoading.value = true
+  try {
+    await api.post('/auth/users', {
+      username,
+      password: authUserForm.value.password || '',
+      role
+    })
+    authUserForm.value.password = ''
+    await loadAuthUsers()
+    showToast('用户已保存', 'success')
+  } catch (error) {
+    const message = error?.response?.data?.message || '保存失败'
+    showToast(message, 'error')
+  } finally {
+    authUserLoading.value = false
+  }
+}
+
+async function deleteAuthUser(username) {
+  if (!username) {
+    return
+  }
+  const confirmed = await askConfirm(`确认删除用户 ${username} ?`, {
+    title: '删除用户',
+    confirmText: '删除',
+    danger: true
+  })
+  if (!confirmed) {
+    return
+  }
+  authUserLoading.value = true
+  try {
+    await api.delete(`/auth/users/${encodeURIComponent(username)}`)
+    await loadAuthUsers()
+    showToast('用户已删除', 'success')
+  } catch (error) {
+    const message = error?.response?.data?.message || '删除失败'
+    showToast(message, 'error')
+  } finally {
+    authUserLoading.value = false
+  }
 }
 
 function clearWorkspaceAfterLogout() {
