@@ -544,6 +544,15 @@ body {
   padding: 3px 8px;
 }
 
+.page-leave-tip {
+  font-size: 11px;
+  color: #9a600c;
+  border: 1px solid #ffd7a0;
+  border-radius: 999px;
+  background: #fff7ea;
+  padding: 3px 8px;
+}
+
 .section-subtitle {
   margin: 2px 0 0;
   color: var(--text-muted);
@@ -2980,6 +2989,10 @@ button.small {
   }
 
   .page-action-shortcuts {
+    display: none;
+  }
+
+  .page-leave-tip {
     display: none;
   }
 

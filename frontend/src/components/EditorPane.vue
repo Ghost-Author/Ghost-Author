@@ -49,6 +49,7 @@
           {{ hasUnsavedChanges ? '有改动待保存' : '内容已同步' }}
         </span>
         <span class="page-action-shortcuts">Alt+F 收藏 · Alt+L 链接 · Alt+H 分享</span>
+        <span class="page-leave-tip" v-if="hasUnsavedChanges">关闭页面前会提示保存</span>
         <button v-if="isEditingSafe" @click="$emit('save', model)">保存</button>
         <button
           v-if="isEditingSafe && model.status !== 'ARCHIVED'"
@@ -1010,6 +1011,14 @@ function onGlobalClick(event) {
   }
 }
 
+function onBeforeUnload(event) {
+  if (!hasUnsavedChanges.value) {
+    return
+  }
+  event.preventDefault()
+  event.returnValue = ''
+}
+
 onMounted(() => {
   if (typeof window !== 'undefined') {
     const rawDock = window.localStorage.getItem(READ_PANEL_DOCK_KEY)
@@ -1020,6 +1029,7 @@ onMounted(() => {
     window.addEventListener('keydown', onGlobalKeydown)
     window.addEventListener('resize', onViewportChange)
     window.addEventListener('scroll', onViewportChange, true)
+    window.addEventListener('beforeunload', onBeforeUnload)
   }
   if (editorPaneRef.value) {
     editorPaneRef.value.addEventListener('scroll', onReadScroll, { passive: true })
@@ -1032,6 +1042,7 @@ onBeforeUnmount(() => {
     window.removeEventListener('keydown', onGlobalKeydown)
     window.removeEventListener('resize', onViewportChange)
     window.removeEventListener('scroll', onViewportChange, true)
+    window.removeEventListener('beforeunload', onBeforeUnload)
   }
   if (editorPaneRef.value) {
     editorPaneRef.value.removeEventListener('scroll', onReadScroll)
