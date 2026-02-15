@@ -599,6 +599,7 @@ const READ_CARD_ORDER_KEY = 'ga-read-card-order'
 const READ_CARD_COLLAPSED_KEY = 'ga-read-card-collapsed'
 const READ_WIDTH_KEY = 'ga-read-width-mode'
 let readScrollRaf = null
+let outlineMenuRaf = null
 const readWidthModes = [
   { key: 'compact', label: '紧凑' },
   { key: 'standard', label: '标准' },
@@ -801,6 +802,8 @@ onMounted(() => {
     }
     window.addEventListener('click', onGlobalClick)
     window.addEventListener('keydown', onGlobalKeydown)
+    window.addEventListener('resize', onViewportChange)
+    window.addEventListener('scroll', onViewportChange, true)
   }
   if (editorPaneRef.value) {
     editorPaneRef.value.addEventListener('scroll', onReadScroll, { passive: true })
@@ -811,6 +814,8 @@ onBeforeUnmount(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('click', onGlobalClick)
     window.removeEventListener('keydown', onGlobalKeydown)
+    window.removeEventListener('resize', onViewportChange)
+    window.removeEventListener('scroll', onViewportChange, true)
   }
   if (editorPaneRef.value) {
     editorPaneRef.value.removeEventListener('scroll', onReadScroll)
@@ -818,6 +823,10 @@ onBeforeUnmount(() => {
   if (readScrollRaf !== null && typeof window !== 'undefined') {
     window.cancelAnimationFrame(readScrollRaf)
     readScrollRaf = null
+  }
+  if (outlineMenuRaf !== null && typeof window !== 'undefined') {
+    window.cancelAnimationFrame(outlineMenuRaf)
+    outlineMenuRaf = null
   }
 })
 
@@ -1234,6 +1243,9 @@ function openOutlineMenu(event, item) {
 }
 
 function onReadScroll() {
+  if (outlineMenu.value.open) {
+    onViewportChange()
+  }
   if (readScrollRaf !== null || isEditingSafe.value || !readPreviewRef.value) {
     return
   }
@@ -1346,6 +1358,19 @@ function closeOutlineMenu() {
     open: false,
     activeIndex: 0
   }
+}
+
+function onViewportChange() {
+  if (!outlineMenu.value.open || typeof window === 'undefined') {
+    return
+  }
+  if (outlineMenuRaf !== null) {
+    return
+  }
+  outlineMenuRaf = window.requestAnimationFrame(() => {
+    outlineMenuRaf = null
+    adjustOutlineMenuPosition()
+  })
 }
 
 function adjustOutlineMenuPosition() {
