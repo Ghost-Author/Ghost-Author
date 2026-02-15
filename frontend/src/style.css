@@ -1936,22 +1936,38 @@ button.small {
   margin-top: 8px;
   border: 1px solid #d8e6fc;
   border-radius: 8px;
-  background: #f8fbff;
+  background: #0f1a2f;
   padding: 8px;
 }
 
-.outline-preview-box textarea {
+.outline-preview-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #b9d2ff;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.outline-preview-text {
   margin: 0;
   min-height: 120px;
   resize: vertical;
   font-size: 12px;
   line-height: 1.45;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  background: #0a1324;
+  color: #e6f0ff;
+  border: 1px solid #20304f;
 }
 
 .outline-preview-actions {
   margin-top: 6px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  color: #9db7e8;
+  font-size: 11px;
 }
 
 .read-outline-progress {

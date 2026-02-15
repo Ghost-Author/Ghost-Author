@@ -288,8 +288,13 @@
                   <button class="secondary tiny" @click="clearOutlineSelection">清空选择</button>
                 </div>
                 <div class="outline-preview-box" v-if="readOutlineOpen && selectedOutlineItems.length && outlinePreviewOpen">
-                  <textarea readonly :value="outlineBatchText" />
+                  <div class="outline-preview-head">
+                    <strong>复制预览</strong>
+                    <span>{{ outlineBatchLineCount }} 行</span>
+                  </div>
+                  <textarea class="outline-preview-text" readonly :value="outlineBatchText" />
                   <div class="outline-preview-actions">
+                    <span>{{ outlineBatchText.length }} 字符</span>
                     <button class="secondary tiny" @click="copyOutlinePreview">复制预览内容</button>
                   </div>
                 </div>
@@ -720,6 +725,13 @@ const selectedOutlineEntries = computed(() => {
 })
 
 const outlineBatchText = computed(() => buildSelectedOutlineCopyText())
+const outlineBatchLineCount = computed(() => {
+  const text = outlineBatchText.value
+  if (!text) {
+    return 0
+  }
+  return text.split('\n').length
+})
 
 const childTreeRows = computed(() => {
   const rows = []
@@ -1638,9 +1650,10 @@ async function copySelectedOutlineLinks() {
     await navigator.clipboard.writeText(text)
     const rawCount = selectedOutlineItems.value.length
     const dedupedCount = selectedOutlineEntries.value.length
+    const lineCount = text ? text.split('\n').length : 0
     emit('notify', {
       type: 'success',
-      message: `已复制 ${dedupedCount}/${rawCount} 条目录链接（${outlineBatchFormat.value === 'LINKS' ? '纯链接' : 'Markdown'}${outlineBatchWithLevel.value ? ' + 层级' : ''} + ${outlineBatchSeparatorLabel()}）`
+      message: `已复制 ${dedupedCount}/${rawCount} 条目录链接，${lineCount} 行（${outlineBatchFormat.value === 'LINKS' ? '纯链接' : 'Markdown'}${outlineBatchWithLevel.value ? ' + 层级' : ''} + ${outlineBatchSeparatorLabel()}）`
     })
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
@@ -1654,7 +1667,8 @@ async function copyOutlinePreview() {
   }
   try {
     await navigator.clipboard.writeText(text)
-    emit('notify', { type: 'success', message: '预览内容已复制' })
+    const lineCount = text ? text.split('\n').length : 0
+    emit('notify', { type: 'success', message: `预览内容已复制（${lineCount} 行）` })
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
   }
