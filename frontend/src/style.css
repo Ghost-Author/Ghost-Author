@@ -1900,6 +1900,20 @@ button.small {
   padding: 4px 8px;
 }
 
+.outline-batch-actions {
+  margin-top: 8px;
+  border: 1px solid #d8e6fc;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #5f759f;
+}
+
 .read-outline-progress {
   margin-top: 8px;
   border: 1px solid #d9e6fc;
@@ -1958,6 +1972,11 @@ button.small {
   border-color: #7ca6f6;
   background: #e6f0ff;
   color: #2b4f89;
+}
+
+.read-outline-list li.selected {
+  border-color: #95b6f6;
+  background: #edf4ff;
 }
 
 .read-outline-list li.done {

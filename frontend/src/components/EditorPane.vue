@@ -266,6 +266,11 @@
                 <div class="outline-default-action-tip" v-if="readOutlineOpen && outlineDefaultAction !== 'NONE'">
                   双击默认：{{ outlineDefaultAction === 'COPY_LINK' ? '复制标题链接' : '复制标题文本' }}
                 </div>
+                <div class="outline-batch-actions" v-if="readOutlineOpen && selectedOutlineItems.length">
+                  <span>已选 {{ selectedOutlineItems.length }} 项</span>
+                  <button class="secondary tiny" @click="copySelectedOutlineLinks">复制已选链接</button>
+                  <button class="secondary tiny" @click="clearOutlineSelection">清空选择</button>
+                </div>
                 <div class="read-outline-filter" v-if="readOutlineOpen && outline.length">
                   <input v-model="readOutlineQuery" placeholder="过滤目录标题" />
                   <button class="secondary tiny" @click="readOutlineQuery = ''">清空</button>
@@ -283,9 +288,9 @@
                   <li
                     v-for="item in filteredOutline"
                     :key="item.id"
-                    :class="{ active: isOutlineActive(item), done: isOutlineDone(item) }"
+                    :class="{ active: isOutlineActive(item), done: isOutlineDone(item), selected: isOutlineSelected(item) }"
                     :style="{ '--outline-indent': `${(item.level - 1) * 14}px` }"
-                    @click="jumpToOutline(item)"
+                    @click="onOutlineItemClick($event, item)"
                     @dblclick.prevent="runOutlineDefaultAction(item)"
                     @contextmenu.prevent="openOutlineMenu($event, item)"
                   >
@@ -585,6 +590,8 @@ const readOutlineOpen = ref(true)
 const readOutlineQuery = ref('')
 const readOutlineLevelFilter = ref(null)
 const outlineDefaultAction = ref(loadOutlineDefaultAction())
+const selectedOutlineIds = ref([])
+const lastSelectedOutlineId = ref('')
 const childQuery = ref('')
 const activeOutlineText = ref('')
 const readInfoOpen = ref(false)
@@ -651,6 +658,11 @@ const filteredOutline = computed(() => {
     return source
   }
   return source.filter((item) => (item.text || '').toLowerCase().includes(q))
+})
+
+const selectedOutlineItems = computed(() => {
+  const selected = new Set(selectedOutlineIds.value)
+  return props.outline.filter((item) => selected.has(item.id))
 })
 
 const childTreeRows = computed(() => {
@@ -741,11 +753,25 @@ watch(
     readPermOpen.value = false
     readChildrenOpen.value = true
     readOutlineLevelFilter.value = null
+    selectedOutlineIds.value = []
+    lastSelectedOutlineId.value = ''
     outlineMenu.value = { open: false, x: 0, y: 0, item: null, activeIndex: 0 }
     childQuery.value = ''
     childOpenMap.value = loadChildOpenState(id)
   },
   { immediate: true }
+)
+
+watch(
+  () => props.outline,
+  (items) => {
+    const valid = new Set((items || []).map((item) => item.id))
+    selectedOutlineIds.value = selectedOutlineIds.value.filter((id) => valid.has(id))
+    if (lastSelectedOutlineId.value && !valid.has(lastSelectedOutlineId.value)) {
+      lastSelectedOutlineId.value = ''
+    }
+  },
+  { deep: true }
 )
 
 watch(
@@ -1261,6 +1287,49 @@ function jumpToOutline(item) {
   target.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
+function onOutlineItemClick(event, item) {
+  if (!item?.id) {
+    return
+  }
+  const isToggle = event.metaKey || event.ctrlKey
+  const isRange = event.shiftKey
+  if (isRange && lastSelectedOutlineId.value) {
+    const idList = filteredOutline.value.map((node) => node.id)
+    const start = idList.indexOf(lastSelectedOutlineId.value)
+    const end = idList.indexOf(item.id)
+    if (start >= 0 && end >= 0) {
+      const left = Math.min(start, end)
+      const right = Math.max(start, end)
+      selectedOutlineIds.value = idList.slice(left, right + 1)
+      jumpToOutline(item)
+      return
+    }
+  }
+  if (isToggle) {
+    const selected = new Set(selectedOutlineIds.value)
+    if (selected.has(item.id)) {
+      selected.delete(item.id)
+    } else {
+      selected.add(item.id)
+    }
+    selectedOutlineIds.value = Array.from(selected)
+    lastSelectedOutlineId.value = item.id
+    return
+  }
+  selectedOutlineIds.value = [item.id]
+  lastSelectedOutlineId.value = item.id
+  jumpToOutline(item)
+}
+
+function isOutlineSelected(item) {
+  return selectedOutlineIds.value.includes(item?.id)
+}
+
+function clearOutlineSelection() {
+  selectedOutlineIds.value = []
+  lastSelectedOutlineId.value = ''
+}
+
 function openOutlineMenu(event, item) {
   outlineMenu.value = {
     open: true,
@@ -1346,14 +1415,25 @@ async function copyOutlineLinkByItem(item) {
   if (!item?.text) {
     return
   }
-  const headingId = findHeadingIdByText(item.text) || headingSlug(item.text)
-  const base = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''
-  const pagePart = model.value.slug ? `?page=${encodeURIComponent(model.value.slug)}` : ''
-  const hashPart = headingId ? `#${encodeURIComponent(headingId)}` : ''
-  const link = `${base}${pagePart}${hashPart}`
+  const link = buildOutlineLink(item)
   try {
     await navigator.clipboard.writeText(link)
     emit('notify', { type: 'success', message: '标题链接已复制' })
+  } catch {
+    emit('notify', { type: 'error', message: '复制失败，请手动复制' })
+  }
+}
+
+async function copySelectedOutlineLinks() {
+  if (!selectedOutlineItems.value.length) {
+    return
+  }
+  const text = selectedOutlineItems.value
+    .map((item) => `${item.text} - ${buildOutlineLink(item)}`)
+    .join('\n')
+  try {
+    await navigator.clipboard.writeText(text)
+    emit('notify', { type: 'success', message: `已复制 ${selectedOutlineItems.value.length} 条目录链接` })
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
   }
@@ -1386,6 +1466,14 @@ function headingSlug(text) {
     .trim()
     .replace(/[^\w\u4e00-\u9fa5\s-]/g, '')
     .replace(/\s+/g, '-')
+}
+
+function buildOutlineLink(item) {
+  const headingId = findHeadingIdByText(item?.text) || headingSlug(item?.text)
+  const base = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''
+  const pagePart = model.value.slug ? `?page=${encodeURIComponent(model.value.slug)}` : ''
+  const hashPart = headingId ? `#${encodeURIComponent(headingId)}` : ''
+  return `${base}${pagePart}${hashPart}`
 }
 
 function closeOutlineMenu() {
