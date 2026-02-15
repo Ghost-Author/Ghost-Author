@@ -556,6 +556,11 @@ ul {
   background: var(--primary-soft);
 }
 
+.doc-items li.ancestor {
+  border-color: #b8cdf7;
+  background: #f4f8ff;
+}
+
 .doc-items li.drag-target {
   border-color: #2f6fec;
   box-shadow: 0 0 0 3px #dce9ff;
@@ -859,8 +864,19 @@ label {
 .actions {
   margin-top: 12px;
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.action-group {
+  display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.action-group + .action-group {
+  border-top: 1px dashed #d6e2fb;
+  padding-top: 8px;
 }
 
 .version-history .hint {
@@ -915,6 +931,7 @@ label {
   color: #35517f;
   padding: 5px 4px;
   border-radius: 8px;
+  cursor: pointer;
 }
 
 .outline-list li:hover {

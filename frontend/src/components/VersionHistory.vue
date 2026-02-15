@@ -22,6 +22,7 @@
             :key="item.id"
             :style="{ paddingLeft: `${(item.level - 1) * 12}px` }"
             :title="item.text"
+            @click="scrollToHeading(item.text)"
           >
             <span class="outline-dot">•</span>
             <span>{{ item.text }}</span>
@@ -131,5 +132,22 @@ function lineClass(line) {
     return 'del'
   }
   return ''
+}
+
+function normalizeText(value) {
+  return (value || '').replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+function scrollToHeading(text) {
+  const container = document.querySelector('.preview-only')
+  if (!container) {
+    return
+  }
+  const headings = Array.from(container.querySelectorAll('h1, h2, h3, h4'))
+  const target = headings.find((node) => normalizeText(node.textContent) === normalizeText(text))
+  if (!target) {
+    return
+  }
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 </script>

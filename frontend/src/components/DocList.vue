@@ -184,7 +184,15 @@
             <li
               v-for="node in group.items"
               :key="node.slug"
-              :class="['tree-node', depthClass(node.depth), { active: activeSlug === node.slug, 'drag-target': dropTargetSlug === node.slug }]"
+              :class="[
+                'tree-node',
+                depthClass(node.depth),
+                {
+                  active: activeSlug === node.slug,
+                  ancestor: activeAncestorSet.has(node.slug) && activeSlug !== node.slug,
+                  'drag-target': dropTargetSlug === node.slug
+                }
+              ]"
               :style="{ paddingLeft: `${10 + node.depth * 22}px` }"
               draggable="true"
               @dragstart="onDragStart(node.slug)"
@@ -421,6 +429,22 @@ const visibilitySections = computed(() => {
     title,
     groups: buildGroups(sourceDocs, visibilityFilter.value)
   }]
+})
+
+const activeAncestorSet = computed(() => {
+  if (!props.activeSlug) {
+    return new Set()
+  }
+  const bySlug = new Map(props.docs.map((doc) => [doc.slug, doc]))
+  const result = new Set()
+  let cursor = bySlug.get(props.activeSlug)
+  const visited = new Set()
+  while (cursor && cursor.parentSlug && !visited.has(cursor.parentSlug)) {
+    visited.add(cursor.parentSlug)
+    result.add(cursor.parentSlug)
+    cursor = bySlug.get(cursor.parentSlug)
+  }
+  return result
 })
 
 function buildGroups(sourceDocs, sectionKey) {

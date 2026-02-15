@@ -214,54 +214,58 @@
     </template>
 
     <div class="actions">
-      <button v-if="isEditingSafe" @click="$emit('save', model)">保存</button>
-      <button
-        v-if="!isCreateMode && isEditingSafe && model.status !== 'ARCHIVED'"
-        class="secondary"
-        @click="quickToggleStatus"
-      >
-        {{ model.status === 'PUBLISHED' ? '转为草稿并保存' : '发布并保存' }}
-      </button>
-      <button
-        v-if="!isCreateMode && isEditingSafe && model.status !== 'ARCHIVED'"
-        class="secondary"
-        @click="setStatusAndSave('ARCHIVED')"
-      >
-        归档页面
-      </button>
-      <button
-        v-if="!isCreateMode && isEditingSafe && model.status === 'ARCHIVED'"
-        class="secondary"
-        @click="setStatusAndSave('DRAFT')"
-      >
-        从归档恢复
-      </button>
-      <button
-        v-if="!isCreateMode"
-        class="secondary"
-        :disabled="!canEdit"
-        @click="setLockedAndSave(!model.locked)"
-      >
-        {{ model.locked ? '解除锁定' : '锁定页面' }}
-      </button>
-      <button
-        v-if="!isCreateMode"
-        class="secondary"
-        :disabled="!canEdit"
-        @click="$emit('toggle-share', !model.shareEnabled)"
-      >
-        {{ model.shareEnabled ? '关闭分享' : '开启分享' }}
-      </button>
-      <button
-        v-if="!isCreateMode && model.shareEnabled"
-        class="secondary"
-        :disabled="!canEdit"
-        @click="$emit('regenerate-share')"
-      >
-        重置分享链接
-      </button>
-      <button v-if="!isCreateMode" class="secondary" :disabled="!canEdit" @click="$emit('create-child')">新建子页面</button>
-      <button class="danger" :disabled="isCreateMode || !canEdit" @click="$emit('delete', model.slug)">删除</button>
+      <div class="action-group primary">
+        <button v-if="isEditingSafe" @click="$emit('save', model)">保存</button>
+        <button v-if="!isCreateMode" class="secondary" :disabled="!canEdit" @click="$emit('create-child')">新建子页面</button>
+      </div>
+      <div class="action-group status" v-if="!isCreateMode && isEditingSafe">
+        <button
+          v-if="model.status !== 'ARCHIVED'"
+          class="secondary"
+          @click="quickToggleStatus"
+        >
+          {{ model.status === 'PUBLISHED' ? '转为草稿并保存' : '发布并保存' }}
+        </button>
+        <button
+          v-if="model.status !== 'ARCHIVED'"
+          class="secondary"
+          @click="setStatusAndSave('ARCHIVED')"
+        >
+          归档页面
+        </button>
+        <button
+          v-if="model.status === 'ARCHIVED'"
+          class="secondary"
+          @click="setStatusAndSave('DRAFT')"
+        >
+          从归档恢复
+        </button>
+      </div>
+      <div class="action-group advanced" v-if="!isCreateMode">
+        <button
+          class="secondary"
+          :disabled="!canEdit"
+          @click="setLockedAndSave(!model.locked)"
+        >
+          {{ model.locked ? '解除锁定' : '锁定页面' }}
+        </button>
+        <button
+          class="secondary"
+          :disabled="!canEdit"
+          @click="$emit('toggle-share', !model.shareEnabled)"
+        >
+          {{ model.shareEnabled ? '关闭分享' : '开启分享' }}
+        </button>
+        <button
+          v-if="model.shareEnabled"
+          class="secondary"
+          :disabled="!canEdit"
+          @click="$emit('regenerate-share')"
+        >
+          重置分享链接
+        </button>
+        <button class="danger" :disabled="isCreateMode || !canEdit" @click="$emit('delete', model.slug)">删除</button>
+      </div>
     </div>
 
     <section class="comment-panel" v-if="!isCreateMode">
