@@ -127,6 +127,19 @@
     <div v-if="toast.show" class="app-toast" :class="toast.type">
       {{ toast.message }}
     </div>
+
+    <div v-if="confirmDialog.open" class="confirm-overlay" @click.self="resolveConfirm(false)">
+      <div class="confirm-panel">
+        <h4>{{ confirmDialog.title }}</h4>
+        <p>{{ confirmDialog.message }}</p>
+        <div class="confirm-actions">
+          <button class="secondary" @click="resolveConfirm(false)">{{ confirmDialog.cancelText }}</button>
+          <button :class="confirmDialog.danger ? 'danger' : ''" @click="resolveConfirm(true)">
+            {{ confirmDialog.confirmText }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -155,6 +168,14 @@ const toast = ref({
   message: '',
   type: 'info'
 })
+const confirmDialog = ref({
+  open: false,
+  title: '请确认',
+  message: '',
+  confirmText: '确认',
+  cancelText: '取消',
+  danger: false
+})
 const diffFrom = ref(null)
 const diffTo = ref(null)
 const diffText = ref('')
@@ -163,6 +184,7 @@ const recent = ref([])
 const currentUser = ref('admin')
 const shareTokenFromUrl = ref('')
 let toastTimer = null
+let confirmResolver = null
 const breadcrumbTitle = computed(() => currentDoc.value.title || 'Untitled Page')
 const breadcrumbPath = computed(() => {
   if (showHome.value) {
@@ -318,6 +340,28 @@ function showToast(message, type = 'info') {
   toastTimer = setTimeout(() => {
     toast.value.show = false
   }, 2200)
+}
+
+function askConfirm(message, options = {}) {
+  return new Promise((resolve) => {
+    confirmDialog.value = {
+      open: true,
+      title: options.title || '请确认',
+      message,
+      confirmText: options.confirmText || '确认',
+      cancelText: options.cancelText || '取消',
+      danger: !!options.danger
+    }
+    confirmResolver = resolve
+  })
+}
+
+function resolveConfirm(accepted) {
+  confirmDialog.value.open = false
+  if (confirmResolver) {
+    confirmResolver(accepted)
+    confirmResolver = null
+  }
 }
 
 function handleEditorNotify(payload) {
@@ -513,7 +557,12 @@ async function deleteDoc(slug) {
     showToast('当前用户无删除权限', 'error')
     return
   }
-  if (!confirm(`确认删除文档 ${slug} ?`)) {
+  const confirmed = await askConfirm(`确认删除文档 ${slug} ?`, {
+    title: '删除页面',
+    confirmText: '删除',
+    danger: true
+  })
+  if (!confirmed) {
     return
   }
   await api.delete(`/documents/${slug}`)
@@ -557,7 +606,12 @@ async function restoreVersion(versionNo) {
   if (!activeSlug.value) {
     return
   }
-  if (!confirm(`确认回滚到 v${versionNo} ?`)) {
+  const confirmed = await askConfirm(`确认回滚到 v${versionNo} ?`, {
+    title: '回滚版本',
+    confirmText: '回滚',
+    danger: true
+  })
+  if (!confirmed) {
     return
   }
   const { data } = await api.post(`/documents/${activeSlug.value}/versions/${versionNo}/restore`)
@@ -981,7 +1035,12 @@ async function deleteTemplate(templateId) {
   if (!templateId) {
     return
   }
-  if (!confirm('确认删除该模板？')) {
+  const confirmed = await askConfirm('确认删除该模板？', {
+    title: '删除模板',
+    confirmText: '删除',
+    danger: true
+  })
+  if (!confirmed) {
     return
   }
   await api.delete(`/templates/${templateId}`)
@@ -1141,6 +1200,10 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
   if (toastTimer) {
     clearTimeout(toastTimer)
+  }
+  if (confirmResolver) {
+    confirmResolver(false)
+    confirmResolver = null
   }
 })
 

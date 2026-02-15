@@ -2133,6 +2133,44 @@ button.small {
   color: #35527f;
 }
 
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0f1c3366;
+  z-index: 26;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.confirm-panel {
+  width: min(420px, calc(100vw - 24px));
+  border: 1px solid #c7d8f8;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 46px #132f5a40;
+  padding: 12px;
+}
+
+.confirm-panel h4 {
+  margin: 0 0 6px;
+  color: #2f4f83;
+  font-size: 15px;
+}
+
+.confirm-panel p {
+  margin: 0;
+  color: #5f759f;
+  font-size: 13px;
+}
+
+.confirm-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .quick-list .quick-empty,
 .outline-empty,
 .version-history .hint,
@@ -2233,5 +2271,13 @@ button.small {
     left: 10px;
     right: 10px;
     bottom: 10px;
+  }
+
+  .confirm-actions {
+    justify-content: stretch;
+  }
+
+  .confirm-actions button {
+    flex: 1;
   }
 }
