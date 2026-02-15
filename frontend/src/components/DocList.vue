@@ -160,6 +160,10 @@
                 >
                   {{ favorites.includes(node.slug) ? '★' : '☆' }}
                 </button>
+                <div class="order-controls">
+                  <button class="order-btn" @click.stop="emit('reorder', { slug: node.slug, direction: 'UP' })">↑</button>
+                  <button class="order-btn" @click.stop="emit('reorder', { slug: node.slug, direction: 'DOWN' })">↓</button>
+                </div>
               </div>
               <div class="node-meta-row">
                 <span class="node-slug">{{ node.slug }}</span>
@@ -215,7 +219,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['search', 'toggle-favorite', 'move'])
+const emit = defineEmits(['search', 'toggle-favorite', 'move', 'reorder'])
 
 const statusFilteredDocs = computed(() => {
   if (statusFilter.value === 'ALL') {
@@ -283,7 +287,10 @@ function buildGroups(sourceDocs, sectionKey) {
     childrenByParent.get(parent).push(doc)
   })
 
-  const roots = sourceDocs.filter((doc) => !doc.parentSlug || !docsBySlug.has(doc.parentSlug))
+  const roots = sourceDocs
+    .filter((doc) => !doc.parentSlug || !docsBySlug.has(doc.parentSlug))
+    .slice()
+    .sort(sortByOrder)
   const map = new Map()
 
   roots.forEach((root) => {
@@ -342,7 +349,7 @@ function flattenTree(node, childrenByParent, depth) {
 
   const children = (childrenByParent.get(node.slug) || [])
     .slice()
-    .sort((a, b) => a.title.localeCompare(b.title, 'zh-Hans-CN'))
+    .sort(sortByOrder)
 
   children.forEach((child) => {
     result.push(...flattenTree(child, childrenByParent, depth + 1))
@@ -372,6 +379,15 @@ function statusText(status) {
     return '已归档'
   }
   return '草稿'
+}
+
+function sortByOrder(a, b) {
+  const orderA = Number.isFinite(a.sortOrder) ? a.sortOrder : 0
+  const orderB = Number.isFinite(b.sortOrder) ? b.sortOrder : 0
+  if (orderA !== orderB) {
+    return orderA - orderB
+  }
+  return (a.title || '').localeCompare(b.title || '', 'zh-Hans-CN')
 }
 
 function expandAll() {

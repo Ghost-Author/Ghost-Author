@@ -6,6 +6,7 @@ import com.ghostauthor.knowledge.dto.DocumentUpdateRequest;
 import com.ghostauthor.knowledge.dto.DocumentVersionDiffResponse;
 import com.ghostauthor.knowledge.dto.DocumentVersionResponse;
 import com.ghostauthor.knowledge.dto.DocumentMoveRequest;
+import com.ghostauthor.knowledge.dto.DocumentReorderRequest;
 import com.ghostauthor.knowledge.dto.CommentCreateRequest;
 import com.ghostauthor.knowledge.dto.CommentResponse;
 import com.ghostauthor.knowledge.dto.AttachmentResponse;
@@ -34,6 +35,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -79,6 +81,7 @@ public class DocumentServiceImpl implements DocumentService {
         entity.setStatus(request.status() == null ? DocumentStatus.DRAFT : request.status());
         entity.setVisibility(request.visibility() == null ? DocumentVisibility.SPACE : request.visibility());
         entity.setLocked(Boolean.TRUE.equals(request.locked()));
+        entity.setSortOrder(nextSortOrder(entity.getParentSlug()));
         entity.setFilePath(filePath);
 
         DocumentEntity saved = documentRepository.save(entity);
@@ -128,7 +131,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional(readOnly = true)
     public List<DocumentResponse> list() {
-        return documentRepository.findAll().stream()
+        return documentRepository.findAllByOrderByParentSlugAscSortOrderAscCreatedAtAsc().stream()
                 .map(entity -> toResponse(entity, null))
                 .toList();
     }
@@ -185,7 +188,47 @@ public class DocumentServiceImpl implements DocumentService {
     public DocumentResponse move(String slug, DocumentMoveRequest request) {
         DocumentEntity entity = documentRepository.findBySlug(slug)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
-        entity.setParentSlug(normalizeParentSlug(slug, request.parentSlug()));
+        String newParent = normalizeParentSlug(slug, request.parentSlug());
+        if (!java.util.Objects.equals(entity.getParentSlug(), newParent)) {
+            entity.setParentSlug(newParent);
+            entity.setSortOrder(nextSortOrder(newParent));
+        }
+        DocumentEntity saved = documentRepository.save(entity);
+        String content = fileStorageService.readMarkdown(saved.getFilePath());
+        return toResponse(saved, content);
+    }
+
+    @Override
+    @Transactional
+    public DocumentResponse reorder(String slug, DocumentReorderRequest request) {
+        DocumentEntity entity = documentRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+
+        List<DocumentEntity> siblings = loadSiblings(entity.getParentSlug());
+        normalizeSiblingOrders(siblings);
+
+        int index = -1;
+        for (int i = 0; i < siblings.size(); i++) {
+            if (siblings.get(i).getSlug().equals(slug)) {
+                index = i;
+                break;
+            }
+        }
+        if (index < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Document is not in sibling list");
+        }
+
+        int targetIndex = "UP".equals(request.direction()) ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= siblings.size()) {
+            String content = fileStorageService.readMarkdown(entity.getFilePath());
+            return toResponse(entity, content);
+        }
+
+        DocumentEntity other = siblings.get(targetIndex);
+        Integer currentOrder = entity.getSortOrder();
+        entity.setSortOrder(other.getSortOrder());
+        other.setSortOrder(currentOrder);
+        documentRepository.save(other);
         DocumentEntity saved = documentRepository.save(entity);
         String content = fileStorageService.readMarkdown(saved.getFilePath());
         return toResponse(saved, content);
@@ -341,6 +384,7 @@ public class DocumentServiceImpl implements DocumentService {
                 entity.getStatus() == null ? DocumentStatus.DRAFT : entity.getStatus(),
                 entity.getVisibility() == null ? DocumentVisibility.SPACE : entity.getVisibility(),
                 Boolean.TRUE.equals(entity.getLocked()),
+                entity.getSortOrder() == null ? 0 : entity.getSortOrder(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
@@ -434,5 +478,36 @@ public class DocumentServiceImpl implements DocumentService {
                 "/api/documents/" + slug + "/attachments/" + attachment.getId() + "/content",
                 attachment.getCreatedAt()
         );
+    }
+
+    private Integer nextSortOrder(String parentSlug) {
+        return loadSiblings(parentSlug).stream()
+                .map(DocumentEntity::getSortOrder)
+                .filter(java.util.Objects::nonNull)
+                .max(Comparator.naturalOrder())
+                .map(v -> v + 100)
+                .orElse(100);
+    }
+
+    private List<DocumentEntity> loadSiblings(String parentSlug) {
+        if (StringUtils.hasText(parentSlug)) {
+            return documentRepository.findByParentSlugOrderBySortOrderAscCreatedAtAsc(parentSlug);
+        }
+        return documentRepository.findByParentSlugIsNullOrderBySortOrderAscCreatedAtAsc();
+    }
+
+    private void normalizeSiblingOrders(List<DocumentEntity> siblings) {
+        int next = 100;
+        boolean changed = false;
+        for (DocumentEntity sibling : siblings) {
+            if (!java.util.Objects.equals(sibling.getSortOrder(), next)) {
+                sibling.setSortOrder(next);
+                changed = true;
+            }
+            next += 100;
+        }
+        if (changed) {
+            documentRepository.saveAll(siblings);
+        }
     }
 }

@@ -35,6 +35,7 @@
         @select="loadDoc"
         @toggle-favorite="toggleFavorite"
         @move="moveDoc"
+        @reorder="reorderDoc"
       />
 
       <SpaceHome
@@ -475,6 +476,19 @@ async function moveDoc(payload) {
   }
   await api.patch(`/documents/${payload.slug}/move`, {
     parentSlug: payload.parentSlug || null
+  })
+  await fetchDocs()
+  if (activeSlug.value) {
+    await loadDoc(activeSlug.value)
+  }
+}
+
+async function reorderDoc(payload) {
+  if (!payload?.slug || !payload?.direction) {
+    return
+  }
+  await api.patch(`/documents/${payload.slug}/reorder`, {
+    direction: payload.direction
   })
   await fetchDocs()
   if (activeSlug.value) {

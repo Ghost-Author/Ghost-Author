@@ -16,6 +16,7 @@ public record DocumentResponse(
         DocumentStatus status,
         DocumentVisibility visibility,
         Boolean locked,
+        Integer sortOrder,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

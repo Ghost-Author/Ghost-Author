@@ -8,6 +8,7 @@ import com.ghostauthor.knowledge.dto.DocumentVersionResponse;
 import com.ghostauthor.knowledge.dto.CommentCreateRequest;
 import com.ghostauthor.knowledge.dto.CommentResponse;
 import com.ghostauthor.knowledge.dto.DocumentMoveRequest;
+import com.ghostauthor.knowledge.dto.DocumentReorderRequest;
 import com.ghostauthor.knowledge.dto.AttachmentResponse;
 import com.ghostauthor.knowledge.dto.AttachmentContentResponse;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,6 +24,7 @@ public interface DocumentService {
     List<DocumentVersionResponse> listVersions(String slug);
     DocumentResponse restoreVersion(String slug, Integer versionNo);
     DocumentResponse move(String slug, DocumentMoveRequest request);
+    DocumentResponse reorder(String slug, DocumentReorderRequest request);
     DocumentVersionDiffResponse diffVersions(String slug, Integer fromVersion, Integer toVersion);
     List<CommentResponse> listComments(String slug);
     CommentResponse addComment(String slug, CommentCreateRequest request);

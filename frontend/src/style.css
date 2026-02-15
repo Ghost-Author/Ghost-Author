@@ -462,6 +462,28 @@ ul {
   gap: 8px;
 }
 
+.order-controls {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.order-btn {
+  border: 1px solid #d0def9;
+  background: #fff;
+  color: #6d80a5;
+  box-shadow: none;
+  border-radius: 7px;
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.order-btn:hover {
+  border-color: #9dbaf8;
+  background: #edf4ff;
+  color: #315796;
+}
+
 .node-title-main {
   display: flex;
   align-items: center;

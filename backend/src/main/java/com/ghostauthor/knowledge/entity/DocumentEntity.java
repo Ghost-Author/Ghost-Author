@@ -31,6 +31,9 @@ public class DocumentEntity {
     @Column(nullable = false)
     private Boolean locked;
 
+    @Column(nullable = false)
+    private Integer sortOrder;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(length = 16)
@@ -63,6 +66,9 @@ public class DocumentEntity {
         }
         if (locked == null) {
             locked = false;
+        }
+        if (sortOrder == null) {
+            sortOrder = 0;
         }
     }
 
@@ -157,5 +163,13 @@ public class DocumentEntity {
 
     public void setLocked(Boolean locked) {
         this.locked = locked;
+    }
+
+    public Integer getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(Integer sortOrder) {
+        this.sortOrder = sortOrder;
     }
 }
