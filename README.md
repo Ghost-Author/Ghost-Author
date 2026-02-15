@@ -219,6 +219,12 @@ curl -X POST http://localhost:8080/api/auth/logout \
 - `editor:{bcrypt}$2a$...:EDITOR`
 - `guest:{bcrypt}$2a$...:VIEWER`（只读，禁止写操作）
 
+角色权限说明：
+
+- `ADMIN`：可读写所有页面，可管理模板
+- `EDITOR`：可创建页面；仅可修改自己可编辑的页面（owner 或 editors 包含自己）
+- `VIEWER`：只读（后端拒绝写接口）
+
 ### 创建文档
 
 ```bash
