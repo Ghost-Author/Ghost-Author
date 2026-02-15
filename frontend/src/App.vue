@@ -39,6 +39,7 @@
         @toggle-favorite="toggleFavorite"
         @move="moveDoc"
         @reorder="reorderDoc"
+        @quick-action="handleDocQuickAction"
       />
 
       <SpaceHome
@@ -673,6 +674,65 @@ async function reorderDoc(payload) {
   await fetchDocs()
   if (activeSlug.value) {
     await loadDoc(activeSlug.value)
+  }
+}
+
+async function handleDocQuickAction(payload) {
+  if (!payload?.slug || !payload?.action) {
+    return
+  }
+  const target = docs.value.find((d) => d.slug === payload.slug)
+  if (!target) {
+    return
+  }
+
+  if (payload.action === 'COPY_LINK') {
+    const shareableLink = `${window.location.origin}?page=${encodeURIComponent(payload.slug)}`
+    try {
+      await navigator.clipboard.writeText(shareableLink)
+      alert('页面链接已复制')
+    } catch {
+      alert('复制失败，请手动复制')
+    }
+    return
+  }
+
+  if (!canEditDoc(target)) {
+    alert('当前用户无编辑权限')
+    return
+  }
+
+  if (payload.action === 'MOVE_ROOT') {
+    await moveDoc({
+      slug: payload.slug,
+      parentSlug: null
+    })
+    return
+  }
+
+  if (payload.action === 'ARCHIVE' || payload.action === 'UNARCHIVE') {
+    const nextStatus = payload.action === 'ARCHIVE' ? 'ARCHIVED' : 'DRAFT'
+    const { data } = await api.get(`/documents/${payload.slug}`)
+    await api.put(`/documents/${payload.slug}`, {
+      title: data.title,
+      summary: data.summary,
+      content: data.content,
+      parentSlug: data.parentSlug || null,
+      labels: data.labels || [],
+      owner: data.owner || null,
+      editors: data.editors || [],
+      viewers: data.viewers || [],
+      priority: data.priority || 'MEDIUM',
+      dueDate: data.dueDate || null,
+      assignee: data.assignee || null,
+      status: nextStatus,
+      visibility: data.visibility || 'SPACE',
+      locked: !!data.locked
+    })
+    await fetchDocs()
+    if (activeSlug.value === payload.slug) {
+      await loadDoc(payload.slug)
+    }
   }
 }
 

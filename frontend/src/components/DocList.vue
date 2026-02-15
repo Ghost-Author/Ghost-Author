@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <div class="doc-list-scroll">
+    <div class="doc-list-scroll" @click="quickMenuSlug = ''">
       <input
         class="search-input"
         v-model="keyword"
@@ -209,6 +209,23 @@
                   <span class="node-depth-pill" v-if="node.depth > 0">L{{ node.depth }}</span>
                   <strong>{{ node.title }}</strong>
                 </div>
+                <div class="node-more">
+                  <button class="node-more-btn" @click.stop="toggleQuickMenu(node.slug)">⋯</button>
+                  <div v-if="quickMenuSlug === node.slug" class="node-menu" @click.stop>
+                    <button class="node-menu-item" @click="emitQuickAction('MOVE_ROOT', node.slug)">
+                      设为顶级页面
+                    </button>
+                    <button
+                      class="node-menu-item"
+                      @click="emitQuickAction((node.status || 'DRAFT') === 'ARCHIVED' ? 'UNARCHIVE' : 'ARCHIVE', node.slug)"
+                    >
+                      {{ (node.status || 'DRAFT') === 'ARCHIVED' ? '恢复为草稿' : '归档页面' }}
+                    </button>
+                    <button class="node-menu-item" @click="emitQuickAction('COPY_LINK', node.slug)">
+                      复制页面链接
+                    </button>
+                  </div>
+                </div>
                 <button
                   class="fav-toggle"
                   :class="{ active: favorites.includes(node.slug) }"
@@ -348,6 +365,7 @@ const quickOpenRecent = ref(quickPanelsState.recent)
 const draggingSlug = ref('')
 const dropTargetSlug = ref('')
 const dropTargetRoot = ref(false)
+const quickMenuSlug = ref('')
 
 const props = defineProps({
   docs: {
@@ -372,7 +390,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['search', 'toggle-favorite', 'move', 'reorder'])
+const emit = defineEmits(['search', 'toggle-favorite', 'move', 'reorder', 'quick-action'])
 
 watch([quickOpenFavorites, quickOpenRecent], ([favoritesOpen, recentOpen]) => {
   persistQuickPanelsState(favoritesOpen, recentOpen)
@@ -583,6 +601,15 @@ function flattenTree(node, childrenByParent, depth) {
 function clearSearch() {
   keyword.value = ''
   emit('search', '')
+}
+
+function toggleQuickMenu(slug) {
+  quickMenuSlug.value = quickMenuSlug.value === slug ? '' : slug
+}
+
+function emitQuickAction(action, slug) {
+  quickMenuSlug.value = ''
+  emit('quick-action', { action, slug })
 }
 
 function toggleMyTodoMode() {
