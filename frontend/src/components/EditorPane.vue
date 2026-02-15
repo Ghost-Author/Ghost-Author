@@ -189,76 +189,85 @@
     <template v-else>
       <div class="read-mode-head">
         <h3>{{ model.title || 'Untitled' }}</h3>
-        <button class="secondary small" @click="readInfoOpen = !readInfoOpen">
-          {{ readInfoOpen ? '隐藏页面信息' : '显示页面信息' }}
-        </button>
+        <div class="read-mode-actions">
+          <button class="secondary small" @click="toggleReadDock">
+            停靠{{ readPanelDock === 'right' ? '左侧' : '右侧' }}
+          </button>
+          <button class="secondary small" @click="readInfoOpen = !readInfoOpen">
+            {{ readInfoOpen ? '隐藏页面信息' : '显示页面信息' }}
+          </button>
+        </div>
       </div>
-      <div class="read-meta" v-show="readInfoOpen">
-        <div class="read-meta-row">
-          <div class="read-badges">
-            <span class="read-status" :class="(model.status || 'DRAFT').toLowerCase()">
-              {{ statusText(model.status) }}
-            </span>
-            <span class="read-visibility" :class="(model.visibility || 'SPACE').toLowerCase()">
-              {{ model.visibility === 'PRIVATE' ? '仅自己' : '空间可见' }}
-            </span>
-            <span class="read-locked" :class="{ locked: !!model.locked }">
-              {{ model.locked ? '已锁定' : '未锁定' }}
-            </span>
+      <div class="read-layout" :class="{ 'panel-left': readPanelDock === 'left' }">
+        <aside class="read-side-panel" v-if="readInfoOpen">
+          <div class="read-meta">
+            <div class="read-meta-row">
+              <div class="read-badges">
+                <span class="read-status" :class="(model.status || 'DRAFT').toLowerCase()">
+                  {{ statusText(model.status) }}
+                </span>
+                <span class="read-visibility" :class="(model.visibility || 'SPACE').toLowerCase()">
+                  {{ model.visibility === 'PRIVATE' ? '仅自己' : '空间可见' }}
+                </span>
+                <span class="read-locked" :class="{ locked: !!model.locked }">
+                  {{ model.locked ? '已锁定' : '未锁定' }}
+                </span>
+              </div>
+            </div>
+            <p class="read-summary">{{ model.summary || '暂无摘要' }}</p>
+            <p class="read-times" v-if="model.updatedAt || model.createdAt">
+              更新于 {{ formatTime(model.updatedAt) }} · 创建于 {{ formatTime(model.createdAt) }}
+            </p>
+            <div class="read-tags" v-if="model.labels && model.labels.length">
+              <span class="doc-label" v-for="label in model.labels" :key="label">{{ label }}</span>
+            </div>
+            <button class="panel-fold-head section-fold-head compact" @click="readPermOpen = !readPermOpen">
+              <strong>权限与访问</strong>
+              <span>{{ readPermOpen ? '收起 ▾' : '展开 ▸' }}</span>
+            </button>
+            <div class="perm-tags" v-show="readPermOpen">
+              <span class="perm-chip owner">Owner: {{ model.owner || '-' }}</span>
+              <span class="perm-chip">Editors: {{ (model.editors || []).join(', ') || '-' }}</span>
+              <span class="perm-chip">Viewers: {{ (model.viewers || []).join(', ') || '-' }}</span>
+              <span class="perm-chip current">当前用户: {{ currentUser || '-' }}</span>
+              <span class="perm-chip share">{{ model.shareEnabled ? '分享已开启' : '未开启分享' }}</span>
+              <span class="perm-chip priority">优先级: {{ priorityText(model.priority) }}</span>
+              <span class="perm-chip">负责人: {{ model.assignee || '-' }}</span>
+              <span class="perm-chip">截止: {{ model.dueDate || '-' }}</span>
+            </div>
+            <div class="share-bar" v-if="model.shareEnabled && shareLink && readPermOpen">
+              <input :value="shareLink" readonly />
+              <button class="secondary small" @click="copyShareLink">复制链接</button>
+            </div>
+            <button class="panel-fold-head section-fold-head compact" v-if="childPages.length" @click="readChildrenOpen = !readChildrenOpen">
+              <strong>子页面导航（{{ childPages.length }}）</strong>
+              <span>{{ readChildrenOpen ? '收起 ▾' : '展开 ▸' }}</span>
+            </button>
+            <div class="child-pages" v-if="childPages.length && readChildrenOpen">
+              <ul>
+                <li
+                  v-for="item in childPages"
+                  :key="item.slug"
+                  @click="$emit('select-child', item.slug)"
+                >
+                  <div class="child-main">
+                    <span class="child-tree-dot"></span>
+                    <strong>{{ item.title }}</strong>
+                    <span>{{ item.slug }}</span>
+                  </div>
+                  <div class="child-extra">
+                    <em class="child-status" :class="(item.status || 'DRAFT').toLowerCase()">{{ statusText(item.status) }}</em>
+                    <em class="child-priority" :class="(item.priority || 'MEDIUM').toLowerCase()">优先级: {{ priorityText(item.priority) }}</em>
+                    <em class="child-due">截止: {{ item.dueDate || '-' }}</em>
+                  </div>
+                </li>
+              </ul>
+            </div>
           </div>
+        </aside>
+        <div class="preview-only read-preview">
+          <MdPreview :model-value="model.content" />
         </div>
-        <p class="read-summary">{{ model.summary || '暂无摘要' }}</p>
-        <p class="read-times" v-if="model.updatedAt || model.createdAt">
-          更新于 {{ formatTime(model.updatedAt) }} · 创建于 {{ formatTime(model.createdAt) }}
-        </p>
-        <div class="read-tags" v-if="model.labels && model.labels.length">
-          <span class="doc-label" v-for="label in model.labels" :key="label">{{ label }}</span>
-        </div>
-        <button class="panel-fold-head section-fold-head compact" @click="readPermOpen = !readPermOpen">
-          <strong>权限与访问</strong>
-          <span>{{ readPermOpen ? '收起 ▾' : '展开 ▸' }}</span>
-        </button>
-        <div class="perm-tags" v-show="readPermOpen">
-          <span class="perm-chip owner">Owner: {{ model.owner || '-' }}</span>
-          <span class="perm-chip">Editors: {{ (model.editors || []).join(', ') || '-' }}</span>
-          <span class="perm-chip">Viewers: {{ (model.viewers || []).join(', ') || '-' }}</span>
-          <span class="perm-chip current">当前用户: {{ currentUser || '-' }}</span>
-          <span class="perm-chip share">{{ model.shareEnabled ? '分享已开启' : '未开启分享' }}</span>
-          <span class="perm-chip priority">优先级: {{ priorityText(model.priority) }}</span>
-          <span class="perm-chip">负责人: {{ model.assignee || '-' }}</span>
-          <span class="perm-chip">截止: {{ model.dueDate || '-' }}</span>
-        </div>
-        <div class="share-bar" v-if="model.shareEnabled && shareLink && readPermOpen">
-          <input :value="shareLink" readonly />
-          <button class="secondary small" @click="copyShareLink">复制链接</button>
-        </div>
-        <button class="panel-fold-head section-fold-head compact" v-if="childPages.length" @click="readChildrenOpen = !readChildrenOpen">
-          <strong>子页面导航（{{ childPages.length }}）</strong>
-          <span>{{ readChildrenOpen ? '收起 ▾' : '展开 ▸' }}</span>
-        </button>
-        <div class="child-pages" v-if="childPages.length && readChildrenOpen">
-          <ul>
-            <li
-              v-for="item in childPages"
-              :key="item.slug"
-              @click="$emit('select-child', item.slug)"
-            >
-              <div class="child-main">
-                <span class="child-tree-dot"></span>
-                <strong>{{ item.title }}</strong>
-                <span>{{ item.slug }}</span>
-              </div>
-              <div class="child-extra">
-                <em class="child-status" :class="(item.status || 'DRAFT').toLowerCase()">{{ statusText(item.status) }}</em>
-                <em class="child-priority" :class="(item.priority || 'MEDIUM').toLowerCase()">优先级: {{ priorityText(item.priority) }}</em>
-                <em class="child-due">截止: {{ item.dueDate || '-' }}</em>
-              </div>
-            </li>
-          </ul>
-        </div>
-      </div>
-      <div class="preview-only">
-        <MdPreview :model-value="model.content" />
       </div>
     </template>
 
@@ -445,6 +454,8 @@ const taskMetaOpen = ref(true)
 const readPermOpen = ref(false)
 const readChildrenOpen = ref(true)
 const readInfoOpen = ref(false)
+const readPanelDock = ref('right')
+const READ_PANEL_DOCK_KEY = 'ga-read-panel-dock'
 const newTemplate = ref({
   name: '',
   description: '',
@@ -495,6 +506,10 @@ function onGlobalClick(event) {
 
 onMounted(() => {
   if (typeof window !== 'undefined') {
+    const rawDock = window.localStorage.getItem(READ_PANEL_DOCK_KEY)
+    if (rawDock === 'left' || rawDock === 'right') {
+      readPanelDock.value = rawDock
+    }
     window.addEventListener('click', onGlobalClick)
   }
 })
@@ -616,6 +631,13 @@ function toggleEditMode() {
     return
   }
   isEditing.value = !isEditing.value
+}
+
+function toggleReadDock() {
+  readPanelDock.value = readPanelDock.value === 'right' ? 'left' : 'right'
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(READ_PANEL_DOCK_KEY, readPanelDock.value)
+  }
 }
 
 async function copyShareLink() {
