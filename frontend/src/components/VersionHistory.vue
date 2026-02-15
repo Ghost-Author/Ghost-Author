@@ -113,6 +113,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 const VERSION_DENSITY_KEY = 'ga-version-density'
+const VERSION_PANEL_KEY = 'ga-version-panels'
 
 function loadCompactMode() {
   if (typeof window === 'undefined') {
@@ -126,6 +127,49 @@ function persistCompactMode(compact) {
     return
   }
   window.localStorage.setItem(VERSION_DENSITY_KEY, compact ? 'compact' : 'comfortable')
+}
+
+function loadPanelState() {
+  if (typeof window === 'undefined') {
+    return {
+      outline: true,
+      history: true,
+      diff: true,
+      diffTools: true
+    }
+  }
+  try {
+    const raw = window.localStorage.getItem(VERSION_PANEL_KEY)
+    if (!raw) {
+      return {
+        outline: true,
+        history: true,
+        diff: true,
+        diffTools: true
+      }
+    }
+    const parsed = JSON.parse(raw)
+    return {
+      outline: parsed.outline !== false,
+      history: parsed.history !== false,
+      diff: parsed.diff !== false,
+      diffTools: parsed.diffTools !== false
+    }
+  } catch {
+    return {
+      outline: true,
+      history: true,
+      diff: true,
+      diffTools: true
+    }
+  }
+}
+
+function persistPanelState(state) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(VERSION_PANEL_KEY, JSON.stringify(state))
 }
 
 const props = defineProps({
@@ -155,11 +199,12 @@ const props = defineProps({
   }
 })
 
-const outlineOpen = ref(true)
-const historyOpen = ref(true)
-const diffOpen = ref(true)
+const panelState = loadPanelState()
+const outlineOpen = ref(panelState.outline)
+const historyOpen = ref(panelState.history)
+const diffOpen = ref(panelState.diff)
 const compactMode = ref(loadCompactMode())
-const diffToolsOpen = ref(true)
+const diffToolsOpen = ref(panelState.diffTools)
 const activeOutlineText = ref('')
 const versionKeyword = ref('')
 const diffKeyword = ref('')
@@ -335,6 +380,15 @@ watch([diffKeyword, () => props.diffText], () => {
 
 watch(compactMode, (compact) => {
   persistCompactMode(compact)
+})
+
+watch([outlineOpen, historyOpen, diffOpen, diffToolsOpen], ([outline, history, diff, diffTools]) => {
+  persistPanelState({
+    outline,
+    history,
+    diff,
+    diffTools
+  })
 })
 
 onMounted(() => {
