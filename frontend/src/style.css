@@ -547,6 +547,7 @@ button.tiny {
   gap: 8px;
   border-top: 1px dashed #d8e3fb;
   padding-top: 8px;
+  isolation: isolate;
 }
 
 .tree-section-title {
@@ -554,6 +555,14 @@ button.tiny {
   color: #5a6f97;
   font-weight: 700;
   margin: 4px 2px;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 6px 8px;
+  border: 1px solid #d4e2fb;
+  border-radius: 10px;
+  background: #f4f8ffdc;
+  backdrop-filter: blur(6px);
 }
 
 .root-drop-zone {
@@ -575,8 +584,9 @@ button.tiny {
 .tree-group {
   border: 1px solid #d8e3fb;
   border-radius: 12px;
-  background: #fdfdff;
+  background: linear-gradient(180deg, #fdfdff, #f8fbff);
   padding: 6px;
+  box-shadow: inset 0 1px 0 #ffffff;
 }
 
 .tree-group-head {
@@ -588,6 +598,9 @@ button.tiny {
   color: #315796;
   box-shadow: none;
   border: 1px solid #d4e2fb;
+  position: sticky;
+  top: 36px;
+  z-index: 2;
 }
 
 .tree-group-head em {
@@ -732,6 +745,21 @@ ul {
   gap: 6px;
 }
 
+.node-type-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: 2px solid #97b8f7;
+  background: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px #edf4ff;
+}
+
+.node-type-dot.root {
+  border-color: #2f6fec;
+  background: #dce9ff;
+}
+
 .node-check {
   width: 14px;
   height: 14px;
@@ -755,35 +783,52 @@ ul {
 .tree-node {
   position: relative;
   border-left-width: 4px;
+  padding-left: var(--node-indent, 12px);
+  overflow: visible;
 }
 
 .tree-node::before {
   content: "";
   position: absolute;
-  left: -2px;
-  top: 10px;
+  left: calc(var(--node-indent, 12px) - 13px);
+  top: 0;
   bottom: 10px;
-  border-left: 1px dashed #c4d4f3;
+  border-left: 1px dashed #c7d7f5;
+}
+
+.tree-node::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--node-indent, 12px) - 13px);
+  top: 20px;
+  width: 9px;
+  border-top: 1px dashed #c7d7f5;
+}
+
+.tree-node.depth-0::before,
+.tree-node.depth-0::after {
+  display: none;
 }
 
 .tree-node.depth-0 {
   border-left-color: #bfd1f8;
+  background: linear-gradient(180deg, #f5f9ff, #edf4ff);
 }
 
 .tree-node.depth-1 {
   border-left-color: #9cbdf8;
-  background: #f7faff;
+  background: #f9fbff;
 }
 
 .tree-node.depth-2 {
-  border-left-color: #8bc5bb;
-  background: #f5fffc;
+  border-left-color: #93cdd6;
+  background: #f6fcff;
 }
 
 .tree-node.depth-3,
 .tree-node.depth-4 {
-  border-left-color: #f1b4c8;
-  background: #fff8fb;
+  border-left-color: #f3bfd0;
+  background: #fff9fc;
 }
 
 .fav-toggle {

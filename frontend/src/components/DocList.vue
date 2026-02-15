@@ -221,7 +221,7 @@
                   'drag-target': dropTargetSlug === node.slug
                 }
               ]"
-              :style="{ paddingLeft: `${10 + node.depth * 22}px` }"
+              :style="{ '--node-indent': `${12 + node.depth * 22}px` }"
               draggable="true"
               @dragstart="onDragStart(node.slug)"
               @dragend="onDragEnd"
@@ -239,7 +239,8 @@
                     :checked="selectedSlugs.includes(node.slug)"
                     @click.stop="toggleSelected(node.slug)"
                   />
-                  <span class="node-branch" v-if="node.depth > 0">└</span>
+                  <span class="node-type-dot" :class="{ root: node.depth === 0 }"></span>
+                  <span class="node-branch" v-if="node.depth > 0">↳</span>
                   <span class="node-depth-pill" v-if="node.depth > 0">L{{ node.depth }}</span>
                   <strong>{{ node.title }}</strong>
                 </div>
