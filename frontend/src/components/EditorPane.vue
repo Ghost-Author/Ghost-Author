@@ -295,6 +295,8 @@
                   <textarea class="outline-preview-text" readonly :value="outlineBatchText" />
                   <div class="outline-preview-actions">
                     <span>{{ outlineBatchText.length }} 字符</span>
+                    <button class="secondary tiny" @click="openOutlinePreviewDialog">全屏查看</button>
+                    <button class="secondary tiny" @click="downloadOutlinePreview">下载 .md</button>
                     <button class="secondary tiny" @click="copyOutlinePreview">复制预览内容</button>
                   </div>
                 </div>
@@ -429,6 +431,17 @@
         </div>
       </div>
     </template>
+
+    <div v-if="outlinePreviewDialogOpen" class="confirm-overlay" @click.self="outlinePreviewDialogOpen = false">
+      <div class="confirm-panel outline-preview-dialog">
+        <h4>批量复制预览</h4>
+        <pre>{{ outlineBatchText }}</pre>
+        <div class="confirm-actions">
+          <button class="secondary" @click="downloadOutlinePreview">下载 .md</button>
+          <button @click="outlinePreviewDialogOpen = false">关闭</button>
+        </div>
+      </div>
+    </div>
 
     <div class="actions">
       <div class="action-group primary">
@@ -626,6 +639,7 @@ const outlineBatchFormat = ref(loadOutlineBatchFormat())
 const outlineBatchSeparator = ref(loadOutlineBatchSeparator())
 const outlineBatchWithLevel = ref(loadOutlineBatchWithLevel())
 const outlinePreviewOpen = ref(false)
+const outlinePreviewDialogOpen = ref(false)
 const selectedOutlineIds = ref([])
 const lastSelectedOutlineId = ref('')
 const outlineCursorId = ref('')
@@ -1483,6 +1497,7 @@ function isOutlineSelected(item) {
 
 function clearOutlineSelection() {
   outlinePreviewOpen.value = false
+  outlinePreviewDialogOpen.value = false
   selectedOutlineIds.value = []
   lastSelectedOutlineId.value = ''
   outlineRangeAnchorId.value = ''
@@ -1672,6 +1687,30 @@ async function copyOutlinePreview() {
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
   }
+}
+
+function openOutlinePreviewDialog() {
+  if (!outlineBatchText.value) {
+    return
+  }
+  outlinePreviewDialogOpen.value = true
+}
+
+function downloadOutlinePreview() {
+  const text = outlineBatchText.value
+  if (!text || typeof window === 'undefined' || typeof document === 'undefined') {
+    return
+  }
+  const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' })
+  const url = window.URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = `${model.value.slug || 'outline-batch'}.md`
+  document.body.appendChild(anchor)
+  anchor.click()
+  document.body.removeChild(anchor)
+  window.URL.revokeObjectURL(url)
+  emit('notify', { type: 'success', message: '已下载预览 .md 文件' })
 }
 
 function filterOutlineByLevel() {

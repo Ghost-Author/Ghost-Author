@@ -1970,6 +1970,25 @@ button.small {
   font-size: 11px;
 }
 
+.outline-preview-dialog {
+  width: min(860px, calc(100vw - 24px));
+}
+
+.outline-preview-dialog pre {
+  margin: 10px 0 0;
+  max-height: 62vh;
+  overflow: auto;
+  border: 1px solid #20304f;
+  border-radius: 10px;
+  background: #0a1324;
+  color: #e6f0ff;
+  padding: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .read-outline-progress {
   margin-top: 8px;
   border: 1px solid #d9e6fc;
