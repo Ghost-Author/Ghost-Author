@@ -204,6 +204,48 @@ body {
   padding-right: 4px;
 }
 
+.doc-list-scroll.compact .doc-items li {
+  padding: 7px 8px;
+  margin-bottom: 6px;
+}
+
+.doc-list-scroll.compact .node-title-row {
+  gap: 6px;
+}
+
+.doc-list-scroll.compact .node-title-main {
+  gap: 4px;
+}
+
+.doc-list-scroll.compact .node-title-main strong {
+  font-size: 12px;
+}
+
+.doc-list-scroll.compact .node-meta-row {
+  margin-top: 2px;
+  gap: 5px;
+}
+
+.doc-list-scroll.compact .node-slug,
+.doc-list-scroll.compact .node-visibility,
+.doc-list-scroll.compact .node-lock,
+.doc-list-scroll.compact .node-status,
+.doc-list-scroll.compact .node-priority,
+.doc-list-scroll.compact .node-owner,
+.doc-list-scroll.compact .doc-label {
+  font-size: 10px;
+}
+
+.doc-list-scroll.compact .label-row {
+  margin-top: 4px;
+  gap: 4px;
+}
+
+.doc-list-scroll.compact .tree-node p {
+  margin: 2px 0 0;
+  font-size: 11px;
+}
+
 .doc-list-scroll,
 .editor-pane,
 .version-history,

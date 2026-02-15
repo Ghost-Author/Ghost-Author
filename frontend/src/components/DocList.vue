@@ -34,11 +34,14 @@
         <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_UNFAVORITE')">取消收藏</button>
         <button class="secondary tiny" @click="expandAll">展开</button>
         <button class="secondary tiny" @click="collapseAll">折叠</button>
+        <button class="secondary tiny" :class="{ active: compactMode }" @click="compactMode = !compactMode">
+          {{ compactMode ? '舒适视图' : '紧凑视图' }}
+        </button>
         <button @click="$emit('create')">+ 新建</button>
       </div>
     </div>
 
-    <div class="doc-list-scroll" @click="quickMenuSlug = ''">
+    <div class="doc-list-scroll" :class="{ compact: compactMode }" @click="quickMenuSlug = ''">
       <input
         class="search-input"
         v-model="keyword"
@@ -331,6 +334,7 @@ const QUICK_PANEL_KEY = 'ga-sidebar-quick-panels'
 const FILTER_PANEL_KEY = 'ga-sidebar-filter-panel'
 const GROUP_OPEN_KEY = 'ga-sidebar-open-groups'
 const SECTION_OPEN_KEY = 'ga-sidebar-open-sections'
+const DENSITY_KEY = 'ga-sidebar-density'
 
 function loadQuickPanelsState() {
   if (typeof window === 'undefined') {
@@ -431,6 +435,20 @@ function persistSectionOpenState(state) {
   window.localStorage.setItem(SECTION_OPEN_KEY, JSON.stringify(state))
 }
 
+function loadCompactMode() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+  return window.localStorage.getItem(DENSITY_KEY) === 'compact'
+}
+
+function persistCompactMode(compact) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(DENSITY_KEY, compact ? 'compact' : 'comfortable')
+}
+
 const keyword = ref('')
 const opened = ref(loadGroupOpenState())
 const sectionOpened = ref(loadSectionOpenState())
@@ -451,6 +469,7 @@ const quickMenuSlug = ref('')
 const batchMode = ref(false)
 const selectedSlugs = ref([])
 const selectedOnlyMode = ref(false)
+const compactMode = ref(loadCompactMode())
 
 const props = defineProps({
   docs: {
@@ -492,6 +511,10 @@ watch(opened, (value) => {
 watch(sectionOpened, (value) => {
   persistSectionOpenState(value)
 }, { deep: true })
+
+watch(compactMode, (compact) => {
+  persistCompactMode(compact)
+})
 
 watch(() => props.docs, () => {
   const valid = new Set(props.docs.map((doc) => doc.slug))
