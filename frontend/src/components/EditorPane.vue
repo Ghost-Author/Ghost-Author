@@ -268,42 +268,52 @@
     </div>
 
     <section class="comment-panel" v-if="!isCreateMode">
-      <h3>附件（{{ attachments.length }}）</h3>
-      <div class="attachment-actions">
-        <input ref="fileInput" type="file" :disabled="!canEdit" @change="onSelectFile" />
-      </div>
-      <ul class="attachment-list">
-        <li v-for="item in attachments" :key="item.id">
-          <div class="attachment-main">
-            <a :href="item.fullUrl" target="_blank" rel="noreferrer">{{ item.fileName }}</a>
-            <span>{{ prettySize(item.fileSize) }}</span>
-          </div>
-          <div class="attachment-btns">
-            <button class="secondary small" :disabled="!canEdit" @click="$emit('insert-attachment', item)">插入正文</button>
-            <button class="danger small" :disabled="!canEdit" @click="$emit('delete-attachment', item.id)">删除</button>
-          </div>
-        </li>
-        <li v-if="attachments.length === 0" class="comment-empty">还没有附件。</li>
-      </ul>
-
-      <h3>评论（{{ comments.length }}）</h3>
-      <div class="comment-inputs">
-        <input v-model="commentAuthor" placeholder="昵称（可选）" />
-        <textarea v-model="commentContent" placeholder="写下你的评论..." />
-        <button :disabled="!canEdit" @click="submitComment">发布评论</button>
+      <button class="panel-fold-head section-fold-head" @click="attachmentsOpen = !attachmentsOpen">
+        <strong>附件（{{ attachments.length }}）</strong>
+        <span>{{ attachmentsOpen ? '收起 ▾' : '展开 ▸' }}</span>
+      </button>
+      <div v-show="attachmentsOpen">
+        <div class="attachment-actions">
+          <input ref="fileInput" type="file" :disabled="!canEdit" @change="onSelectFile" />
+        </div>
+        <ul class="attachment-list">
+          <li v-for="item in attachments" :key="item.id">
+            <div class="attachment-main">
+              <a :href="item.fullUrl" target="_blank" rel="noreferrer">{{ item.fileName }}</a>
+              <span>{{ prettySize(item.fileSize) }}</span>
+            </div>
+            <div class="attachment-btns">
+              <button class="secondary small" :disabled="!canEdit" @click="$emit('insert-attachment', item)">插入正文</button>
+              <button class="danger small" :disabled="!canEdit" @click="$emit('delete-attachment', item.id)">删除</button>
+            </div>
+          </li>
+          <li v-if="attachments.length === 0" class="comment-empty">还没有附件。</li>
+        </ul>
       </div>
 
-      <ul class="comment-list">
-        <li v-for="comment in comments" :key="comment.id">
-          <div class="comment-head">
-            <strong>{{ comment.author }}</strong>
-            <span>{{ formatTime(comment.createdAt) }}</span>
-          </div>
-          <p>{{ comment.content }}</p>
-          <button class="danger small" :disabled="!canEdit" @click="$emit('delete-comment', comment.id)">删除</button>
-        </li>
-        <li v-if="comments.length === 0" class="comment-empty">还没有评论，来写第一条吧。</li>
-      </ul>
+      <button class="panel-fold-head section-fold-head" @click="commentsOpen = !commentsOpen">
+        <strong>评论（{{ comments.length }}）</strong>
+        <span>{{ commentsOpen ? '收起 ▾' : '展开 ▸' }}</span>
+      </button>
+      <div v-show="commentsOpen">
+        <div class="comment-inputs">
+          <input v-model="commentAuthor" placeholder="昵称（可选）" />
+          <textarea v-model="commentContent" placeholder="写下你的评论..." />
+          <button :disabled="!canEdit" @click="submitComment">发布评论</button>
+        </div>
+
+        <ul class="comment-list">
+          <li v-for="comment in comments" :key="comment.id">
+            <div class="comment-head">
+              <strong>{{ comment.author }}</strong>
+              <span>{{ formatTime(comment.createdAt) }}</span>
+            </div>
+            <p>{{ comment.content }}</p>
+            <button class="danger small" :disabled="!canEdit" @click="$emit('delete-comment', comment.id)">删除</button>
+          </li>
+          <li v-if="comments.length === 0" class="comment-empty">还没有评论，来写第一条吧。</li>
+        </ul>
+      </div>
     </section>
   </div>
 </template>
@@ -385,6 +395,8 @@ const templateCenterOpen = ref(false)
 const editingTemplateId = ref(null)
 const actionMenuOpen = ref(false)
 const actionMenuRef = ref(null)
+const attachmentsOpen = ref(true)
+const commentsOpen = ref(true)
 const newTemplate = ref({
   name: '',
   description: '',

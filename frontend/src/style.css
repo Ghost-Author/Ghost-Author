@@ -1480,6 +1480,10 @@ label {
   font-size: 14px;
 }
 
+.section-fold-head {
+  margin-bottom: 8px;
+}
+
 .comment-inputs {
   display: grid;
   grid-template-columns: 1fr;
