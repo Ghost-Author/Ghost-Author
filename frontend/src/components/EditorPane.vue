@@ -281,8 +281,17 @@
                     <input type="checkbox" v-model="outlineBatchWithLevel" />
                     层级前缀
                   </label>
+                  <button class="secondary tiny" @click="outlinePreviewOpen = !outlinePreviewOpen">
+                    {{ outlinePreviewOpen ? '收起预览' : '预览' }}
+                  </button>
                   <button class="secondary tiny" @click="copySelectedOutlineLinks">复制已选链接</button>
                   <button class="secondary tiny" @click="clearOutlineSelection">清空选择</button>
+                </div>
+                <div class="outline-preview-box" v-if="readOutlineOpen && selectedOutlineItems.length && outlinePreviewOpen">
+                  <textarea readonly :value="outlineBatchText" />
+                  <div class="outline-preview-actions">
+                    <button class="secondary tiny" @click="copyOutlinePreview">复制预览内容</button>
+                  </div>
                 </div>
                 <div class="read-outline-filter" v-if="readOutlineOpen && outline.length">
                   <input v-model="readOutlineQuery" placeholder="过滤目录标题" />
@@ -611,6 +620,7 @@ const outlineDefaultAction = ref(loadOutlineDefaultAction())
 const outlineBatchFormat = ref(loadOutlineBatchFormat())
 const outlineBatchSeparator = ref(loadOutlineBatchSeparator())
 const outlineBatchWithLevel = ref(loadOutlineBatchWithLevel())
+const outlinePreviewOpen = ref(false)
 const selectedOutlineIds = ref([])
 const lastSelectedOutlineId = ref('')
 const outlineCursorId = ref('')
@@ -709,6 +719,8 @@ const selectedOutlineEntries = computed(() => {
   return result
 })
 
+const outlineBatchText = computed(() => buildSelectedOutlineCopyText())
+
 const childTreeRows = computed(() => {
   const rows = []
   const openStack = []
@@ -797,6 +809,7 @@ watch(
     readPermOpen.value = false
     readChildrenOpen.value = true
     readOutlineLevelFilter.value = null
+    outlinePreviewOpen.value = false
     selectedOutlineIds.value = []
     lastSelectedOutlineId.value = ''
     outlineCursorId.value = ''
@@ -1457,6 +1470,7 @@ function isOutlineSelected(item) {
 }
 
 function clearOutlineSelection() {
+  outlinePreviewOpen.value = false
   selectedOutlineIds.value = []
   lastSelectedOutlineId.value = ''
   outlineRangeAnchorId.value = ''
@@ -1619,18 +1633,7 @@ async function copySelectedOutlineLinks() {
   if (!selectedOutlineEntries.value.length) {
     return
   }
-  const labelOf = (item) => {
-    const matched = props.outline.find((node) => node.id === item.id)
-    const levelPrefix = outlineBatchWithLevel.value && matched ? `H${matched.level} ` : ''
-    return `${levelPrefix}${item.text}`
-  }
-  const text = outlineBatchFormat.value === 'LINKS'
-    ? selectedOutlineEntries.value
-      .map((item) => outlineBatchWithLevel.value ? `${labelOf(item)} - ${item.link}` : item.link)
-      .join(resolveOutlineSeparator())
-    : selectedOutlineEntries.value
-      .map((item) => `- [${labelOf(item)}](${item.link})`)
-      .join(resolveOutlineSeparator())
+  const text = buildSelectedOutlineCopyText()
   try {
     await navigator.clipboard.writeText(text)
     const rawCount = selectedOutlineItems.value.length
@@ -1639,6 +1642,19 @@ async function copySelectedOutlineLinks() {
       type: 'success',
       message: `已复制 ${dedupedCount}/${rawCount} 条目录链接（${outlineBatchFormat.value === 'LINKS' ? '纯链接' : 'Markdown'}${outlineBatchWithLevel.value ? ' + 层级' : ''} + ${outlineBatchSeparatorLabel()}）`
     })
+  } catch {
+    emit('notify', { type: 'error', message: '复制失败，请手动复制' })
+  }
+}
+
+async function copyOutlinePreview() {
+  const text = outlineBatchText.value
+  if (!text) {
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(text)
+    emit('notify', { type: 'success', message: '预览内容已复制' })
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
   }
@@ -1679,6 +1695,25 @@ function buildOutlineLink(item) {
   const pagePart = model.value.slug ? `?page=${encodeURIComponent(model.value.slug)}` : ''
   const hashPart = headingId ? `#${encodeURIComponent(headingId)}` : ''
   return `${base}${pagePart}${hashPart}`
+}
+
+function buildSelectedOutlineCopyText() {
+  if (!selectedOutlineEntries.value.length) {
+    return ''
+  }
+  const labelOf = (item) => {
+    const matched = props.outline.find((node) => node.id === item.id)
+    const levelPrefix = outlineBatchWithLevel.value && matched ? `H${matched.level} ` : ''
+    return `${levelPrefix}${item.text}`
+  }
+  if (outlineBatchFormat.value === 'LINKS') {
+    return selectedOutlineEntries.value
+      .map((item) => outlineBatchWithLevel.value ? `${labelOf(item)} - ${item.link}` : item.link)
+      .join(resolveOutlineSeparator())
+  }
+  return selectedOutlineEntries.value
+    .map((item) => `- [${labelOf(item)}](${item.link})`)
+    .join(resolveOutlineSeparator())
 }
 
 function resolveOutlineSeparator() {

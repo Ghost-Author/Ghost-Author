@@ -1932,6 +1932,28 @@ button.small {
   margin: 0;
 }
 
+.outline-preview-box {
+  margin-top: 8px;
+  border: 1px solid #d8e6fc;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 8px;
+}
+
+.outline-preview-box textarea {
+  margin: 0;
+  min-height: 120px;
+  resize: vertical;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.outline-preview-actions {
+  margin-top: 6px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .read-outline-progress {
   margin-top: 8px;
   border: 1px solid #d9e6fc;
