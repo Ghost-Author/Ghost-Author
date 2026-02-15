@@ -46,6 +46,7 @@
           返回父页面
         </button>
         <button class="secondary small" @click="copyPageLink">复制页面链接</button>
+        <button class="secondary small" @click="copyPageMarkdownLink">复制 Markdown 链接</button>
         <button class="secondary small" :class="{ active: isFavorite }" @click="$emit('toggle-favorite', model.slug)">
           {{ isFavorite ? '取消收藏' : '收藏页面' }}
         </button>
@@ -78,7 +79,7 @@
         <span class="page-dirty-tip" :class="{ dirty: hasUnsavedChanges }">
           {{ hasUnsavedChanges ? '有改动待保存' : '内容已同步' }}
         </span>
-        <span class="page-action-shortcuts">Alt+[ / Alt+] 同级 · Alt+P 父级 · Alt+F 收藏 · Alt+L 链接 · Alt+H 分享 · Alt+S 保存</span>
+        <span class="page-action-shortcuts">Alt+[ / Alt+] 同级 · Alt+P 父级 · Alt+F 收藏 · Alt+L 链接 · Alt+M Markdown · Alt+H 分享 · Alt+S 保存</span>
         <span class="page-leave-tip" v-if="hasUnsavedChanges">关闭页面前会提示保存</span>
         <button v-if="isEditingSafe" :disabled="!hasUnsavedChanges" @click="$emit('save', model)">保存</button>
         <button
@@ -1434,6 +1435,11 @@ function handlePageActionShortcuts(event) {
     copyPageLink()
     return true
   }
+  if (key === 'm') {
+    event.preventDefault()
+    copyPageMarkdownLink()
+    return true
+  }
   if (key === 'h') {
     if (!props.canEdit) {
       return false
@@ -2165,6 +2171,21 @@ async function copyPageLink() {
   try {
     await navigator.clipboard.writeText(link)
     emit('notify', { type: 'success', message: '页面链接已复制' })
+  } catch {
+    emit('notify', { type: 'error', message: '复制失败，请手动复制' })
+  }
+}
+
+async function copyPageMarkdownLink() {
+  if (!model.value.slug) {
+    return
+  }
+  const title = model.value.title || model.value.slug
+  const link = `${window.location.origin}?page=${encodeURIComponent(model.value.slug)}`
+  const markdown = `[${title}](${link})`
+  try {
+    await navigator.clipboard.writeText(markdown)
+    emit('notify', { type: 'success', message: 'Markdown 链接已复制' })
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
   }
