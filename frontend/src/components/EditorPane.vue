@@ -50,6 +50,7 @@
         </button>
         <button class="secondary small" @click="$emit('duplicate-page')">复制为草稿</button>
         <button class="secondary small" @click="openCurrentPageInNewTab">新标签打开</button>
+        <button class="secondary small" @click="copyPageSlug">复制 slug</button>
         <button class="secondary small" @click="copyPageLink">复制页面链接</button>
         <button class="secondary small" @click="copyPageMarkdownLink">复制 Markdown 链接</button>
         <button class="secondary small" :class="{ active: isFavorite }" @click="$emit('toggle-favorite', model.slug)">
@@ -84,7 +85,7 @@
         <span class="page-dirty-tip" :class="{ dirty: hasUnsavedChanges }">
           {{ hasUnsavedChanges ? '有改动待保存' : '内容已同步' }}
         </span>
-        <span class="page-action-shortcuts">Alt+[ / Alt+] 同级 · Alt+P 父级 · Alt+V 版本栏 · Alt+D 复制 · Alt+A 归档/恢复 · Alt+O 新标签 · Alt+F 收藏 · Alt+L 链接 · Alt+M Markdown · Alt+H 分享 · Alt+S 保存</span>
+        <span class="page-action-shortcuts">Alt+[ / Alt+] 同级 · Alt+P 父级 · Alt+V 版本栏 · Alt+D 复制 · Alt+A 归档/恢复 · Alt+O 新标签 · Alt+G slug · Alt+F 收藏 · Alt+L 链接 · Alt+M Markdown · Alt+H 分享 · Alt+S 保存</span>
         <span class="page-leave-tip" v-if="hasUnsavedChanges">关闭页面前会提示保存</span>
         <button v-if="isEditingSafe" :disabled="!hasUnsavedChanges" @click="$emit('save', model)">保存</button>
         <button
@@ -1476,6 +1477,11 @@ function handlePageActionShortcuts(event) {
     openCurrentPageInNewTab()
     return true
   }
+  if (key === 'g') {
+    event.preventDefault()
+    copyPageSlug()
+    return true
+  }
   if (key === 'm') {
     event.preventDefault()
     copyPageMarkdownLink()
@@ -2223,6 +2229,18 @@ function openCurrentPageInNewTab() {
   }
   const link = `${window.location.origin}?page=${encodeURIComponent(model.value.slug)}`
   window.open(link, '_blank', 'noopener')
+}
+
+async function copyPageSlug() {
+  if (!model.value.slug) {
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(model.value.slug)
+    emit('notify', { type: 'success', message: 'slug 已复制' })
+  } catch {
+    emit('notify', { type: 'error', message: '复制失败，请手动复制' })
+  }
 }
 
 async function copyPageMarkdownLink() {
