@@ -1301,6 +1301,35 @@ label {
   align-items: center;
 }
 
+.version-head-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.version-history ul.compact li {
+  padding: 6px 8px;
+  margin-bottom: 6px;
+}
+
+.version-history ul.compact li strong {
+  font-size: 12px;
+}
+
+.version-history ul.compact li p {
+  margin-top: 2px;
+  font-size: 11px;
+}
+
+.version-history ul.compact .version-actions {
+  gap: 4px;
+}
+
+.version-history ul.compact .version-actions button {
+  padding: 3px 7px;
+  font-size: 11px;
+}
+
 .version-actions {
   display: flex;
   gap: 6px;
@@ -1394,6 +1423,12 @@ label {
   margin-bottom: 8px;
   font-size: 12px;
   color: #4b5f84;
+}
+
+.diff-toolbar-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
 
 .diff-search {

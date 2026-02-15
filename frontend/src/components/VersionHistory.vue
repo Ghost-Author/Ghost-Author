@@ -5,7 +5,12 @@
         <h3>Page Tools</h3>
         <p class="section-subtitle">目录导航 + 版本管理</p>
       </div>
-      <button :disabled="!slug" @click="$emit('refresh')">刷新</button>
+      <div class="version-head-actions">
+        <button class="secondary tiny" :class="{ active: compactMode }" @click="compactMode = !compactMode">
+          {{ compactMode ? '舒适视图' : '紧凑视图' }}
+        </button>
+        <button :disabled="!slug" @click="$emit('refresh')">刷新</button>
+      </div>
     </div>
 
     <div v-if="!slug" class="hint">先保存文档后才会产生目录和版本</div>
@@ -42,7 +47,7 @@
         v-model="versionKeyword"
         placeholder="筛选版本（版本号/时间）"
       />
-      <ul v-show="historyOpen">
+      <ul v-show="historyOpen" :class="{ compact: compactMode }">
         <li v-for="item in filteredVersions" :key="item.id">
           <div>
             <strong>v{{ item.versionNo }}</strong>
@@ -69,9 +74,14 @@
         <div v-show="diffOpen">
           <div class="diff-toolbar">
             <span>对比: v{{ diffFrom || '-' }} -> v{{ diffTo || '-' }}</span>
-            <button :disabled="!diffFrom || !diffTo" @click="$emit('diff')">生成 Diff</button>
+            <div class="diff-toolbar-actions">
+              <button class="secondary tiny" :class="{ active: diffToolsOpen }" @click="diffToolsOpen = !diffToolsOpen">
+                {{ diffToolsOpen ? '收起工具' : '展开工具' }}
+              </button>
+              <button :disabled="!diffFrom || !diffTo" @click="$emit('diff')">生成 Diff</button>
+            </div>
           </div>
-          <div class="diff-search-row">
+          <div class="diff-search-row" v-show="diffToolsOpen">
             <input
               class="diff-search"
               v-model="diffKeyword"
@@ -102,6 +112,21 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+const VERSION_DENSITY_KEY = 'ga-version-density'
+
+function loadCompactMode() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+  return window.localStorage.getItem(VERSION_DENSITY_KEY) === 'compact'
+}
+
+function persistCompactMode(compact) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(VERSION_DENSITY_KEY, compact ? 'compact' : 'comfortable')
+}
 
 const props = defineProps({
   slug: {
@@ -133,6 +158,8 @@ const props = defineProps({
 const outlineOpen = ref(true)
 const historyOpen = ref(true)
 const diffOpen = ref(true)
+const compactMode = ref(loadCompactMode())
+const diffToolsOpen = ref(true)
 const activeOutlineText = ref('')
 const versionKeyword = ref('')
 const diffKeyword = ref('')
@@ -304,6 +331,10 @@ watch([diffKeyword, () => props.diffText], () => {
   if (diffKeyword.value.trim()) {
     nextTick(() => scrollCurrentHitIntoView())
   }
+})
+
+watch(compactMode, (compact) => {
+  persistCompactMode(compact)
 })
 
 onMounted(() => {
