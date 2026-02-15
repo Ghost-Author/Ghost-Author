@@ -2101,6 +2101,32 @@ button.small {
   cursor: default;
 }
 
+.quick-list .quick-empty,
+.outline-empty,
+.version-history .hint,
+.version-history li.version-empty,
+.comment-empty,
+.home-empty,
+.command-empty {
+  border: 1px dashed #d4e2fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  color: #8fa2c2;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.quick-list .quick-empty::before,
+.outline-empty::before,
+.version-history .hint::before,
+.version-history li.version-empty::before,
+.comment-empty::before,
+.home-empty::before,
+.command-empty::before {
+  content: "◌ ";
+  color: #97b1dd;
+}
+
 @media (max-width: 1180px) {
   body {
     height: auto;
@@ -2131,6 +2157,22 @@ button.small {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .topbar-right {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .user-input {
+    width: min(220px, 100%);
+  }
+
   .shortcut-hint {
     display: none;
   }
@@ -2143,5 +2185,15 @@ button.small {
   .action-group.more {
     margin-left: 0;
     align-self: flex-end;
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar-right {
+    justify-content: stretch;
+  }
+
+  .user-input {
+    width: 100%;
   }
 }
