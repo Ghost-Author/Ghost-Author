@@ -1,5 +1,5 @@
 <template>
-  <div class="editor-pane">
+  <div ref="editorPaneRef" class="editor-pane">
     <div class="pane-head">
       <h2>Page Editor</h2>
       <div class="view-switch" v-if="!isCreateMode">
@@ -471,6 +471,7 @@ const isEditing = ref(false)
 const isEditingSafe = computed(() => (isCreateMode.value || (isEditing.value && !isLocked.value)) && props.canEdit)
 const commentAuthor = ref('')
 const commentContent = ref('')
+const editorPaneRef = ref(null)
 const fileInput = ref(null)
 const readPreviewRef = ref(null)
 const titleInputRef = ref(null)
@@ -491,6 +492,7 @@ const activeOutlineText = ref('')
 const readInfoOpen = ref(false)
 const readPanelDock = ref('right')
 const READ_PANEL_DOCK_KEY = 'ga-read-panel-dock'
+let readScrollRaf = null
 const newTemplate = ref({
   name: '',
   description: '',
@@ -547,11 +549,21 @@ onMounted(() => {
     }
     window.addEventListener('click', onGlobalClick)
   }
+  if (editorPaneRef.value) {
+    editorPaneRef.value.addEventListener('scroll', onReadScroll, { passive: true })
+  }
 })
 
 onBeforeUnmount(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('click', onGlobalClick)
+  }
+  if (editorPaneRef.value) {
+    editorPaneRef.value.removeEventListener('scroll', onReadScroll)
+  }
+  if (readScrollRaf !== null && typeof window !== 'undefined') {
+    window.cancelAnimationFrame(readScrollRaf)
+    readScrollRaf = null
   }
 })
 
@@ -693,6 +705,53 @@ function jumpToOutline(item) {
   activeOutlineText.value = item.text
   target.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
+
+function onReadScroll() {
+  if (readScrollRaf !== null || isEditingSafe.value || !readPreviewRef.value) {
+    return
+  }
+  readScrollRaf = window.requestAnimationFrame(() => {
+    readScrollRaf = null
+    updateActiveOutlineByScroll()
+  })
+}
+
+function updateActiveOutlineByScroll() {
+  const container = readPreviewRef.value
+  const pane = editorPaneRef.value
+  if (!container || !pane) {
+    return
+  }
+  const headings = Array.from(container.querySelectorAll('h1, h2, h3, h4'))
+  if (!headings.length) {
+    activeOutlineText.value = ''
+    return
+  }
+  const paneTop = pane.getBoundingClientRect().top
+  let current = headings[0]
+  for (const heading of headings) {
+    const delta = heading.getBoundingClientRect().top - paneTop
+    if (delta <= 110) {
+      current = heading
+    } else {
+      break
+    }
+  }
+  activeOutlineText.value = (current.textContent || '').trim()
+}
+
+watch(
+  () => props.doc.id,
+  () => {
+    activeOutlineText.value = ''
+    if (typeof window === 'undefined') {
+      return
+    }
+    window.setTimeout(() => {
+      updateActiveOutlineByScroll()
+    }, 30)
+  }
+)
 
 async function copyShareLink() {
   if (!props.shareLink) {
