@@ -253,7 +253,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { api } from './api/client'
+import { api, loadApiAuthToken, setApiAuthToken } from './api/client'
 import DocList from './components/DocList.vue'
 import EditorPane from './components/EditorPane.vue'
 import SpaceHome from './components/SpaceHome.vue'
@@ -1549,33 +1549,41 @@ function loadCollections() {
 
 function loadAuthSessionUser() {
   if (typeof window === 'undefined') {
-    return ''
+    return null
   }
   try {
     const raw = window.localStorage.getItem(AUTH_SESSION_KEY)
     if (!raw) {
-      return ''
+      return null
     }
     const parsed = JSON.parse(raw)
     const username = (parsed?.username || '').trim()
-    return username
+    const expiresAt = Number(parsed?.expiresAt || 0)
+    if (!username || !Number.isFinite(expiresAt)) {
+      return null
+    }
+    return {
+      username,
+      expiresAt
+    }
   } catch {
-    return ''
+    return null
   }
 }
 
-function persistAuthSession(username) {
+function persistAuthSession(username, expiresAt = 0) {
   if (typeof window === 'undefined') {
     return
   }
   const clean = (username || '').trim()
-  if (!clean) {
+  const expireNumber = Number(expiresAt || 0)
+  if (!clean || !Number.isFinite(expireNumber) || expireNumber <= 0) {
     window.localStorage.removeItem(AUTH_SESSION_KEY)
     return
   }
   window.localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({
     username: clean,
-    loginAt: Date.now()
+    expiresAt: expireNumber
   }))
 }
 
@@ -1594,9 +1602,26 @@ async function submitLogin() {
     loginError.value = '请输入用户名和密码'
     return
   }
-  currentUser.value = username
-  persistCollections()
-  persistAuthSession(username)
+  try {
+    const { data } = await api.post('/auth/login', {
+      username,
+      password
+    })
+    const authUser = (data?.username || username).trim()
+    const token = (data?.token || '').trim()
+    const expiresAt = Number(data?.expiresAt || 0)
+    if (!token || !authUser || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      loginError.value = '登录响应无效，请稍后重试'
+      return
+    }
+    setApiAuthToken(token)
+    currentUser.value = authUser
+    persistCollections()
+    persistAuthSession(authUser, expiresAt)
+  } catch {
+    loginError.value = '用户名或密码错误'
+    return
+  }
   isAuthenticated.value = true
   loginForm.value.password = ''
   loginError.value = ''
@@ -1606,7 +1631,8 @@ async function submitLogin() {
 }
 
 function logout() {
-  persistAuthSession('')
+  persistAuthSession('', 0)
+  setApiAuthToken('')
   isAuthenticated.value = false
   pendingPageSlug.value = ''
   loginForm.value = {
@@ -1748,14 +1774,25 @@ onMounted(async () => {
   const initialPage = params.get('page') || ''
   loadCollections()
   pendingPageSlug.value = initialPage
-  const sessionUser = loadAuthSessionUser()
-  if (sessionUser) {
-    currentUser.value = sessionUser
-    loginForm.value.username = sessionUser
-    isAuthenticated.value = true
-    await bootstrapWorkspace(initialPage)
-    pendingPageSlug.value = ''
+  const session = loadAuthSessionUser()
+  const token = loadApiAuthToken()
+  if (session && token && session.expiresAt > Date.now()) {
+    try {
+      await api.get('/auth/me')
+      currentUser.value = session.username
+      loginForm.value.username = session.username
+      isAuthenticated.value = true
+      await bootstrapWorkspace(initialPage)
+      pendingPageSlug.value = ''
+    } catch {
+      persistAuthSession('', 0)
+      setApiAuthToken('')
+      isAuthenticated.value = false
+      loginForm.value.username = currentUser.value || ''
+    }
   } else {
+    persistAuthSession('', 0)
+    setApiAuthToken('')
     isAuthenticated.value = false
     loginForm.value.username = currentUser.value || ''
   }

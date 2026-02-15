@@ -29,6 +29,9 @@ knowledge:
     enabled: ${SEARCH_ENABLED:false}
   cors:
     allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:5173}
+  auth:
+    users: ${AUTH_USERS:admin:admin123}
+    token-ttl-hours: ${AUTH_TOKEN_TTL_HOURS:168}
 
 management:
   endpoints:

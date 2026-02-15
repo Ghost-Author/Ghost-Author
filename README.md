@@ -88,6 +88,8 @@ backend 环境变量建议：
 - `SEARCH_URIS=http://<your-es-host>:9200`（如果启用搜索）
 - `DOCS_BASE_DIR=/app/storage/docs`
 - `CORS_ALLOWED_ORIGIN=https://<your-frontend-domain>`
+- `AUTH_USERS=admin:admin123,liupeng:yourPassword`（账号密码，逗号分隔）
+- `AUTH_TOKEN_TTL_HOURS=168`（登录 token 有效时长，单位小时）
 - `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=70 -XX:InitialRAMPercentage=20 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError`（避免小规格实例被 OOM 杀掉）
 
 后端健康后会得到一个 Railway 域名，例如：
@@ -176,9 +178,22 @@ npm run dev
 - `SEARCH_ENABLED`：是否开启检索（`true/false`）
 - `DOCS_BASE_DIR`：Markdown 文档目录
 - `CORS_ALLOWED_ORIGIN`：前端跨域地址
+- `AUTH_USERS`：登录账号密码（格式：`user1:pass1,user2:pass2`）
+- `AUTH_TOKEN_TTL_HOURS`：登录 token 有效时长（小时）
 - `VITE_API_BASE_URL`：前端调用后端 API 基地址（Railway 前端服务建议配置）
 
 ## API 示例
+
+### 登录
+
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "username":"admin",
+    "password":"admin123"
+  }'
+```
 
 ### 创建文档
 

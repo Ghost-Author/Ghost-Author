@@ -26,6 +26,7 @@ services:
       - SEARCH_ENABLED=true
       - DOCS_BASE_DIR=/app/storage/docs
       - CORS_ALLOWED_ORIGIN=http://localhost:5173
+      - AUTH_USERS=admin:admin123
     volumes:
       - backend-data:/app/data
       - docs-data:/app/storage/docs
