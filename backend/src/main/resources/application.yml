@@ -17,6 +17,10 @@ spring:
       mode: always
   elasticsearch:
     uris: ${SEARCH_URIS:http://localhost:9200}
+  data:
+    elasticsearch:
+      repositories:
+        enabled: ${SEARCH_ENABLED:false}
 
 knowledge:
   storage:

@@ -6,12 +6,14 @@ import com.ghostauthor.knowledge.repository.SearchDocumentRepository;
 import com.ghostauthor.knowledge.service.SearchService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@ConditionalOnProperty(name = "knowledge.search.enabled", havingValue = "true")
 public class SearchServiceImpl implements SearchService {
 
     private static final Logger logger = LoggerFactory.getLogger(SearchServiceImpl.class);
@@ -20,7 +22,7 @@ public class SearchServiceImpl implements SearchService {
     private final boolean searchEnabled;
 
     public SearchServiceImpl(SearchDocumentRepository searchDocumentRepository,
-                             @Value("${knowledge.search.enabled:true}") boolean searchEnabled) {
+                             @Value("${knowledge.search.enabled:false}") boolean searchEnabled) {
         this.searchDocumentRepository = searchDocumentRepository;
         this.searchEnabled = searchEnabled;
     }
