@@ -19,6 +19,8 @@
         <button class="secondary tiny" v-if="batchMode" @click="selectByPriority('HIGH')">选高优</button>
         <button class="secondary tiny" v-if="batchMode" @click="selectByPriority('MEDIUM')">选中优</button>
         <button class="secondary tiny" v-if="batchMode" @click="selectByPriority('LOW')">选低优</button>
+        <button class="secondary tiny" v-if="batchMode" @click="selectByDue('TODAY')">选今天到期</button>
+        <button class="secondary tiny" v-if="batchMode" @click="selectByDue('OVERDUE')">选已逾期</button>
         <button class="secondary tiny" v-if="batchMode" @click="invertSelection">反选</button>
         <button class="secondary tiny" v-if="batchMode" @click="clearSelected">清空</button>
         <button class="secondary tiny" v-if="batchMode" :disabled="selectedSlugs.length === 0" @click="emitBulkAction('BULK_MOVE_ROOT')">移到顶级</button>
@@ -736,6 +738,27 @@ function selectByPriority(priority) {
     .flatMap((group) => group.items)
   selectedSlugs.value = all
     .filter((item) => (item.priority || 'MEDIUM') === priority)
+    .map((item) => item.slug)
+}
+
+function selectByDue(mode) {
+  const all = visibilitySections.value
+    .flatMap((section) => section.groups)
+    .flatMap((group) => group.items)
+  const today = new Date().toISOString().slice(0, 10)
+  selectedSlugs.value = all
+    .filter((item) => {
+      if (!item.dueDate) {
+        return false
+      }
+      if (mode === 'TODAY') {
+        return item.dueDate === today
+      }
+      if (mode === 'OVERDUE') {
+        return item.dueDate < today
+      }
+      return false
+    })
     .map((item) => item.slug)
 }
 
