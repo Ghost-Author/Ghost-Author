@@ -10,56 +10,80 @@
       </div>
     </div>
 
-    <div class="meta-grid">
-      <label>
-        Slug
-        <input v-model="model.slug" :disabled="!isCreateMode || !isEditingSafe" />
-      </label>
-      <label>
-        标题
-        <input v-model="model.title" :disabled="!isEditingSafe" />
-      </label>
-    </div>
+    <template v-if="isEditingSafe">
+      <div class="meta-grid">
+        <label>
+          Slug
+          <input v-model="model.slug" :disabled="!isCreateMode || !isEditingSafe" />
+        </label>
+        <label>
+          标题
+          <input v-model="model.title" :disabled="!isEditingSafe" />
+        </label>
+      </div>
 
-    <div class="meta-grid">
-      <label>
-        父页面 Slug
-        <input v-model="model.parentSlug" :disabled="!isEditingSafe" placeholder="例如：product-guide（可选）" />
-      </label>
-      <label>
-        页面状态
-        <select v-model="model.status" :disabled="!isEditingSafe">
-          <option value="DRAFT">草稿</option>
-          <option value="PUBLISHED">已发布</option>
-        </select>
-      </label>
-    </div>
+      <div class="meta-grid">
+        <label>
+          父页面 Slug
+          <input v-model="model.parentSlug" :disabled="!isEditingSafe" placeholder="例如：product-guide（可选）" />
+        </label>
+        <label>
+          页面状态
+          <select v-model="model.status" :disabled="!isEditingSafe">
+            <option value="DRAFT">草稿</option>
+            <option value="PUBLISHED">已发布</option>
+          </select>
+        </label>
+      </div>
 
-    <div class="meta-grid">
+      <div class="meta-grid">
+        <label>
+          标签（逗号分隔）
+          <input v-model="labelsText" :disabled="!isEditingSafe" placeholder="产品, 入门, SOP" />
+        </label>
+        <div />
+      </div>
+
       <label>
-        标签（逗号分隔）
-        <input v-model="labelsText" :disabled="!isEditingSafe" placeholder="产品, 入门, SOP" />
+        摘要
+        <input v-model="model.summary" :disabled="!isEditingSafe" />
       </label>
-      <div />
-    </div>
 
-    <label>
-      摘要
-      <input v-model="model.summary" :disabled="!isEditingSafe" />
-    </label>
+      <MdEditor v-model="model.content" :toolbars="toolbars" />
+    </template>
 
-    <div v-if="!isEditingSafe" class="preview-only">
-      <MdPreview :model-value="model.content" />
-    </div>
-    <MdEditor v-else v-model="model.content" :toolbars="toolbars" />
+    <template v-else>
+      <div class="read-meta">
+        <div class="read-meta-row">
+          <h3>{{ model.title || 'Untitled' }}</h3>
+          <span class="read-status" :class="(model.status || 'DRAFT').toLowerCase()">
+            {{ model.status === 'PUBLISHED' ? '已发布' : '草稿' }}
+          </span>
+        </div>
+        <p class="read-summary">{{ model.summary || '暂无摘要' }}</p>
+        <div class="read-tags" v-if="model.labels && model.labels.length">
+          <span class="doc-label" v-for="label in model.labels" :key="label">{{ label }}</span>
+        </div>
+      </div>
+      <div class="preview-only">
+        <MdPreview :model-value="model.content" />
+      </div>
+    </template>
 
     <div class="actions">
       <button v-if="isEditingSafe" @click="$emit('save', model)">保存</button>
+      <button
+        v-if="!isCreateMode && isEditingSafe"
+        class="secondary"
+        @click="quickToggleStatus"
+      >
+        {{ model.status === 'PUBLISHED' ? '转为草稿并保存' : '发布并保存' }}
+      </button>
       <button class="danger" :disabled="isCreateMode" @click="$emit('delete', model.slug)">删除</button>
     </div>
 
     <section class="comment-panel" v-if="!isCreateMode">
-      <h3>评论</h3>
+      <h3>评论（{{ comments.length }}）</h3>
       <div class="comment-inputs">
         <input v-model="commentAuthor" placeholder="昵称（可选）" />
         <textarea v-model="commentContent" placeholder="写下你的评论..." />
@@ -75,6 +99,7 @@
           <p>{{ comment.content }}</p>
           <button class="danger small" @click="$emit('delete-comment', comment.id)">删除</button>
         </li>
+        <li v-if="comments.length === 0" class="comment-empty">还没有评论，来写第一条吧。</li>
       </ul>
     </section>
   </div>
@@ -155,5 +180,10 @@ function formatTime(value) {
     return '-'
   }
   return new Date(value).toLocaleString()
+}
+
+function quickToggleStatus() {
+  model.value.status = model.value.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED'
+  emit('save', model.value)
 }
 </script>

@@ -19,6 +19,30 @@
       <button class="search-btn clear" @click="clearSearch">清空</button>
     </div>
 
+    <div class="status-filters">
+      <button
+        class="filter-btn"
+        :class="{ active: statusFilter === 'ALL' }"
+        @click="statusFilter = 'ALL'"
+      >
+        全部 {{ statusCounts.ALL }}
+      </button>
+      <button
+        class="filter-btn"
+        :class="{ active: statusFilter === 'PUBLISHED' }"
+        @click="statusFilter = 'PUBLISHED'"
+      >
+        已发布 {{ statusCounts.PUBLISHED }}
+      </button>
+      <button
+        class="filter-btn"
+        :class="{ active: statusFilter === 'DRAFT' }"
+        @click="statusFilter = 'DRAFT'"
+      >
+        草稿 {{ statusCounts.DRAFT }}
+      </button>
+    </div>
+
     <div class="quick-zones">
       <div class="quick-zone">
         <h4>⭐ 收藏</h4>
@@ -106,6 +130,7 @@ import { computed, ref } from 'vue'
 
 const keyword = ref('')
 const opened = ref({})
+const statusFilter = ref('ALL')
 
 const props = defineProps({
   docs: {
@@ -128,11 +153,29 @@ const props = defineProps({
 
 const emit = defineEmits(['search', 'toggle-favorite'])
 
+const filteredDocs = computed(() => {
+  if (statusFilter.value === 'ALL') {
+    return props.docs
+  }
+  return props.docs.filter((doc) => (doc.status || 'DRAFT') === statusFilter.value)
+})
+
+const statusCounts = computed(() => {
+  const published = props.docs.filter((doc) => (doc.status || 'DRAFT') === 'PUBLISHED').length
+  const draft = props.docs.length - published
+  return {
+    ALL: props.docs.length,
+    PUBLISHED: published,
+    DRAFT: draft
+  }
+})
+
 const groupedDocs = computed(() => {
-  const docsBySlug = new Map(props.docs.map((doc) => [doc.slug, doc]))
+  const sourceDocs = filteredDocs.value
+  const docsBySlug = new Map(sourceDocs.map((doc) => [doc.slug, doc]))
   const childrenByParent = new Map()
 
-  props.docs.forEach((doc) => {
+  sourceDocs.forEach((doc) => {
     const parent = doc.parentSlug || '__root__'
     if (!childrenByParent.has(parent)) {
       childrenByParent.set(parent, [])
@@ -140,7 +183,7 @@ const groupedDocs = computed(() => {
     childrenByParent.get(parent).push(doc)
   })
 
-  const roots = props.docs.filter((doc) => !doc.parentSlug || !docsBySlug.has(doc.parentSlug))
+  const roots = sourceDocs.filter((doc) => !doc.parentSlug || !docsBySlug.has(doc.parentSlug))
   const map = new Map()
 
   roots.forEach((root) => {
