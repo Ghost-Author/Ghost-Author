@@ -9,16 +9,19 @@
       </div>
       <div class="topbar-right">
         <input v-model="currentUser" class="user-input" placeholder="当前用户（如 liupeng）" />
-        <span class="shortcut-hint">⌘/Ctrl+K 搜索 · ⌘/Ctrl+S 保存 · Alt+1/2/3 左栏</span>
+        <span class="shortcut-hint">⌘/Ctrl+K 搜索 · ⌘/Ctrl+S 保存 · Alt+1/2/3/4</span>
         <button class="secondary tiny" @click="openHome">空间首页</button>
         <button class="secondary tiny" @click="toggleRightPanel">
           {{ rightPanelOpen ? '收起右栏' : '展开右栏' }}
+        </button>
+        <button class="secondary tiny" :class="{ active: focusMode }" @click="toggleFocusMode">
+          {{ focusMode ? '退出专注' : '专注模式' }}
         </button>
         <div class="topbar-badge">{{ visibleDocs.length }} pages</div>
       </div>
     </header>
 
-    <div class="breadcrumb">
+    <div class="breadcrumb" v-show="!focusMode">
       <span>🏠 Space</span>
       <span>/</span>
       <span>Knowledge</span>
@@ -29,7 +32,7 @@
       </template>
     </div>
 
-    <div class="layout" :class="{ 'right-collapsed': !rightPanelOpen }" :style="layoutStyle">
+    <div class="layout" :class="{ 'right-collapsed': !rightPanelOpen, 'focus-mode': focusMode }" :style="layoutStyle">
       <DocList
         class="layout-doclist"
         ref="docListRef"
@@ -262,6 +265,7 @@ const recent = ref([])
 const currentUser = ref('admin')
 const rightPanelOpen = ref(loadRightPanelState())
 const leftPaneWidth = ref(loadLeftPaneWidth())
+const focusMode = ref(loadFocusModeState())
 const shareTokenFromUrl = ref('')
 let toastTimer = null
 let confirmResolver = null
@@ -431,6 +435,7 @@ const RECENT_KEY = 'ga-recent'
 const CURRENT_USER_KEY = 'ga-current-user'
 const RIGHT_PANEL_KEY = 'ga-right-panel-open'
 const LEFT_PANE_KEY = 'ga-left-pane-width'
+const FOCUS_MODE_KEY = 'ga-focus-mode'
 
 function loadRightPanelState() {
   if (typeof window === 'undefined') {
@@ -452,6 +457,24 @@ function persistRightPanelState(open) {
 
 function toggleRightPanel() {
   rightPanelOpen.value = !rightPanelOpen.value
+}
+
+function loadFocusModeState() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+  return window.localStorage.getItem(FOCUS_MODE_KEY) === '1'
+}
+
+function persistFocusModeState(open) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(FOCUS_MODE_KEY, open ? '1' : '0')
+}
+
+function toggleFocusMode() {
+  focusMode.value = !focusMode.value
 }
 
 function loadLeftPaneWidth() {
@@ -1403,6 +1426,13 @@ function handleKeydown(event) {
     return
   }
 
+  const isToggleFocusMode = event.altKey && !event.ctrlKey && !event.metaKey && event.key === '4'
+  if (isToggleFocusMode) {
+    event.preventDefault()
+    toggleFocusMode()
+    return
+  }
+
   const isSave = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's'
   if (isSave) {
     event.preventDefault()
@@ -1522,6 +1552,10 @@ watch(rightPanelOpen, (open) => {
 
 watch(leftPaneWidth, (width) => {
   persistLeftPaneWidth(width)
+})
+
+watch(focusMode, (open) => {
+  persistFocusModeState(open)
 })
 
 function normalizeMembers(values) {
