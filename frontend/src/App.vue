@@ -104,14 +104,15 @@
           <input
             v-model="commandQuery"
             placeholder="搜索页面标题或 slug，回车快速打开"
-            @keydown.esc.prevent="closeCommand"
-            @keydown.enter.prevent="openFirstCommandResult"
+            @keydown="onCommandInputKeydown"
           />
         </div>
         <ul class="command-list">
           <li
-            v-for="item in commandResults"
+            v-for="(item, idx) in commandResults"
             :key="item.slug"
+            :class="{ active: idx === commandActiveIndex }"
+            @mouseenter="commandActiveIndex = idx"
             @click="selectCommandDoc(item.slug)"
           >
             <strong>{{ item.title }}</strong>
@@ -143,6 +144,7 @@ const currentDoc = ref(emptyDoc())
 const showHome = ref(true)
 const commandOpen = ref(false)
 const commandQuery = ref('')
+const commandActiveIndex = ref(0)
 const diffFrom = ref(null)
 const diffTo = ref(null)
 const diffText = ref('')
@@ -992,6 +994,7 @@ function handleKeydown(event) {
   if (isCommand) {
     event.preventDefault()
     commandOpen.value = true
+    commandActiveIndex.value = 0
     return
   }
 
@@ -1031,13 +1034,46 @@ function handleKeydown(event) {
 function closeCommand() {
   commandOpen.value = false
   commandQuery.value = ''
+  commandActiveIndex.value = 0
 }
 
 function openFirstCommandResult() {
-  if (commandResults.value.length === 0) {
+  if (commandResults.value.length === 0 || commandActiveIndex.value < 0) {
     return
   }
-  selectCommandDoc(commandResults.value[0].slug)
+  const target = commandResults.value[commandActiveIndex.value] || commandResults.value[0]
+  if (!target) {
+    return
+  }
+  selectCommandDoc(target.slug)
+}
+
+function onCommandInputKeydown(event) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    closeCommand()
+    return
+  }
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    openFirstCommandResult()
+    return
+  }
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    if (commandResults.value.length === 0) {
+      return
+    }
+    commandActiveIndex.value = (commandActiveIndex.value + 1) % commandResults.value.length
+    return
+  }
+  if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    if (commandResults.value.length === 0) {
+      return
+    }
+    commandActiveIndex.value = (commandActiveIndex.value - 1 + commandResults.value.length) % commandResults.value.length
+  }
 }
 
 async function selectCommandDoc(slug) {
@@ -1060,6 +1096,20 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
+})
+
+watch(commandQuery, () => {
+  commandActiveIndex.value = 0
+})
+
+watch(commandResults, (list) => {
+  if (!list.length) {
+    commandActiveIndex.value = 0
+    return
+  }
+  if (commandActiveIndex.value >= list.length) {
+    commandActiveIndex.value = list.length - 1
+  }
 })
 
 watch(currentUser, () => {

@@ -2080,6 +2080,11 @@ button.small {
   background: #ebf3ff;
 }
 
+.command-list li.active {
+  border-color: #8db1f7;
+  background: #eaf3ff;
+}
+
 .command-list li strong {
   display: block;
   color: #2f4f83;
