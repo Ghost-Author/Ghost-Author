@@ -257,8 +257,17 @@
           <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="exportSelectedTemplatesAsMarkdown">导出已选 MD</button>
           <button class="secondary small" @click="exportFilteredTemplatesAsJson">导出当前 JSON</button>
           <button class="secondary small" @click="exportFilteredTemplatesAsMarkdown">导出当前 MD</button>
+          <button class="secondary small" @click="openTemplateImportPicker('JSON')">导入 JSON</button>
+          <button class="secondary small" @click="openTemplateImportPicker('MARKDOWN')">导入 MD</button>
           <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="clearTemplateSelection">清空选择</button>
         </div>
+        <input
+          ref="templateImportInput"
+          class="template-import-input"
+          type="file"
+          accept=".json,.md,.markdown,text/markdown,application/json"
+          @change="onTemplateImportFile"
+        />
         <div v-if="templates.length === 0" class="comment-empty">还没有模板，请先新增。</div>
         <div v-else-if="filteredTemplates.length === 0" class="comment-empty">没有匹配模板，请调整关键词。</div>
         <div v-else class="template-group-list">
@@ -939,6 +948,8 @@ const commentAuthor = ref('')
 const commentContent = ref('')
 const editorPaneRef = ref(null)
 const fileInput = ref(null)
+const templateImportInput = ref(null)
+const templateImportFormat = ref('JSON')
 const readPreviewRef = ref(null)
 const titleInputRef = ref(null)
 const selectedTemplate = ref('')
@@ -2419,6 +2430,132 @@ function exportFilteredTemplatesAsMarkdown() {
   }
   downloadTextFile('templates-filtered.md', formatTemplateMarkdown(items), 'text/markdown;charset=utf-8')
   emit('notify', { type: 'success', message: `已导出 ${items.length} 个当前模板（Markdown）` })
+}
+
+function openTemplateImportPicker(format) {
+  templateImportFormat.value = format === 'MARKDOWN' ? 'MARKDOWN' : 'JSON'
+  if (!templateImportInput.value) {
+    return
+  }
+  templateImportInput.value.value = ''
+  templateImportInput.value.click()
+}
+
+async function onTemplateImportFile(event) {
+  const file = event.target.files?.[0]
+  if (!file) {
+    return
+  }
+  try {
+    const text = await file.text()
+    const sourceFormat = detectTemplateImportFormat(file.name || '', text)
+    const items = sourceFormat === 'JSON'
+      ? parseTemplateJsonImport(text)
+      : parseTemplateMarkdownImport(text)
+    if (!items.length) {
+      emit('notify', { type: 'error', message: '未识别到可导入模板' })
+      return
+    }
+    let success = 0
+    let skipped = 0
+    items.forEach((item) => {
+      const name = String(item.name || '').trim()
+      const content = String(item.content || '').trimEnd()
+      if (!name || !content) {
+        skipped += 1
+        return
+      }
+      emit('create-template', {
+        name,
+        description: String(item.description || '').trim(),
+        content
+      })
+      success += 1
+    })
+    if (!success) {
+      emit('notify', { type: 'error', message: '导入失败：模板名称或内容为空' })
+      return
+    }
+    const suffix = skipped ? `，跳过 ${skipped} 项` : ''
+    emit('notify', { type: 'success', message: `已导入 ${success} 个模板${suffix}` })
+  } catch {
+    emit('notify', { type: 'error', message: '导入失败：文件格式不正确' })
+  } finally {
+    if (templateImportInput.value) {
+      templateImportInput.value.value = ''
+    }
+  }
+}
+
+function detectTemplateImportFormat(filename, text) {
+  const lowerName = String(filename || '').toLowerCase()
+  if (lowerName.endsWith('.md') || lowerName.endsWith('.markdown')) {
+    return 'MARKDOWN'
+  }
+  if (lowerName.endsWith('.json')) {
+    return 'JSON'
+  }
+  const trimmed = String(text || '').trim()
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    return 'JSON'
+  }
+  return templateImportFormat.value === 'MARKDOWN' ? 'MARKDOWN' : 'JSON'
+}
+
+function parseTemplateJsonImport(text) {
+  const parsed = JSON.parse(text)
+  const list = Array.isArray(parsed)
+    ? parsed
+    : Array.isArray(parsed?.templates)
+      ? parsed.templates
+      : []
+  return list
+    .filter((item) => item && typeof item === 'object')
+    .map((item) => ({
+      name: String(item.name || ''),
+      description: String(item.description || ''),
+      content: String(item.content || '')
+    }))
+}
+
+function parseTemplateMarkdownImport(text) {
+  const blocks = String(text || '')
+    .replace(/\r\n/g, '\n')
+    .split(/\n-{3,}\n/g)
+    .map((block) => block.trim())
+    .filter(Boolean)
+  return blocks.map((block, index) => parseTemplateMarkdownBlock(block, index)).filter(Boolean)
+}
+
+function parseTemplateMarkdownBlock(block, index) {
+  const lines = String(block || '').split('\n')
+  let cursor = 0
+  let name = `导入模板 ${index + 1}`
+  let description = ''
+  if (lines[cursor]?.startsWith('# ')) {
+    name = lines[cursor].slice(2).trim() || name
+    cursor += 1
+  }
+  if (lines[cursor]?.startsWith('> ')) {
+    description = lines[cursor].slice(2).trim()
+    cursor += 1
+  }
+  const bodyLines = lines.slice(cursor)
+  const fencedStart = bodyLines.findIndex((line) => /^```/.test(line.trim()))
+  let content = ''
+  if (fencedStart >= 0) {
+    const fencedEnd = bodyLines.findIndex((line, idx) => idx > fencedStart && /^```/.test(line.trim()))
+    if (fencedEnd > fencedStart) {
+      content = bodyLines.slice(fencedStart + 1, fencedEnd).join('\n').trim()
+    }
+  }
+  if (!content) {
+    content = bodyLines.join('\n').trim()
+  }
+  if (!name.trim() && !content.trim()) {
+    return null
+  }
+  return { name, description, content }
 }
 
 function normalizeTemplateUsage(parsed) {

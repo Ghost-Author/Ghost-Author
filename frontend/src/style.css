@@ -2483,6 +2483,10 @@ li p {
   padding: 0 4px;
 }
 
+.template-import-input {
+  display: none;
+}
+
 .template-list {
   margin-top: 8px;
 }
