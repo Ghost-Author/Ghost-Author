@@ -133,7 +133,17 @@
       </div>
 
       <div class="template-center" v-if="canManageTemplates && templateCenterOpen">
-        <h4>模板中心</h4>
+        <div class="template-center-head">
+          <h4>模板中心</h4>
+          <span class="template-center-count">共 {{ templates.length }} 个 · 当前 {{ filteredTemplates.length }} 个</span>
+        </div>
+        <div class="template-filter">
+          <input
+            v-model.trim="templateQuery"
+            placeholder="搜索模板名称 / 描述 / 内容"
+          />
+          <button class="secondary small" :disabled="!templateQuery" @click="templateQuery = ''">清空</button>
+        </div>
         <div class="template-form">
           <input v-model="newTemplate.name" placeholder="模板名称" />
           <input v-model="newTemplate.description" placeholder="模板描述（可选）" />
@@ -141,7 +151,7 @@
           <button class="secondary small" :disabled="!canCreateTemplate" @click="createTemplate">新增模板</button>
         </div>
         <ul class="template-list">
-          <li v-for="tpl in templates" :key="tpl.id">
+          <li v-for="tpl in filteredTemplates" :key="tpl.id">
             <template v-if="editingTemplateId === tpl.id">
               <input v-model="editTemplate.name" />
               <input v-model="editTemplate.description" />
@@ -162,6 +172,7 @@
             </template>
           </li>
           <li v-if="templates.length === 0" class="comment-empty">还没有模板，请先新增。</li>
+          <li v-else-if="filteredTemplates.length === 0" class="comment-empty">没有匹配模板，请调整关键词。</li>
         </ul>
       </div>
 
@@ -775,6 +786,7 @@ const readPreviewRef = ref(null)
 const titleInputRef = ref(null)
 const selectedTemplate = ref('')
 const templateCenterOpen = ref(false)
+const templateQuery = ref('')
 const editingTemplateId = ref(null)
 const actionMenuOpen = ref(false)
 const actionMenuRef = ref(null)
@@ -972,6 +984,18 @@ const canCreateTemplate = computed(() => {
   return !!newTemplate.value.name.trim() && !!newTemplate.value.content.trim()
 })
 const quickChildTemplates = computed(() => props.templates.slice(0, 3))
+const filteredTemplates = computed(() => {
+  const q = templateQuery.value.trim().toLowerCase()
+  if (!q) {
+    return props.templates
+  }
+  return props.templates.filter((tpl) => {
+    const name = String(tpl.name || '').toLowerCase()
+    const desc = String(tpl.description || '').toLowerCase()
+    const content = String(tpl.content || '').toLowerCase()
+    return name.includes(q) || desc.includes(q) || content.includes(q)
+  })
+})
 const editorsSummary = computed(() => {
   const list = Array.isArray(model.value.editors) ? model.value.editors.filter(Boolean) : []
   return list.length ? list.join(', ') : '-'
