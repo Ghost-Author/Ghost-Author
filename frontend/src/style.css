@@ -2483,6 +2483,13 @@ li p {
   padding: 0 4px;
 }
 
+.template-import-mode-chip.active {
+  border-color: #f3b7ce;
+  background: linear-gradient(145deg, #fff2f8, #ffe9f2);
+  box-shadow: 0 5px 12px #d47aa22a;
+  color: #a75279;
+}
+
 .template-import-input {
   display: none;
 }

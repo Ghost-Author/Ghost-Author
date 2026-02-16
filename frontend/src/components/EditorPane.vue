@@ -257,6 +257,28 @@
           <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="exportSelectedTemplatesAsMarkdown">导出已选 MD</button>
           <button class="secondary small" @click="exportFilteredTemplatesAsJson">导出当前 JSON</button>
           <button class="secondary small" @click="exportFilteredTemplatesAsMarkdown">导出当前 MD</button>
+          <span>同名策略</span>
+          <button
+            class="secondary small template-import-mode-chip"
+            :class="{ active: templateImportConflictMode === 'SKIP' }"
+            @click="templateImportConflictMode = 'SKIP'"
+          >
+            跳过
+          </button>
+          <button
+            class="secondary small template-import-mode-chip"
+            :class="{ active: templateImportConflictMode === 'RENAME' }"
+            @click="templateImportConflictMode = 'RENAME'"
+          >
+            重命名
+          </button>
+          <button
+            class="secondary small template-import-mode-chip"
+            :class="{ active: templateImportConflictMode === 'OVERWRITE' }"
+            @click="templateImportConflictMode = 'OVERWRITE'"
+          >
+            覆盖
+          </button>
           <button class="secondary small" @click="openTemplateImportPicker('JSON')">导入 JSON</button>
           <button class="secondary small" @click="openTemplateImportPicker('MARKDOWN')">导入 MD</button>
           <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="clearTemplateSelection">清空选择</button>
@@ -950,6 +972,7 @@ const editorPaneRef = ref(null)
 const fileInput = ref(null)
 const templateImportInput = ref(null)
 const templateImportFormat = ref('JSON')
+const templateImportConflictMode = ref('RENAME')
 const readPreviewRef = ref(null)
 const titleInputRef = ref(null)
 const selectedTemplate = ref('')
@@ -2456,28 +2479,71 @@ async function onTemplateImportFile(event) {
       emit('notify', { type: 'error', message: '未识别到可导入模板' })
       return
     }
-    let success = 0
+    const existingByName = new Map()
+    props.templates.forEach((tpl) => {
+      const key = normalizeTemplateNameKey(tpl?.name || '')
+      if (!key || existingByName.has(key)) {
+        return
+      }
+      existingByName.set(key, tpl)
+    })
+    const reservedNames = new Set(props.templates.map((tpl) => normalizeTemplateNameKey(tpl?.name || '')).filter(Boolean))
+    let created = 0
+    let overwritten = 0
     let skipped = 0
     items.forEach((item) => {
-      const name = String(item.name || '').trim()
+      let name = String(item.name || '').trim()
       const content = String(item.content || '').trimEnd()
       if (!name || !content) {
         skipped += 1
         return
+      }
+      const key = normalizeTemplateNameKey(name)
+      const conflict = key ? existingByName.get(key) : null
+      const mode = normalizeTemplateImportConflictMode(templateImportConflictMode.value)
+      if (conflict && mode === 'SKIP') {
+        skipped += 1
+        return
+      }
+      if (conflict && mode === 'OVERWRITE') {
+        emit('update-template', {
+          id: conflict.id,
+          name,
+          description: String(item.description || '').trim(),
+          content
+        })
+        overwritten += 1
+        return
+      }
+      if (conflict && mode === 'RENAME') {
+        name = buildImportedTemplateName(name, reservedNames)
+      }
+      const nextKey = normalizeTemplateNameKey(name)
+      if (nextKey) {
+        reservedNames.add(nextKey)
       }
       emit('create-template', {
         name,
         description: String(item.description || '').trim(),
         content
       })
-      success += 1
+      created += 1
     })
-    if (!success) {
+    if (!created && !overwritten) {
       emit('notify', { type: 'error', message: '导入失败：模板名称或内容为空' })
       return
     }
-    const suffix = skipped ? `，跳过 ${skipped} 项` : ''
-    emit('notify', { type: 'success', message: `已导入 ${success} 个模板${suffix}` })
+    const parts = []
+    if (created) {
+      parts.push(`新增 ${created}`)
+    }
+    if (overwritten) {
+      parts.push(`覆盖 ${overwritten}`)
+    }
+    if (skipped) {
+      parts.push(`跳过 ${skipped}`)
+    }
+    emit('notify', { type: 'success', message: `导入完成：${parts.join('，')}` })
   } catch {
     emit('notify', { type: 'error', message: '导入失败：文件格式不正确' })
   } finally {
@@ -2485,6 +2551,28 @@ async function onTemplateImportFile(event) {
       templateImportInput.value.value = ''
     }
   }
+}
+
+function normalizeTemplateImportConflictMode(value) {
+  if (value === 'SKIP' || value === 'RENAME' || value === 'OVERWRITE') {
+    return value
+  }
+  return 'RENAME'
+}
+
+function normalizeTemplateNameKey(value) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function buildImportedTemplateName(baseName, reservedNames) {
+  const raw = String(baseName || '').trim() || '导入模板'
+  let index = 1
+  let candidate = `${raw}（导入）`
+  while (reservedNames.has(normalizeTemplateNameKey(candidate))) {
+    index += 1
+    candidate = `${raw}（导入${index}）`
+  }
+  return candidate
 }
 
 function detectTemplateImportFormat(filename, text) {
