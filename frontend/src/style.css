@@ -52,6 +52,10 @@
   --field-bg-soft: #f7faff;
   --field-text: #24324a;
   --field-placeholder: #8b9fbe;
+  --scrollbar-track: #f3f8ff;
+  --scrollbar-thumb: #c9daf7;
+  --scrollbar-thumb-hover: #b5caf1;
+  --split-line: #cfdef9;
 }
 
 * {
@@ -514,13 +518,14 @@ body {
 }
 
 .layout-splitter {
-  border: 1px solid #d5e3fc;
+  border: 1px solid var(--split-line);
   border-radius: 999px;
   background: linear-gradient(180deg, #ffffff, #f0f5ff);
   cursor: col-resize;
   align-self: stretch;
   position: relative;
   box-shadow: 0 3px 8px #1f4d930f;
+  transition: border-color var(--motion-mid) ease, background var(--motion-mid) ease, box-shadow var(--motion-mid) ease, transform var(--motion-mid) var(--ease-soft);
 }
 
 .layout-splitter::after {
@@ -528,16 +533,25 @@ body {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 2px;
+  width: 3px;
   height: 26px;
   transform: translate(-50%, -50%);
   border-radius: 999px;
   background: #9fb8e8;
+  box-shadow: 0 -8px 0 #c1d4f5, 0 8px 0 #c1d4f5;
 }
 
 .layout-splitter:hover {
   border-color: #aac1f2;
   background: linear-gradient(180deg, #f8fbff, #eaf2ff);
+  box-shadow: 0 5px 12px #1f4d9318;
+}
+
+.layout-splitter:active {
+  transform: scaleX(1.06);
+  border-color: #8fb1ef;
+  background: linear-gradient(180deg, #f3f8ff, #e4efff);
+  box-shadow: 0 7px 16px #1f4d9320;
 }
 
 .doc-list,
@@ -581,6 +595,8 @@ body {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 .doc-list-scroll.compact .doc-items li {
@@ -669,6 +685,8 @@ body {
 .version-history,
 .space-home {
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 .header,
@@ -2684,7 +2702,7 @@ label {
 .editor-pane::-webkit-scrollbar,
 .version-history::-webkit-scrollbar,
 .space-home::-webkit-scrollbar {
-  width: 10px;
+  width: 11px;
 }
 
 .tree-scroll-region::-webkit-scrollbar-thumb,
@@ -2692,15 +2710,23 @@ label {
 .version-history::-webkit-scrollbar-thumb,
 .space-home::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: #c8d9f7;
-  border: 2px solid #f4f8ff;
+  background: var(--scrollbar-thumb);
+  border: 2px solid var(--scrollbar-track);
+  transition: background var(--motion-mid) ease;
+}
+
+.tree-scroll-region::-webkit-scrollbar-thumb:hover,
+.editor-pane::-webkit-scrollbar-thumb:hover,
+.version-history::-webkit-scrollbar-thumb:hover,
+.space-home::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 .tree-scroll-region::-webkit-scrollbar-track,
 .editor-pane::-webkit-scrollbar-track,
 .version-history::-webkit-scrollbar-track,
 .space-home::-webkit-scrollbar-track {
-  background: #f4f8ff;
+  background: var(--scrollbar-track);
   border-radius: 999px;
 }
 
