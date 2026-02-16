@@ -2327,6 +2327,53 @@ li p {
   margin: 0;
 }
 
+.template-preview-card {
+  border: 1px solid #d7e4fb;
+  border-radius: 12px;
+  background: linear-gradient(165deg, #fbfdff, #f3f8ff);
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.template-preview-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.template-preview-head strong {
+  color: #34598f;
+  font-size: 13px;
+}
+
+.template-preview-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.template-preview-card p {
+  margin: 6px 0;
+  color: #5f769f;
+  font-size: 12px;
+}
+
+.template-preview-card pre {
+  margin: 0;
+  border: 1px solid #d7e4fb;
+  border-radius: 10px;
+  background: #fff;
+  color: #3a4f74;
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 8px;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
 .template-form textarea {
   min-height: 80px;
 }
@@ -2347,6 +2394,23 @@ li p {
   margin: 4px 0;
   color: #617597;
   font-size: 12px;
+}
+
+.template-snippet {
+  border: 1px dashed #d5e3fb;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 6px 8px;
+  color: #5f759f;
+  line-height: 1.4;
+}
+
+.template-list mark,
+.template-preview-card mark {
+  background: #ffe9a9;
+  color: #6d4a00;
+  border-radius: 3px;
+  padding: 0 1px;
 }
 
 .template-item-actions {
@@ -4787,6 +4851,11 @@ button.small {
 
   .template-filter {
     grid-template-columns: 1fr;
+  }
+
+  .template-preview-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .command-label-filter {

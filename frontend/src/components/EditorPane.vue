@@ -144,6 +144,17 @@
           />
           <button class="secondary small" :disabled="!templateQuery" @click="templateQuery = ''">清空</button>
         </div>
+        <div class="template-preview-card" v-if="templatePreview">
+          <div class="template-preview-head">
+            <strong>{{ templatePreview.name || '未命名模板' }}</strong>
+            <div class="template-preview-actions">
+              <button class="secondary small" @click="applyTemplateById(templatePreview.id)">套用</button>
+              <button class="secondary small" @click="templatePreviewId = null">关闭预览</button>
+            </div>
+          </div>
+          <p>{{ templatePreview.description || '无描述' }}</p>
+          <pre>{{ templatePreviewContent }}</pre>
+        </div>
         <div class="template-form">
           <input v-model="newTemplate.name" placeholder="模板名称" />
           <input v-model="newTemplate.description" placeholder="模板描述（可选）" />
@@ -162,10 +173,14 @@
               </div>
             </template>
             <template v-else>
-              <strong>{{ tpl.name }}</strong>
-              <p>{{ tpl.description || '无描述' }}</p>
+              <strong v-html="templateNameHtml(tpl)"></strong>
+              <p v-html="templateDescHtml(tpl)"></p>
+              <p class="template-snippet" v-if="templateQuery" v-html="templateSnippetHtml(tpl)"></p>
               <div class="template-item-actions">
                 <button class="secondary small" @click="applyTemplateById(tpl.id)">套用</button>
+                <button class="secondary small" @click="toggleTemplatePreview(tpl.id)">
+                  {{ templatePreviewId === tpl.id ? '收起预览' : '预览' }}
+                </button>
                 <button class="secondary small" @click="startEditTemplate(tpl)">编辑</button>
                 <button class="danger small" @click="$emit('delete-template', tpl.id)">删除</button>
               </div>
@@ -787,6 +802,7 @@ const titleInputRef = ref(null)
 const selectedTemplate = ref('')
 const templateCenterOpen = ref(false)
 const templateQuery = ref('')
+const templatePreviewId = ref(null)
 const editingTemplateId = ref(null)
 const actionMenuOpen = ref(false)
 const actionMenuRef = ref(null)
@@ -996,6 +1012,19 @@ const filteredTemplates = computed(() => {
     return name.includes(q) || desc.includes(q) || content.includes(q)
   })
 })
+const templatePreview = computed(() => {
+  if (!templatePreviewId.value) {
+    return null
+  }
+  return props.templates.find((tpl) => tpl.id === templatePreviewId.value) || null
+})
+const templatePreviewContent = computed(() => {
+  const raw = String(templatePreview.value?.content || '')
+  if (raw.length <= 1200) {
+    return raw
+  }
+  return `${raw.slice(0, 1200)}\n...`
+})
 const editorsSummary = computed(() => {
   const list = Array.isArray(model.value.editors) ? model.value.editors.filter(Boolean) : []
   return list.length ? list.join(', ') : '-'
@@ -1061,6 +1090,15 @@ watch(filteredOutline, (items) => {
   }
   if (!items.some((item) => item.id === outlineCursorId.value)) {
     outlineCursorId.value = items[0].id
+  }
+})
+
+watch(filteredTemplates, (items) => {
+  if (!templatePreviewId.value) {
+    return
+  }
+  if (!items.some((tpl) => tpl.id === templatePreviewId.value)) {
+    templatePreviewId.value = null
   }
 })
 
@@ -2386,6 +2424,57 @@ function applyTemplateById(id) {
   }
   model.value.content = item.content
   selectedTemplate.value = String(id)
+}
+
+function toggleTemplatePreview(id) {
+  templatePreviewId.value = templatePreviewId.value === id ? null : id
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
+
+function highlightMatch(value) {
+  const raw = String(value || '')
+  const escaped = escapeHtml(raw)
+  const q = templateQuery.value.trim()
+  if (!q) {
+    return escaped
+  }
+  const escapedQuery = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regexp = new RegExp(`(${escapedQuery})`, 'ig')
+  return escaped.replace(regexp, '<mark>$1</mark>')
+}
+
+function templateNameHtml(template) {
+  return highlightMatch(template?.name || '未命名模板')
+}
+
+function templateDescHtml(template) {
+  return highlightMatch(template?.description || '无描述')
+}
+
+function templateSnippetHtml(template) {
+  const q = templateQuery.value.trim().toLowerCase()
+  const content = String(template?.content || '')
+  if (!q) {
+    return ''
+  }
+  const source = content.toLowerCase()
+  const idx = source.indexOf(q)
+  if (idx < 0) {
+    return highlightMatch(content.slice(0, 120))
+  }
+  const start = Math.max(0, idx - 40)
+  const end = Math.min(content.length, idx + q.length + 60)
+  const head = start > 0 ? '...' : ''
+  const tail = end < content.length ? '...' : ''
+  return `${head}${highlightMatch(content.slice(start, end))}${tail}`
 }
 
 function createTemplate() {
