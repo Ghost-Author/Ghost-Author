@@ -43,7 +43,7 @@
       <div class="topbar-right">
         <span class="topbar-user">当前用户：{{ currentUser }}</span>
         <span class="topbar-user role">角色：{{ currentUserRole }}</span>
-        <span class="shortcut-hint">⌘/Ctrl+K 搜索 · ⌘/Ctrl+S 保存 · Alt+0/1/2/3/4/5/6/7/8/9</span>
+        <span class="shortcut-hint">⌘/Ctrl+K 搜索 · ⌘/Ctrl+S 保存 · Alt+0/1/2/3/4/5/6/7/8/9 · ?</span>
         <button
           class="topbar-user tree-focus"
           :class="{ on: treeFocusPathEnabled }"
@@ -61,6 +61,7 @@
           {{ focusMode ? '退出专注' : '专注模式' }}
         </button>
         <button class="secondary tiny" @click="openPasswordDialog">修改密码</button>
+        <button class="secondary tiny" @click="openShortcutHelp">快捷键</button>
         <button v-if="canManageUsers" class="secondary tiny" @click="openUserAdmin">用户管理</button>
         <button class="secondary tiny" @click="logout">退出登录</button>
         <div class="topbar-badge">{{ visibleDocs.length }} pages</div>
@@ -189,23 +190,227 @@
         <div class="command-head">
           <input
             v-model="commandQuery"
-            placeholder="搜索页面标题或 slug，回车快速打开"
+            placeholder="搜索页面，支持 @范围 + #标签（如：@pinned #设计 规范）"
             @keydown="onCommandInputKeydown"
           />
+          <ul v-if="commandSyntaxSuggestions.length > 0" class="command-suggest-list">
+            <li
+              v-for="(item, idx) in commandSyntaxSuggestions"
+              :key="item.key"
+              :class="{ active: idx === commandSuggestIndex }"
+              @mouseenter="commandSuggestIndex = idx"
+              @click="applyCommandSuggestion(item)"
+            >
+              <strong>{{ item.display }}</strong>
+              <span>{{ item.desc }}</span>
+            </li>
+          </ul>
+          <div class="command-head-tools">
+            <span class="command-count">共 {{ commandResults.length }} 项</span>
+            <span class="command-exec-hint">Shift + Enter 仅补全 · ⌘/Ctrl + Enter 直接执行</span>
+            <select v-model="commandLabelFilter" class="command-label-filter">
+              <option value="">标签：全部</option>
+              <option v-for="label in commandLabelOptions" :key="label" :value="label">{{ label }}</option>
+            </select>
+          </div>
+          <div class="command-scope-row">
+            <button
+              v-for="scope in commandScopes"
+              :key="scope.key"
+              class="command-scope-chip"
+              :class="{ active: commandEffectiveScope === scope.key }"
+              @click="commandScope = scope.key"
+            >
+              {{ scope.label }}
+            </button>
+          </div>
+          <div v-if="commandInlineScopesDisplay.length > 0" class="command-inline-scopes">
+            <span class="hint">语法范围</span>
+            <span v-for="scope in commandInlineScopesDisplay" :key="scope" class="command-inline-scope">@{{ scope }}</span>
+          </div>
+          <div v-if="commandInlineLabelsDisplay.length > 0" class="command-inline-tags">
+            <span class="hint">语法标签</span>
+            <span v-for="label in commandInlineLabelsDisplay" :key="label" class="command-inline-tag">#{{ label }}</span>
+          </div>
+          <div class="command-help-row">
+            <span class="hint">语法示例</span>
+            <button
+              v-for="item in commandSyntaxExamples"
+              :key="item.key"
+              type="button"
+              class="command-help-chip"
+              :class="{ active: commandExampleKeyboardArmed && commandSyntaxExamples[commandExampleIndex]?.key === item.key }"
+              :title="item.desc"
+              @mouseenter="setCommandExampleIndexByKey(item.key)"
+              @click="applyCommandExample(item.query)"
+            >
+              {{ item.display }}
+            </button>
+          </div>
+          <div v-if="commandPinnedHistoryDisplay.length > 0" class="command-history-row">
+            <span class="hint">常用搜索</span>
+            <div
+              v-for="item in commandPinnedHistoryDisplay"
+              :key="`pin-history-${item}`"
+              class="command-history-item pinned"
+              :class="{
+                dragging: commandPinnedDragQuery === item,
+                'drop-target': commandPinnedDragQuery && commandPinnedDropQuery === item && commandPinnedDragQuery !== item
+              }"
+              draggable="true"
+              @dragstart="onPinnedHistoryDragStart(item)"
+              @dragover.prevent="onPinnedHistoryDragOver(item)"
+              @drop.prevent="onPinnedHistoryDrop(item)"
+              @dragend="onPinnedHistoryDragEnd"
+            >
+              <button
+                type="button"
+                class="command-history-chip"
+                :title="item"
+                @click="applyCommandHistory(item)"
+              >
+                {{ getPinnedQueryDisplay(item) }}
+              </button>
+              <button
+                type="button"
+                class="command-history-alias"
+                title="设置别名"
+                @click.stop="renamePinnedCommandAlias(item)"
+              >
+                🏷
+              </button>
+              <button
+                v-if="hasPinnedQueryAlias(item)"
+                type="button"
+                class="command-history-alias"
+                title="清除别名"
+                @click.stop="clearPinnedCommandAlias(item)"
+              >
+                ⌫
+              </button>
+              <button
+                type="button"
+                class="command-history-remove"
+                title="取消固定"
+                @click.stop="togglePinCommandHistoryQuery(item)"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+          <div v-if="commandRecentHistoryDisplay.length > 0" class="command-history-row">
+            <span class="hint">最近搜索</span>
+            <div
+              v-for="item in commandRecentHistoryDisplay"
+              :key="`history-${item}`"
+              class="command-history-item"
+            >
+              <button
+                type="button"
+                class="command-history-chip"
+                :title="item"
+                @click="applyCommandHistory(item)"
+              >
+                {{ item }}
+              </button>
+              <button
+                type="button"
+                class="command-history-pin"
+                title="固定到常用搜索"
+                @click.stop="togglePinCommandHistoryQuery(item)"
+              >
+                📌
+              </button>
+              <button
+                type="button"
+                class="command-history-remove"
+                title="删除这条历史"
+                @click.stop="removeCommandHistoryQuery(item)"
+              >
+                ×
+              </button>
+            </div>
+            <button type="button" class="command-history-clear" @click="clearCommandHistory">
+              清空
+            </button>
+          </div>
         </div>
         <ul class="command-list">
-          <li
-            v-for="(item, idx) in commandResults"
-            :key="item.slug"
-            :class="{ active: idx === commandActiveIndex }"
-            @mouseenter="commandActiveIndex = idx"
-            @click="selectCommandDoc(item.slug)"
-          >
-            <strong>{{ item.title }}</strong>
-            <span>{{ item.slug }}</span>
-          </li>
-          <li v-if="commandResults.length === 0" class="command-empty">没有匹配页面</li>
+          <template v-for="section in commandSections" :key="section.key">
+            <li class="command-section">
+              <span class="command-section-icon">{{ section.icon }}</span>
+              <span>{{ section.title }}</span>
+            </li>
+            <li
+              v-for="item in section.items"
+              :key="item.key"
+              :class="{ active: item.flatIndex === commandActiveIndex }"
+              @mouseenter="commandActiveIndex = item.flatIndex"
+              @click="selectCommandItem(item)"
+            >
+              <div class="command-item-line">
+                <strong>{{ item.title }}</strong>
+                <span v-if="item.shortcut" class="command-kbd">{{ item.shortcut }}</span>
+              </div>
+              <span :class="item.type === 'action' ? 'command-sub action' : 'command-sub doc'">{{ item.subtitle }}</span>
+            </li>
+          </template>
+          <li v-if="commandResults.length === 0" class="command-empty">没有匹配结果</li>
         </ul>
+      </div>
+    </div>
+
+    <div v-if="shortcutHelpOpen" class="confirm-overlay" @click.self="closeShortcutHelp">
+      <div class="confirm-panel shortcut-help-panel">
+        <h4>快捷键帮助</h4>
+        <p>更快地导航页面与侧栏（命令面板内按一次 `Esc` 先收起语法建议，再按一次关闭面板）</p>
+        <div class="shortcut-help-grid">
+          <div class="shortcut-help-group">
+            <h5>全局</h5>
+            <ul>
+              <li><strong>打开命令面板</strong><span>⌘/Ctrl + K</span></li>
+              <li><strong>保存当前页面</strong><span>⌘/Ctrl + S</span></li>
+              <li><strong>打开快捷键帮助</strong><span>?</span></li>
+            </ul>
+          </div>
+          <div class="shortcut-help-group">
+            <h5>命令面板</h5>
+            <ul>
+              <li><strong>上下移动（建议+结果）</strong><span>↑ / ↓</span></li>
+              <li><strong>应用语法建议 / 打开结果</strong><span>Enter</span></li>
+              <li><strong>仅补全语法</strong><span>Shift + Enter</span></li>
+              <li><strong>直接执行当前结果</strong><span>⌘/Ctrl + Enter</span></li>
+              <li><strong>应用当前语法建议</strong><span>Tab</span></li>
+              <li><strong>空查询切换语法示例</strong><span>← / →</span></li>
+              <li><strong>空查询应用选中示例</strong><span>Enter</span></li>
+              <li><strong>浏览最近搜索历史</strong><span>Alt + ↑ / ↓</span></li>
+              <li><strong>快速应用常用搜索</strong><span>Alt + 1..9</span></li>
+            </ul>
+          </div>
+          <div class="shortcut-help-group">
+            <h5>页面树与布局</h5>
+            <ul>
+              <li><strong>路径聚焦开关</strong><span>Alt + 0</span></li>
+              <li><strong>展开页面树</strong><span>Alt + 1</span></li>
+              <li><strong>收起页面树</strong><span>Alt + 2</span></li>
+              <li><strong>紧凑/舒适视图</strong><span>Alt + 3</span></li>
+              <li><strong>专注模式开关</strong><span>Alt + 4</span></li>
+            </ul>
+          </div>
+          <div class="shortcut-help-group">
+            <h5>侧栏导航</h5>
+            <ul>
+              <li><strong>收起导航分组</strong><span>Alt + 5</span></li>
+              <li><strong>展开导航分组</strong><span>Alt + 6</span></li>
+              <li><strong>聚焦固定搜索</strong><span>Alt + 7</span></li>
+              <li><strong>聚焦收藏搜索</strong><span>Alt + 8</span></li>
+              <li><strong>聚焦最近访问搜索</strong><span>Alt + 9</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="confirm-actions">
+          <button @click="closeShortcutHelp">关闭</button>
+        </div>
       </div>
     </div>
 
@@ -358,6 +563,10 @@ const AUTH_SESSION_KEY = 'ga-auth-session'
 const RIGHT_PANEL_KEY = 'ga-right-panel-open'
 const LEFT_PANE_KEY = 'ga-left-pane-width'
 const FOCUS_MODE_KEY = 'ga-focus-mode'
+const RECENT_COMMAND_ACTIONS_KEY = 'ga-recent-command-actions'
+const COMMAND_QUERY_HISTORY_KEY = 'ga-command-query-history'
+const PINNED_COMMAND_QUERY_KEY = 'ga-pinned-command-query'
+const PINNED_COMMAND_QUERY_ALIAS_KEY = 'ga-pinned-command-query-alias'
 
 const docs = ref([])
 const versions = ref([])
@@ -406,6 +615,21 @@ const showHome = ref(true)
 const commandOpen = ref(false)
 const commandQuery = ref('')
 const commandActiveIndex = ref(0)
+const commandScope = ref('ALL')
+const commandLabelFilter = ref('')
+const commandSuggestIndex = ref(0)
+const commandNavIndex = ref(0)
+const commandSuggestDismissed = ref(false)
+const commandExampleIndex = ref(0)
+const commandExampleKeyboardArmed = ref(false)
+const commandQueryHistory = ref([])
+const commandHistoryCursor = ref(-1)
+const commandPinnedQueries = ref([])
+const commandPinnedQueryAliases = ref({})
+const commandPinnedDragQuery = ref('')
+const commandPinnedDropQuery = ref('')
+const shortcutHelpOpen = ref(false)
+const recentCommandActionKeys = ref([])
 const toast = ref({
   show: false,
   message: '',
@@ -599,14 +823,683 @@ const myTodoDocs = computed(() => {
     })
     .slice(0, 12)
 })
-const commandResults = computed(() => {
-  const q = commandQuery.value.trim().toLowerCase()
-  if (!q) {
-    return visibleDocs.value.slice(0, 12)
+const commandActions = computed(() => {
+  const actions = [
+    {
+      key: 'action:open-home',
+      type: 'action',
+      action: 'OPEN_HOME',
+      title: '打开空间首页',
+      subtitle: '动作 · Home',
+      keywords: 'home 首页 空间'
+    },
+    {
+      key: 'action:create-page',
+      type: 'action',
+      action: 'CREATE_PAGE',
+      title: '新建页面',
+      subtitle: '动作 · Create',
+      keywords: 'new create 新建 页面'
+    },
+    {
+      key: 'action:open-my-todo',
+      type: 'action',
+      action: 'OPEN_MY_TODO',
+      title: '打开我的待办',
+      subtitle: '动作 · My Todo',
+      keywords: 'todo 我的 待办 assignee'
+    },
+    {
+      key: 'action:toggle-right',
+      type: 'action',
+      action: 'TOGGLE_RIGHT',
+      title: rightPanelOpen.value ? '收起右栏' : '展开右栏',
+      subtitle: '动作 · Right Panel',
+      keywords: 'right panel 右栏 版本栏'
+    },
+    {
+      key: 'action:toggle-focus',
+      type: 'action',
+      action: 'TOGGLE_FOCUS',
+      title: focusMode.value ? '退出专注模式' : '进入专注模式',
+      subtitle: '动作 · Focus Mode',
+      keywords: 'focus 专注 模式 alt+4',
+      shortcut: 'Alt+4'
+    },
+    {
+      key: 'action:toggle-density',
+      type: 'action',
+      action: 'TOGGLE_DENSITY',
+      title: '切换紧凑/舒适视图',
+      subtitle: '动作 · Sidebar Density',
+      keywords: 'density compact comfortable 紧凑 舒适 视图 alt+3',
+      shortcut: 'Alt+3'
+    },
+    {
+      key: 'action:expand-tree',
+      type: 'action',
+      action: 'EXPAND_TREE',
+      title: '展开页面树',
+      subtitle: '动作 · Tree',
+      keywords: 'tree expand 展开 页面树 alt+1',
+      shortcut: 'Alt+1'
+    },
+    {
+      key: 'action:collapse-tree',
+      type: 'action',
+      action: 'COLLAPSE_TREE',
+      title: '收起页面树',
+      subtitle: '动作 · Tree',
+      keywords: 'tree collapse 收起 页面树 alt+2',
+      shortcut: 'Alt+2'
+    },
+    {
+      key: 'action:toggle-tree-focus',
+      type: 'action',
+      action: 'TOGGLE_TREE_FOCUS',
+      title: treeFocusPathEnabled.value ? '关闭路径聚焦' : '开启路径聚焦',
+      subtitle: '动作 · Tree Focus',
+      keywords: 'tree focus 路径 聚焦 alt+0',
+      shortcut: 'Alt+0'
+    },
+    {
+      key: 'action:collapse-sidebar-panels',
+      type: 'action',
+      action: 'COLLAPSE_SIDEBAR_PANELS',
+      title: '收起导航分组',
+      subtitle: '动作 · Sidebar Panels',
+      keywords: 'sidebar panel collapse 收起 导航 分组 alt+5',
+      shortcut: 'Alt+5'
+    },
+    {
+      key: 'action:expand-sidebar-panels',
+      type: 'action',
+      action: 'EXPAND_SIDEBAR_PANELS',
+      title: '展开导航分组',
+      subtitle: '动作 · Sidebar Panels',
+      keywords: 'sidebar panel expand 展开 导航 分组 alt+6',
+      shortcut: 'Alt+6'
+    },
+    {
+      key: 'action:focus-pinned',
+      type: 'action',
+      action: 'FOCUS_PINNED_SEARCH',
+      title: '聚焦固定搜索框',
+      subtitle: '动作 · Sidebar Search',
+      keywords: 'pinned 固定 搜索 alt+7',
+      shortcut: 'Alt+7'
+    },
+    {
+      key: 'action:focus-favorites',
+      type: 'action',
+      action: 'FOCUS_FAVORITES_SEARCH',
+      title: '聚焦收藏搜索框',
+      subtitle: '动作 · Sidebar Search',
+      keywords: 'favorites 收藏 搜索 alt+8',
+      shortcut: 'Alt+8'
+    },
+    {
+      key: 'action:focus-recent',
+      type: 'action',
+      action: 'FOCUS_RECENT_SEARCH',
+      title: '聚焦最近访问搜索框',
+      subtitle: '动作 · Sidebar Search',
+      keywords: 'recent 最近 访问 搜索 alt+9',
+      shortcut: 'Alt+9'
+    },
+    {
+      key: 'action:shortcut-help',
+      type: 'action',
+      action: 'OPEN_SHORTCUT_HELP',
+      title: '打开快捷键帮助',
+      subtitle: '动作 · Help',
+      keywords: 'help shortcut 快捷键 帮助 ?',
+      shortcut: '?'
+    },
+    {
+      key: 'action:user-admin',
+      type: 'action',
+      action: 'OPEN_USER_ADMIN',
+      title: '打开用户管理',
+      subtitle: canManageUsers.value ? '动作 · Admin' : '动作 · Admin（无权限）',
+      keywords: 'admin 用户 管理 权限'
+    },
+    {
+      key: 'action:logout',
+      type: 'action',
+      action: 'LOGOUT',
+      title: '退出登录',
+      subtitle: '动作 · Logout',
+      keywords: 'logout 退出 登录'
+    }
+  ]
+  const onPage = !showHome.value && !!activeSlug.value
+  if (onPage) {
+    actions.push(
+      {
+        key: 'action:copy-current-link',
+        type: 'action',
+        action: 'COPY_CURRENT_PAGE_LINK',
+        title: '复制当前页面链接',
+        subtitle: '动作 · Current Page',
+        keywords: 'copy link 当前 页面 链接 slug'
+      },
+      {
+        key: 'action:duplicate-current-page',
+        type: 'action',
+        action: 'DUPLICATE_CURRENT_PAGE',
+        title: '复制当前页面（草稿）',
+        subtitle: currentCanEdit.value ? '动作 · Current Page' : '动作 · Current Page（无编辑权限）',
+        keywords: 'duplicate copy page 复制 当前 页面 草稿'
+      },
+      {
+        key: 'action:toggle-current-share',
+        type: 'action',
+        action: 'TOGGLE_CURRENT_SHARE',
+        title: currentDoc.value?.shareEnabled ? '关闭当前页面分享' : '开启当前页面分享',
+        subtitle: currentCanEdit.value ? '动作 · Share' : '动作 · Share（无编辑权限）',
+        keywords: 'share 分享 链接 开启 关闭 当前 页面'
+      },
+      {
+        key: 'action:regenerate-current-share',
+        type: 'action',
+        action: 'REGENERATE_CURRENT_SHARE',
+        title: '重置当前分享链接',
+        subtitle: currentCanEdit.value ? '动作 · Share' : '动作 · Share（无编辑权限）',
+        keywords: 'share regenerate reset 重置 分享 链接 当前 页面'
+      }
+    )
+
+    const parentSlug = String(currentDoc.value?.parentSlug || '').trim()
+    if (parentSlug) {
+      actions.push({
+        key: 'action:open-parent-page',
+        type: 'action',
+        action: 'OPEN_PARENT_PAGE',
+        title: '打开父页面',
+        subtitle: `动作 · Parent · ${parentSlug}`,
+        keywords: `parent 父 页面 上级 ${parentSlug}`
+      })
+    }
   }
-  return visibleDocs.value
-    .filter((d) => (d.title || '').toLowerCase().includes(q) || (d.slug || '').toLowerCase().includes(q))
-    .slice(0, 12)
+  return actions
+})
+function matchCommandText(q, ...segments) {
+  if (!q) {
+    return true
+  }
+  return segments.some((part) => String(part || '').toLowerCase().includes(q))
+}
+
+function normalizeLabelKey(label) {
+  return String(label || '').trim().toLowerCase()
+}
+
+function normalizeQueryToken(token) {
+  return String(token || '').trim().replace(/[，,。.；;！!？?]+$/g, '')
+}
+
+function resolveCommandScopeToken(scopeToken) {
+  const key = normalizeLabelKey(normalizeQueryToken(scopeToken))
+  if (!key) {
+    return ''
+  }
+  const map = {
+    all: 'ALL',
+    '全部': 'ALL',
+    'recent-actions': 'RECENT_ACTIONS',
+    'recent_action': 'RECENT_ACTIONS',
+    recentactions: 'RECENT_ACTIONS',
+    '最近动作': 'RECENT_ACTIONS',
+    actions: 'ACTIONS',
+    action: 'ACTIONS',
+    '动作': 'ACTIONS',
+    pinned: 'PINNED',
+    pin: 'PINNED',
+    '固定': 'PINNED',
+    favorites: 'FAVORITES',
+    favorite: 'FAVORITES',
+    fav: 'FAVORITES',
+    '收藏': 'FAVORITES',
+    recent: 'RECENT',
+    '最近': 'RECENT',
+    pages: 'PAGES',
+    page: 'PAGES',
+    '页面': 'PAGES'
+  }
+  return map[key] || ''
+}
+
+function parseCommandQuery(raw) {
+  const source = String(raw || '').trim()
+  if (!source) {
+    return {
+      text: '',
+      labels: [],
+      scopes: []
+    }
+  }
+  const labels = []
+  const scopes = []
+  const textTokens = []
+  source.split(/\s+/).forEach((token) => {
+    const normalizedToken = normalizeQueryToken(token)
+    if (normalizedToken.startsWith('@') && normalizedToken.length > 1) {
+      const scope = resolveCommandScopeToken(normalizedToken.slice(1))
+      if (scope && !scopes.includes(scope)) {
+        scopes.push(scope)
+      } else {
+        textTokens.push(normalizedToken)
+      }
+      return
+    }
+    if (normalizedToken.startsWith('#') && normalizedToken.length > 1) {
+      const normalized = normalizeLabelKey(normalizedToken.slice(1))
+      if (normalized && !labels.includes(normalized)) {
+        labels.push(normalized)
+      }
+      return
+    }
+    textTokens.push(normalizedToken)
+  })
+  return {
+    text: textTokens.join(' ').trim().toLowerCase(),
+    labels,
+    scopes
+  }
+}
+
+const commandQueryMeta = computed(() => parseCommandQuery(commandQuery.value))
+
+const commandScopes = [
+  { key: 'ALL', label: '全部' },
+  { key: 'RECENT_ACTIONS', label: '最近动作' },
+  { key: 'ACTIONS', label: '全部动作' },
+  { key: 'PINNED', label: '固定' },
+  { key: 'FAVORITES', label: '收藏' },
+  { key: 'RECENT', label: '最近访问' },
+  { key: 'PAGES', label: '页面' }
+]
+
+const commandScopeByKey = new Map(commandScopes.map((item) => [item.key, item.label]))
+
+const commandEffectiveScope = computed(() => {
+  const inlineScope = commandQueryMeta.value.scopes[0]
+  if (inlineScope) {
+    return inlineScope
+  }
+  return String(commandScope.value || 'ALL').trim().toUpperCase() || 'ALL'
+})
+
+const commandLabelOptions = computed(() => {
+  const stats = new Map()
+  visibleDocs.value.forEach((doc) => {
+    const labels = Array.isArray(doc.labels) ? doc.labels : []
+    labels.forEach((item) => {
+      const label = String(item || '').trim()
+      if (!label) {
+        return
+      }
+      stats.set(label, (stats.get(label) || 0) + 1)
+    })
+  })
+  return Array.from(stats.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([label]) => label)
+    .slice(0, 24)
+})
+
+const commandInlineLabelsDisplay = computed(() => {
+  if (!commandQueryMeta.value.labels.length) {
+    return []
+  }
+  const byLower = new Map(commandLabelOptions.value.map((label) => [normalizeLabelKey(label), label]))
+  return commandQueryMeta.value.labels.map((key) => byLower.get(key) || key)
+})
+
+const commandInlineScopesDisplay = computed(() => {
+  if (!commandQueryMeta.value.scopes.length) {
+    return []
+  }
+  return commandQueryMeta.value.scopes.map((key) => commandScopeByKey.get(key) || key)
+})
+
+const commandScopeSyntaxOptions = [
+  { key: 'ALL', token: 'all', display: '@all', desc: '范围 · 全部' },
+  { key: 'RECENT_ACTIONS', token: 'recent-actions', display: '@recent-actions', desc: '范围 · 最近动作' },
+  { key: 'ACTIONS', token: 'actions', display: '@actions', desc: '范围 · 全部动作' },
+  { key: 'PINNED', token: 'pinned', display: '@pinned', desc: '范围 · 固定' },
+  { key: 'FAVORITES', token: 'favorites', display: '@favorites', desc: '范围 · 收藏' },
+  { key: 'RECENT', token: 'recent', display: '@recent', desc: '范围 · 最近访问' },
+  { key: 'PAGES', token: 'pages', display: '@pages', desc: '范围 · 页面' }
+]
+const commandScopeTokenByKey = new Map(commandScopeSyntaxOptions.map((item) => [item.key, item.token]))
+
+const commandSuggestContext = computed(() => {
+  const query = String(commandQuery.value || '')
+  const match = query.match(/(?:^|\s)([@#][^\s@#]*)$/)
+  if (!match) {
+    return null
+  }
+  const token = String(match[1] || '')
+  const start = (match.index || 0) + (match[0].length - token.length)
+  const end = start + token.length
+  const type = token[0] === '@' ? 'scope' : token[0] === '#' ? 'label' : ''
+  const text = normalizeLabelKey(token.slice(1))
+  if (!type) {
+    return null
+  }
+  return { query, token, start, end, type, text }
+})
+
+const commandSyntaxSuggestions = computed(() => {
+  if (commandSuggestDismissed.value) {
+    return []
+  }
+  const context = commandSuggestContext.value
+  if (!context) {
+    return []
+  }
+  if (context.type === 'scope') {
+    return commandScopeSyntaxOptions
+      .filter((item) => !context.text || item.token.includes(context.text))
+      .slice(0, 8)
+      .map((item) => ({
+        key: `scope:${item.key}`,
+        display: item.display,
+        token: item.token,
+        desc: item.desc,
+        replace: `@${item.token}`
+      }))
+  }
+  return commandLabelOptions.value
+    .filter((label) => !context.text || normalizeLabelKey(label).includes(context.text))
+    .slice(0, 8)
+    .map((label) => ({
+      key: `label:${label}`,
+      display: `#${label}`,
+      token: normalizeLabelKey(label),
+      desc: '标签',
+      replace: `#${label}`
+    }))
+})
+
+const commandSyntaxExamples = computed(() => {
+  const labelCandidates = commandLabelOptions.value.filter((label) => !String(label || '').includes(' '))
+  const topLabel = labelCandidates[0] || '设计'
+  const nextLabel = labelCandidates[1] || '规范'
+  const inlineLabelKey = commandQueryMeta.value.labels[0] || ''
+  const manualLabelKey = normalizeLabelKey(commandLabelFilter.value)
+  const activeLabelKey = inlineLabelKey || manualLabelKey || ''
+  const byLower = new Map(commandLabelOptions.value.map((label) => [normalizeLabelKey(label), label]))
+  const rawActiveLabel = activeLabelKey ? (byLower.get(activeLabelKey) || activeLabelKey) : topLabel
+  const activeLabel = String(rawActiveLabel || '').includes(' ') ? topLabel : rawActiveLabel
+  const currentScope = commandEffectiveScope.value
+  const currentScopeToken = commandScopeTokenByKey.get(currentScope) || 'all'
+  const currentScopeLabel = commandScopeByKey.get(currentScope) || currentScope
+  const examples = []
+
+  if (currentScope !== 'ALL') {
+    examples.push(
+      {
+        key: 'ex-current-scope-label',
+        display: `@${currentScopeToken} #${activeLabel}`,
+        query: `@${currentScopeToken} #${activeLabel}`,
+        desc: `在当前范围（${currentScopeLabel}）按标签检索`
+      },
+      {
+        key: 'ex-current-scope-keyword',
+        display: `@${currentScopeToken} 规范`,
+        query: `@${currentScopeToken} 规范`,
+        desc: `在当前范围（${currentScopeLabel}）检索关键词`
+      }
+    )
+  } else {
+    examples.push(
+      {
+        key: 'ex-pinned-label',
+        display: `@pinned #${activeLabel}`,
+        query: `@pinned #${activeLabel}`,
+        desc: '检索固定页面中的指定标签'
+      },
+      {
+        key: 'ex-recent-label',
+        display: `@recent #${nextLabel}`,
+        query: `@recent #${nextLabel}`,
+        desc: '检索最近访问中的指定标签'
+      }
+    )
+  }
+
+  examples.push(
+    {
+      key: 'ex-actions-share',
+      display: '@actions 分享',
+      query: '@actions 分享',
+      desc: '仅检索动作并匹配“分享”'
+    },
+    {
+      key: 'ex-label-only',
+      display: `#${activeLabel} 规范`,
+      query: `#${activeLabel} 规范`,
+      desc: '全局标签 + 关键词组合检索'
+    }
+  )
+
+  const unique = []
+  const seen = new Set()
+  examples.forEach((item) => {
+    if (!item?.query || seen.has(item.query)) {
+      return
+    }
+    seen.add(item.query)
+    unique.push(item)
+  })
+  return unique.slice(0, 5)
+})
+
+const commandExampleKeyboardEnabled = computed(() => {
+  return !commandQuery.value.trim()
+    && commandSyntaxSuggestions.value.length === 0
+    && commandSyntaxExamples.value.length > 0
+})
+
+const commandPinnedHistoryDisplay = computed(() => commandPinnedQueries.value.slice(0, 12))
+const commandRecentHistoryDisplay = computed(() => commandQueryHistory.value
+  .filter((query) => !commandPinnedQueries.value.includes(query))
+  .slice(0, 6))
+
+const commandDocGroups = computed(() => {
+  const q = commandQueryMeta.value.text
+  const bySlug = new Map(visibleDocs.value.map((doc) => [doc.slug, doc]))
+  const used = new Set()
+
+  const toDocItem = (doc, keyPrefix, subtitlePrefix) => ({
+    key: `doc:${keyPrefix}:${doc.slug}`,
+    type: 'doc',
+    group: keyPrefix,
+    slug: doc.slug,
+    title: doc.title || doc.slug,
+    subtitle: `${subtitlePrefix} · ${doc.slug}`,
+    labels: Array.isArray(doc.labels) ? doc.labels.map((item) => String(item || '').trim()).filter(Boolean) : [],
+    labelKeys: Array.isArray(doc.labels)
+      ? doc.labels.map((item) => normalizeLabelKey(item)).filter(Boolean)
+      : []
+  })
+
+  const collectFromSlugs = (slugs, group, subtitlePrefix) => {
+    const result = []
+    slugs.forEach((slug) => {
+      if (!slug || used.has(slug)) {
+        return
+      }
+      const doc = bySlug.get(slug)
+      if (!doc) {
+        return
+      }
+      if (!matchCommandText(q, doc.title, doc.slug)) {
+        return
+      }
+      used.add(slug)
+      result.push(toDocItem(doc, group, subtitlePrefix))
+    })
+    return result
+  }
+
+  const pinnedDocs = collectFromSlugs(pinned.value, 'pinned', '固定')
+  const favoriteDocs = collectFromSlugs(favorites.value, 'favorites', '收藏')
+  const recentDocs = collectFromSlugs(recent.value, 'recent', '最近访问')
+
+  const pageDocs = visibleDocs.value
+    .filter((doc) => !used.has(doc.slug) && matchCommandText(q, doc.title, doc.slug))
+    .slice(0, 16)
+    .map((doc) => toDocItem(doc, 'pages', '页面'))
+
+  return {
+    pinnedDocs,
+    favoriteDocs,
+    recentDocs,
+    pageDocs
+  }
+})
+
+const recentCommandActions = computed(() => {
+  const q = commandQueryMeta.value.text
+  const actionByKey = new Map(commandActions.value.map((item) => [item.key, item]))
+  return recentCommandActionKeys.value
+    .map((actionKey) => actionByKey.get(actionKey))
+    .filter(Boolean)
+    .filter((item) => matchCommandText(q, item.title, item.subtitle, item.keywords))
+    .map((item) => ({
+      ...item,
+      key: `recent:${item.key}`,
+      sourceActionKey: item.key,
+      actionGroup: 'recent',
+      subtitle: `最近动作 · ${item.title}`
+    }))
+})
+
+const commandResults = computed(() => {
+  const q = commandQueryMeta.value.text
+  const scope = commandEffectiveScope.value
+  const manualLabel = normalizeLabelKey(commandLabelFilter.value)
+  const inlineLabels = commandQueryMeta.value.labels
+  const activeLabelKeys = Array.from(new Set([
+    ...(manualLabel ? [manualLabel] : []),
+    ...inlineLabels
+  ]))
+  const recentActions = recentCommandActions.value
+  const recentActionKeys = new Set(recentActions.map((item) => item.sourceActionKey).filter(Boolean))
+  const actions = commandActions.value
+    .filter((item) => matchCommandText(q, item.title, item.subtitle, item.keywords))
+    .filter((item) => !recentActionKeys.has(item.key))
+  const {
+    pinnedDocs,
+    favoriteDocs,
+    recentDocs,
+    pageDocs
+  } = commandDocGroups.value
+  const byScope = {
+    RECENT_ACTIONS: [...recentActions],
+    ACTIONS: [...actions],
+    PINNED: [...pinnedDocs],
+    FAVORITES: [...favoriteDocs],
+    RECENT: [...recentDocs],
+    PAGES: [...pageDocs]
+  }
+  let list = scope === 'ALL'
+    ? [...recentActions, ...actions, ...pinnedDocs, ...favoriteDocs, ...recentDocs, ...pageDocs]
+    : (byScope[scope] || [])
+
+  if (activeLabelKeys.length > 0) {
+    list = list.filter((item) => {
+      if (item.type !== 'doc' || !Array.isArray(item.labelKeys)) {
+        return false
+      }
+      return activeLabelKeys.every((key) => item.labelKeys.includes(key))
+    })
+  }
+  return list.slice(0, 28)
+})
+const commandSections = computed(() => {
+  let flatIndex = 0
+  const recentActions = []
+  const actions = []
+  const pinnedDocs = []
+  const favoriteDocs = []
+  const recentDocs = []
+  const pages = []
+  commandResults.value.forEach((item) => {
+    const wrapped = {
+      ...item,
+      flatIndex: flatIndex++
+    }
+    if (item.type === 'action' && item.actionGroup === 'recent') {
+      recentActions.push(wrapped)
+    } else if (item.type === 'action') {
+      actions.push(wrapped)
+    } else if (item.group === 'pinned') {
+      pinnedDocs.push(wrapped)
+    } else if (item.group === 'favorites') {
+      favoriteDocs.push(wrapped)
+    } else if (item.group === 'recent') {
+      recentDocs.push(wrapped)
+    } else {
+      pages.push(wrapped)
+    }
+  })
+  return [
+    {
+      key: 'recent-actions',
+      icon: '🕘',
+      title: `最近动作 (${recentActions.length})`,
+      items: recentActions
+    },
+    {
+      key: 'actions',
+      icon: '⚡',
+      title: `全部动作 (${actions.length})`,
+      items: actions
+    },
+    {
+      key: 'pinned',
+      icon: '📌',
+      title: `固定 (${pinnedDocs.length})`,
+      items: pinnedDocs
+    },
+    {
+      key: 'favorites',
+      icon: '⭐',
+      title: `收藏 (${favoriteDocs.length})`,
+      items: favoriteDocs
+    },
+    {
+      key: 'recent',
+      icon: '🕒',
+      title: `最近访问 (${recentDocs.length})`,
+      items: recentDocs
+    },
+    {
+      key: 'pages',
+      icon: '📄',
+      title: `页面 (${pages.length})`,
+      items: pages
+    }
+  ].filter((section) => section.items.length > 0)
+})
+
+const commandNavItems = computed(() => {
+  const suggest = commandSyntaxSuggestions.value.map((item, index) => ({
+    kind: 'suggest',
+    index,
+    item
+  }))
+  const results = commandResults.value.map((item, index) => ({
+    kind: 'result',
+    index,
+    item
+  }))
+  return [...suggest, ...results]
 })
 const pageOutline = computed(() => {
   const content = currentDoc.value?.content || ''
@@ -1828,6 +2721,31 @@ function loadCollections() {
       cleanupRecentOlder(7)
     }
     currentUser.value = localStorage.getItem(CURRENT_USER_KEY) || 'admin'
+    const parsedRecentActions = JSON.parse(localStorage.getItem(RECENT_COMMAND_ACTIONS_KEY) || '[]')
+    recentCommandActionKeys.value = Array.isArray(parsedRecentActions)
+      ? parsedRecentActions
+        .map((item) => String(item || '').trim())
+        .filter((item) => item.startsWith('action:'))
+        .slice(0, 8)
+      : []
+    const parsedCommandHistory = JSON.parse(localStorage.getItem(COMMAND_QUERY_HISTORY_KEY) || '[]')
+    commandQueryHistory.value = Array.isArray(parsedCommandHistory)
+      ? parsedCommandHistory
+        .map((item) => String(item || '').trim())
+        .filter(Boolean)
+        .slice(0, 20)
+      : []
+    const parsedPinnedCommandHistory = JSON.parse(localStorage.getItem(PINNED_COMMAND_QUERY_KEY) || '[]')
+    commandPinnedQueries.value = Array.isArray(parsedPinnedCommandHistory)
+      ? parsedPinnedCommandHistory
+        .map((item) => String(item || '').trim())
+        .filter(Boolean)
+        .slice(0, 12)
+      : []
+    const parsedPinnedQueryAliases = JSON.parse(localStorage.getItem(PINNED_COMMAND_QUERY_ALIAS_KEY) || '{}')
+    commandPinnedQueryAliases.value = parsedPinnedQueryAliases && typeof parsedPinnedQueryAliases === 'object'
+      ? parsedPinnedQueryAliases
+      : {}
   } catch {
     pinned.value = []
     favorites.value = []
@@ -1835,7 +2753,19 @@ function loadCollections() {
     recentMeta.value = {}
     autoCleanRecentOlder.value = false
     currentUser.value = 'admin'
+    recentCommandActionKeys.value = []
+    commandQueryHistory.value = []
+    commandPinnedQueries.value = []
+    commandPinnedQueryAliases.value = {}
   }
+}
+
+function rememberCommandAction(item) {
+  const sourceKey = String(item?.sourceActionKey || item?.key || '').trim()
+  if (!sourceKey.startsWith('action:')) {
+    return
+  }
+  recentCommandActionKeys.value = [sourceKey, ...recentCommandActionKeys.value.filter((key) => key !== sourceKey)].slice(0, 8)
 }
 
 function loadAuthSessionUser() {
@@ -2153,6 +3083,14 @@ async function logout() {
   }
 }
 
+function openShortcutHelp() {
+  shortcutHelpOpen.value = true
+}
+
+function closeShortcutHelp() {
+  shortcutHelpOpen.value = false
+}
+
 function handleKeydown(event) {
   if (!isAuthenticated.value) {
     return
@@ -2165,8 +3103,31 @@ function handleKeydown(event) {
   if (isCommand) {
     event.preventDefault()
     commandOpen.value = true
+    commandNavIndex.value = 0
+    commandSuggestIndex.value = 0
+    commandHistoryCursor.value = -1
     commandActiveIndex.value = 0
     return
+  }
+
+  const isShortcutHelp = !event.altKey && !event.ctrlKey && !event.metaKey && event.key === '?'
+  if (isShortcutHelp && !typingElement) {
+    event.preventDefault()
+    openShortcutHelp()
+    return
+  }
+
+  if (event.key === 'Escape') {
+    if (commandOpen.value) {
+      event.preventDefault()
+      closeCommand()
+      return
+    }
+    if (shortcutHelpOpen.value) {
+      event.preventDefault()
+      closeShortcutHelp()
+      return
+    }
   }
 
   const isToggleTreePathFocus = event.altKey && !event.ctrlKey && !event.metaKey && event.key === '0'
@@ -2254,51 +3215,498 @@ function handleKeydown(event) {
 function closeCommand() {
   commandOpen.value = false
   commandQuery.value = ''
+  commandScope.value = 'ALL'
+  commandLabelFilter.value = ''
+  commandNavIndex.value = 0
+  commandSuggestIndex.value = 0
+  commandSuggestDismissed.value = false
+  commandExampleIndex.value = 0
+  commandExampleKeyboardArmed.value = false
+  commandHistoryCursor.value = -1
+  commandPinnedDragQuery.value = ''
+  commandPinnedDropQuery.value = ''
   commandActiveIndex.value = 0
 }
 
 function openFirstCommandResult() {
-  if (commandResults.value.length === 0 || commandActiveIndex.value < 0) {
+  const nav = commandNavItems.value[commandNavIndex.value]
+  if (nav?.kind === 'result') {
+    selectCommandItem(nav.item)
+    return
+  }
+  if (commandResults.value.length === 0) {
     return
   }
   const target = commandResults.value[commandActiveIndex.value] || commandResults.value[0]
   if (!target) {
     return
   }
-  selectCommandDoc(target.slug)
+  selectCommandItem(target)
 }
 
 function onCommandInputKeydown(event) {
   if (event.key === 'Escape') {
     event.preventDefault()
+    if (commandSyntaxSuggestions.value.length > 0) {
+      commandSuggestDismissed.value = true
+      commandSuggestIndex.value = -1
+      return
+    }
     closeCommand()
+    return
+  }
+  const navItems = commandNavItems.value
+  const pinnedQuickMatch = event.altKey && !event.ctrlKey && !event.metaKey
+    ? String(event.key || '').match(/^[1-9]$/)
+    : null
+  if (pinnedQuickMatch) {
+    const index = Number(pinnedQuickMatch[0]) - 1
+    const targetQuery = commandPinnedHistoryDisplay.value[index] || ''
+    if (targetQuery) {
+      event.preventDefault()
+      event.stopPropagation()
+      applyCommandHistory(targetQuery)
+      return
+    }
+  }
+  const historyCycleUp = event.altKey && !event.ctrlKey && !event.metaKey && event.key === 'ArrowUp'
+  if (historyCycleUp) {
+    event.preventDefault()
+    if (!commandQueryHistory.value.length) {
+      return
+    }
+    if (commandHistoryCursor.value < 0) {
+      commandHistoryCursor.value = 0
+    } else {
+      commandHistoryCursor.value = Math.min(commandHistoryCursor.value + 1, commandQueryHistory.value.length - 1)
+    }
+    commandQuery.value = commandQueryHistory.value[commandHistoryCursor.value] || ''
+    return
+  }
+  const historyCycleDown = event.altKey && !event.ctrlKey && !event.metaKey && event.key === 'ArrowDown'
+  if (historyCycleDown) {
+    event.preventDefault()
+    if (!commandQueryHistory.value.length) {
+      return
+    }
+    if (commandHistoryCursor.value <= 0) {
+      commandHistoryCursor.value = -1
+      commandQuery.value = ''
+    } else {
+      commandHistoryCursor.value -= 1
+      commandQuery.value = commandQueryHistory.value[commandHistoryCursor.value] || ''
+    }
+    return
+  }
+  if (commandExampleKeyboardEnabled.value && event.key === 'ArrowRight') {
+    event.preventDefault()
+    commandExampleIndex.value = (commandExampleIndex.value + 1) % commandSyntaxExamples.value.length
+    commandExampleKeyboardArmed.value = true
+    return
+  }
+  if (commandExampleKeyboardEnabled.value && event.key === 'ArrowLeft') {
+    event.preventDefault()
+    commandExampleIndex.value = (commandExampleIndex.value - 1 + commandSyntaxExamples.value.length) % commandSyntaxExamples.value.length
+    commandExampleKeyboardArmed.value = true
+    return
+  }
+  if (!navItems.length && (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === 'Tab')) {
+    event.preventDefault()
+    return
+  }
+  const completeOnly = event.shiftKey && event.key === 'Enter' && !event.ctrlKey && !event.metaKey
+  if (completeOnly) {
+    event.preventDefault()
+    const nav = navItems[commandNavIndex.value]
+    if (nav?.kind === 'suggest') {
+      applyCommandSuggestion(nav.item)
+      return
+    }
+    if (commandSyntaxSuggestions.value.length > 0) {
+      const first = commandSyntaxSuggestions.value[0]
+      if (first) {
+        applyCommandSuggestion(first)
+      }
+    }
+    return
+  }
+  const quickExecute = (event.ctrlKey || event.metaKey) && event.key === 'Enter'
+  if (quickExecute) {
+    event.preventDefault()
+    const nav = navItems[commandNavIndex.value]
+    if (nav?.kind === 'result') {
+      selectCommandItem(nav.item)
+      return
+    }
+    if (commandResults.value.length > 0) {
+      const fallback = commandResults.value[commandActiveIndex.value] || commandResults.value[0]
+      if (fallback) {
+        selectCommandItem(fallback)
+      }
+    }
+    return
+  }
+  if (event.key === 'Tab') {
+    event.preventDefault()
+    const nav = navItems[commandNavIndex.value]
+    if (nav?.kind === 'suggest') {
+      applyCommandSuggestion(nav.item)
+      return
+    }
+    openFirstCommandResult()
     return
   }
   if (event.key === 'Enter') {
     event.preventDefault()
+    if (commandExampleKeyboardEnabled.value && commandExampleKeyboardArmed.value) {
+      const example = commandSyntaxExamples.value[commandExampleIndex.value] || commandSyntaxExamples.value[0]
+      if (example?.query) {
+        applyCommandExample(example.query)
+      }
+      return
+    }
+    const nav = navItems[commandNavIndex.value]
+    if (nav?.kind === 'suggest') {
+      applyCommandSuggestion(nav.item)
+      return
+    }
     openFirstCommandResult()
     return
   }
   if (event.key === 'ArrowDown') {
     event.preventDefault()
-    if (commandResults.value.length === 0) {
-      return
-    }
-    commandActiveIndex.value = (commandActiveIndex.value + 1) % commandResults.value.length
+    commandNavIndex.value = (commandNavIndex.value + 1) % navItems.length
     return
   }
   if (event.key === 'ArrowUp') {
     event.preventDefault()
-    if (commandResults.value.length === 0) {
-      return
-    }
-    commandActiveIndex.value = (commandActiveIndex.value - 1 + commandResults.value.length) % commandResults.value.length
+    commandNavIndex.value = (commandNavIndex.value - 1 + navItems.length) % navItems.length
   }
+}
+
+function applyCommandSuggestion(item) {
+  const context = commandSuggestContext.value
+  if (!context || !item?.replace) {
+    return
+  }
+  const before = context.query.slice(0, context.start)
+  const after = context.query.slice(context.end)
+  commandQuery.value = `${before}${item.replace} ${after}`.replace(/\s+/g, ' ').trimStart()
+  commandNavIndex.value = 0
+  commandSuggestIndex.value = 0
+  commandSuggestDismissed.value = false
+  commandExampleKeyboardArmed.value = false
+  commandHistoryCursor.value = -1
+}
+
+function applyCommandExample(query) {
+  commandQuery.value = String(query || '').trim()
+  commandNavIndex.value = 0
+  commandSuggestIndex.value = 0
+  commandSuggestDismissed.value = false
+  commandExampleKeyboardArmed.value = false
+  commandHistoryCursor.value = -1
+}
+
+function setCommandExampleIndexByKey(key) {
+  const idx = commandSyntaxExamples.value.findIndex((item) => item.key === key)
+  if (idx >= 0) {
+    commandExampleIndex.value = idx
+  }
+}
+
+function applyCommandHistory(query) {
+  commandQuery.value = String(query || '').trim()
+  commandHistoryCursor.value = -1
+  commandNavIndex.value = 0
+  commandSuggestIndex.value = 0
+}
+
+function removeCommandHistoryQuery(query) {
+  const value = String(query || '').trim()
+  if (!value) {
+    return
+  }
+  commandQueryHistory.value = commandQueryHistory.value.filter((item) => item !== value)
+  commandPinnedQueries.value = commandPinnedQueries.value.filter((item) => item !== value)
+  if (commandPinnedQueryAliases.value[value]) {
+    const next = { ...commandPinnedQueryAliases.value }
+    delete next[value]
+    commandPinnedQueryAliases.value = next
+  }
+  commandHistoryCursor.value = -1
+}
+
+function clearCommandHistory() {
+  commandQueryHistory.value = []
+  commandPinnedQueries.value = []
+  commandPinnedQueryAliases.value = {}
+  commandHistoryCursor.value = -1
+}
+
+function togglePinCommandHistoryQuery(query) {
+  const value = String(query || '').trim()
+  if (!value) {
+    return
+  }
+  if (commandPinnedQueries.value.includes(value)) {
+    commandPinnedQueries.value = commandPinnedQueries.value.filter((item) => item !== value)
+    return
+  }
+  commandPinnedQueries.value = [value, ...commandPinnedQueries.value.filter((item) => item !== value)].slice(0, 12)
+  commandQueryHistory.value = [value, ...commandQueryHistory.value.filter((item) => item !== value)].slice(0, 20)
+}
+
+function reorderPinnedCommandHistory(sourceQuery, targetQuery) {
+  const source = String(sourceQuery || '').trim()
+  const target = String(targetQuery || '').trim()
+  if (!source || !target || source === target) {
+    return
+  }
+  const list = [...commandPinnedQueries.value]
+  const from = list.indexOf(source)
+  const to = list.indexOf(target)
+  if (from < 0 || to < 0) {
+    return
+  }
+  const [moved] = list.splice(from, 1)
+  list.splice(to, 0, moved)
+  commandPinnedQueries.value = list
+}
+
+function onPinnedHistoryDragStart(query) {
+  const value = String(query || '').trim()
+  if (!value) {
+    return
+  }
+  commandPinnedDragQuery.value = value
+  commandPinnedDropQuery.value = value
+}
+
+function onPinnedHistoryDragOver(query) {
+  const value = String(query || '').trim()
+  if (!value || !commandPinnedDragQuery.value || value === commandPinnedDragQuery.value) {
+    return
+  }
+  commandPinnedDropQuery.value = value
+}
+
+function onPinnedHistoryDrop(query) {
+  const target = String(query || '').trim()
+  if (!target || !commandPinnedDragQuery.value) {
+    onPinnedHistoryDragEnd()
+    return
+  }
+  reorderPinnedCommandHistory(commandPinnedDragQuery.value, target)
+  onPinnedHistoryDragEnd()
+}
+
+function onPinnedHistoryDragEnd() {
+  commandPinnedDragQuery.value = ''
+  commandPinnedDropQuery.value = ''
+}
+
+function hasPinnedQueryAlias(query) {
+  const key = String(query || '').trim()
+  if (!key) {
+    return false
+  }
+  return String(commandPinnedQueryAliases.value[key] || '').trim().length > 0
+}
+
+function getPinnedQueryDisplay(query) {
+  const key = String(query || '').trim()
+  if (!key) {
+    return ''
+  }
+  const alias = String(commandPinnedQueryAliases.value[key] || '').trim()
+  return alias || key
+}
+
+async function renamePinnedCommandAlias(query) {
+  const key = String(query || '').trim()
+  if (!key) {
+    return
+  }
+  const currentAlias = String(commandPinnedQueryAliases.value[key] || '').trim()
+  const nextAlias = await askPrompt('输入这个常用搜索的别名（留空不修改）', {
+    title: '设置常用搜索别名',
+    placeholder: '例如：发布检查',
+    initialValue: currentAlias,
+    confirmText: '保存'
+  })
+  if (!nextAlias) {
+    return
+  }
+  commandPinnedQueryAliases.value = {
+    ...commandPinnedQueryAliases.value,
+    [key]: String(nextAlias).trim()
+  }
+}
+
+function clearPinnedCommandAlias(query) {
+  const key = String(query || '').trim()
+  if (!key || !commandPinnedQueryAliases.value[key]) {
+    return
+  }
+  const next = { ...commandPinnedQueryAliases.value }
+  delete next[key]
+  commandPinnedQueryAliases.value = next
+}
+
+function syncCommandNavSelection() {
+  const nav = commandNavItems.value[commandNavIndex.value]
+  if (!nav) {
+    commandSuggestIndex.value = commandSyntaxSuggestions.value.length > 0 ? 0 : -1
+    commandActiveIndex.value = commandResults.value.length > 0 ? 0 : -1
+    return
+  }
+  if (nav.kind === 'suggest') {
+    commandSuggestIndex.value = nav.index
+    commandActiveIndex.value = -1
+    return
+  }
+  commandSuggestIndex.value = -1
+  commandActiveIndex.value = nav.item?.flatIndex ?? nav.index
 }
 
 async function selectCommandDoc(slug) {
   closeCommand()
   await loadDoc(slug)
+}
+
+async function selectCommandItem(item) {
+  if (!item) {
+    return
+  }
+  rememberCommandQuery(commandQuery.value)
+  if (item.type === 'action') {
+    closeCommand()
+    rememberCommandAction(item)
+    if (item.action === 'OPEN_HOME') {
+      openHome()
+      return
+    }
+    if (item.action === 'CREATE_PAGE') {
+      createNewDoc()
+      return
+    }
+    if (item.action === 'OPEN_MY_TODO') {
+      openMyTodoView()
+      return
+    }
+    if (item.action === 'COPY_CURRENT_PAGE_LINK') {
+      const pageLink = currentShareLink.value || `${window.location.origin}?page=${encodeURIComponent(activeSlug.value)}`
+      try {
+        await navigator.clipboard.writeText(pageLink)
+        showToast('页面链接已复制', 'success')
+      } catch {
+        showToast('复制失败，请手动复制', 'error')
+      }
+      return
+    }
+    if (item.action === 'DUPLICATE_CURRENT_PAGE') {
+      duplicateCurrentPage()
+      return
+    }
+    if (item.action === 'TOGGLE_CURRENT_SHARE') {
+      if (!currentCanEdit.value) {
+        showToast('当前用户无编辑权限', 'error')
+        return
+      }
+      await toggleShare(!currentDoc.value?.shareEnabled)
+      return
+    }
+    if (item.action === 'REGENERATE_CURRENT_SHARE') {
+      if (!currentCanEdit.value) {
+        showToast('当前用户无编辑权限', 'error')
+        return
+      }
+      await regenerateShare()
+      return
+    }
+    if (item.action === 'OPEN_PARENT_PAGE') {
+      const parentSlug = String(currentDoc.value?.parentSlug || '').trim()
+      if (parentSlug) {
+        await loadDoc(parentSlug)
+      }
+      return
+    }
+    if (item.action === 'TOGGLE_RIGHT') {
+      toggleRightPanel()
+      return
+    }
+    if (item.action === 'TOGGLE_FOCUS') {
+      toggleFocusMode()
+      return
+    }
+    if (item.action === 'TOGGLE_DENSITY') {
+      docListRef.value?.toggleCompactMode()
+      return
+    }
+    if (item.action === 'EXPAND_TREE') {
+      docListRef.value?.expandAll()
+      return
+    }
+    if (item.action === 'COLLAPSE_TREE') {
+      docListRef.value?.collapseAll()
+      return
+    }
+    if (item.action === 'TOGGLE_TREE_FOCUS') {
+      docListRef.value?.toggleTreeFocusPath()
+      return
+    }
+    if (item.action === 'COLLAPSE_SIDEBAR_PANELS') {
+      docListRef.value?.collapseSidebarPanels()
+      return
+    }
+    if (item.action === 'EXPAND_SIDEBAR_PANELS') {
+      docListRef.value?.expandSidebarPanels()
+      return
+    }
+    if (item.action === 'FOCUS_PINNED_SEARCH') {
+      docListRef.value?.focusQuickSearch('PINNED')
+      return
+    }
+    if (item.action === 'FOCUS_FAVORITES_SEARCH') {
+      docListRef.value?.focusQuickSearch('FAVORITES')
+      return
+    }
+    if (item.action === 'FOCUS_RECENT_SEARCH') {
+      docListRef.value?.focusQuickSearch('RECENT')
+      return
+    }
+    if (item.action === 'OPEN_SHORTCUT_HELP') {
+      openShortcutHelp()
+      return
+    }
+    if (item.action === 'OPEN_USER_ADMIN') {
+      if (!canManageUsers.value) {
+        showToast('仅管理员可访问用户管理', 'error')
+        return
+      }
+      await openUserAdmin()
+      return
+    }
+    if (item.action === 'LOGOUT') {
+      await logout()
+    }
+    return
+  }
+  if (item.type === 'doc' && item.slug) {
+    await selectCommandDoc(item.slug)
+  }
+}
+
+function rememberCommandQuery(query) {
+  const value = String(query || '').trim()
+  if (!value || value.length < 2) {
+    return
+  }
+  commandQueryHistory.value = [value, ...commandQueryHistory.value.filter((item) => item !== value)].slice(0, 20)
+  if (commandPinnedQueries.value.includes(value)) {
+    commandPinnedQueries.value = [value, ...commandPinnedQueries.value.filter((item) => item !== value)].slice(0, 12)
+  }
 }
 
 onMounted(async () => {
@@ -2354,17 +3762,56 @@ onBeforeUnmount(() => {
 })
 
 watch(commandQuery, () => {
+  commandNavIndex.value = 0
+  commandSuggestIndex.value = 0
+  commandSuggestDismissed.value = false
+  commandExampleKeyboardArmed.value = false
   commandActiveIndex.value = 0
 })
 
-watch(commandResults, (list) => {
+watch(commandSyntaxExamples, (list) => {
   if (!list.length) {
-    commandActiveIndex.value = 0
+    commandExampleIndex.value = 0
+    commandExampleKeyboardArmed.value = false
     return
   }
-  if (commandActiveIndex.value >= list.length) {
-    commandActiveIndex.value = list.length - 1
+  if (commandExampleIndex.value >= list.length) {
+    commandExampleIndex.value = list.length - 1
   }
+})
+
+watch(commandNavItems, (list) => {
+  if (!list.length) {
+    commandNavIndex.value = 0
+    syncCommandNavSelection()
+    return
+  }
+  if (commandNavIndex.value >= list.length) {
+    commandNavIndex.value = list.length - 1
+  }
+  if (commandNavIndex.value < 0) {
+    commandNavIndex.value = 0
+  }
+  syncCommandNavSelection()
+})
+
+watch(commandLabelOptions, (options) => {
+  if (commandLabelFilter.value && !options.includes(commandLabelFilter.value)) {
+    commandLabelFilter.value = ''
+  }
+})
+
+watch(commandNavIndex, () => {
+  syncCommandNavSelection()
+})
+
+watch(commandOpen, (open) => {
+  if (!open) {
+    return
+  }
+  commandNavIndex.value = 0
+  commandHistoryCursor.value = -1
+  syncCommandNavSelection()
 })
 
 watch(currentUser, () => {
@@ -2386,6 +3833,32 @@ watch(leftPaneWidth, (width) => {
 watch(focusMode, (open) => {
   persistFocusModeState(open)
 })
+
+watch(recentCommandActionKeys, (keys) => {
+  localStorage.setItem(RECENT_COMMAND_ACTIONS_KEY, JSON.stringify(Array.isArray(keys) ? keys.slice(0, 8) : []))
+}, { deep: true })
+
+watch(commandQueryHistory, (list) => {
+  localStorage.setItem(COMMAND_QUERY_HISTORY_KEY, JSON.stringify(Array.isArray(list) ? list.slice(0, 20) : []))
+}, { deep: true })
+
+watch(commandPinnedQueries, (list) => {
+  const valid = new Set(Array.isArray(list) ? list : [])
+  const nextAliases = {}
+  Object.entries(commandPinnedQueryAliases.value || {}).forEach(([query, alias]) => {
+    if (valid.has(query)) {
+      nextAliases[query] = alias
+    }
+  })
+  if (JSON.stringify(nextAliases) !== JSON.stringify(commandPinnedQueryAliases.value || {})) {
+    commandPinnedQueryAliases.value = nextAliases
+  }
+  localStorage.setItem(PINNED_COMMAND_QUERY_KEY, JSON.stringify(Array.isArray(list) ? list.slice(0, 12) : []))
+}, { deep: true })
+
+watch(commandPinnedQueryAliases, (aliases) => {
+  localStorage.setItem(PINNED_COMMAND_QUERY_ALIAS_KEY, JSON.stringify(aliases && typeof aliases === 'object' ? aliases : {}))
+}, { deep: true })
 
 function normalizeMembers(values) {
   if (!Array.isArray(values)) {
