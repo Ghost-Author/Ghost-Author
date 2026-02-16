@@ -56,6 +56,11 @@
   --scrollbar-thumb: #c9daf7;
   --scrollbar-thumb-hover: #b5caf1;
   --split-line: #cfdef9;
+  --chip-radius: 999px;
+  --chip-font-size: 11px;
+  --chip-line-height: 1.35;
+  --chip-padding-y: 2px;
+  --chip-padding-x: 8px;
 }
 
 * {
@@ -743,14 +748,43 @@ body {
   flex-wrap: wrap;
 }
 
+.access-pill,
+.context-chip,
+.page-status-pill,
+.save-state-pill,
+.page-dirty-tip,
+.batch-count,
+.node-slug,
+.node-visibility,
+.node-perm,
+.node-status,
+.node-lock,
+.node-priority,
+.node-owner,
+.doc-label,
+.pick-tag,
+.perm-chip,
+.child-status,
+.child-priority,
+.child-due,
+.read-status,
+.read-visibility,
+.command-scope-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border-radius: var(--chip-radius);
+  font-size: var(--chip-font-size);
+  line-height: var(--chip-line-height);
+}
+
 .access-pill {
   border: 1px solid #e4d8b6;
-  border-radius: 999px;
   background: #fff8e8;
   color: #7f6130;
-  font-size: 11px;
   font-weight: 700;
-  padding: 3px 9px;
+  padding: calc(var(--chip-padding-y) + 1px) calc(var(--chip-padding-x) + 1px);
 }
 
 .access-pill.owner {
@@ -773,12 +807,10 @@ body {
 
 .context-chip {
   border: 1px solid #cfddf9;
-  border-radius: 999px;
   background: linear-gradient(145deg, #ffffff, #f5f9ff);
   color: #4c6290;
-  font-size: 11px;
   font-weight: 700;
-  padding: 3px 9px;
+  padding: calc(var(--chip-padding-y) + 1px) calc(var(--chip-padding-x) + 1px);
 }
 
 .context-link {
@@ -912,12 +944,10 @@ body {
 
 .page-status-pill {
   border: 1px solid #cfddf9;
-  border-radius: 999px;
   background: linear-gradient(145deg, #ffffff, #f4f8ff);
   color: #4c6290;
-  font-size: 11px;
   font-weight: 700;
-  padding: 3px 9px;
+  padding: calc(var(--chip-padding-y) + 1px) calc(var(--chip-padding-x) + 1px);
 }
 
 .page-status-pill.published {
@@ -961,12 +991,10 @@ body {
 }
 
 .batch-count {
-  font-size: 11px;
   border: 1px solid #cfe0fb;
   background: #f3f8ff;
   color: #4b648f;
-  border-radius: 999px;
-  padding: 2px 8px;
+  padding: var(--chip-padding-y) var(--chip-padding-x);
 }
 
 .header h2,
@@ -988,12 +1016,10 @@ body {
 
 .save-state-pill {
   border: 1px solid var(--status-pub-border);
-  border-radius: 999px;
   background: var(--status-pub-bg);
   color: var(--status-pub-text);
-  font-size: 11px;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: var(--chip-padding-y) var(--chip-padding-x);
 }
 
 .save-state-pill.dirty {
@@ -1004,11 +1030,9 @@ body {
 
 .page-dirty-tip {
   border: 1px solid #d4e1fb;
-  border-radius: 999px;
   background: #f4f8ff;
   color: #5b7095;
-  font-size: 11px;
-  padding: 3px 8px;
+  padding: calc(var(--chip-padding-y) + 1px) var(--chip-padding-x);
 }
 
 .page-dirty-tip.dirty {
@@ -2092,17 +2116,13 @@ ul {
 
 .node-slug {
   color: #7083a7;
-  font-size: 11px;
   background: #f4f7ff;
   border: 1px solid #d7e2fb;
-  border-radius: 999px;
-  padding: 1px 7px;
+  padding: var(--chip-padding-y) calc(var(--chip-padding-x) - 1px);
 }
 
 .node-visibility {
-  font-size: 11px;
-  border-radius: 999px;
-  padding: 1px 7px;
+  padding: var(--chip-padding-y) calc(var(--chip-padding-x) - 1px);
   border: 1px solid #c8daf9;
   background: #edf4ff;
   color: #325a99;
@@ -2121,9 +2141,7 @@ ul {
 }
 
 .node-perm {
-  font-size: 11px;
-  border-radius: 999px;
-  padding: 1px 7px;
+  padding: var(--chip-padding-y) calc(var(--chip-padding-x) - 1px);
   border: 1px solid #d4e1fb;
   background: #f6f9ff;
   color: #486391;
@@ -2161,18 +2179,14 @@ ul {
 }
 
 .node-status {
-  font-size: 11px;
-  border-radius: 999px;
-  padding: 1px 7px;
+  padding: var(--chip-padding-y) calc(var(--chip-padding-x) - 1px);
   border: 1px solid #c8daf9;
   background: #edf4ff;
   color: #325a99;
 }
 
 .node-lock {
-  font-size: 11px;
-  border-radius: 999px;
-  padding: 1px 7px;
+  padding: var(--chip-padding-y) calc(var(--chip-padding-x) - 1px);
   border: 1px solid #a6d6f5;
   background: #ecf8ff;
   color: #2d6f99;
@@ -2203,9 +2217,7 @@ ul {
 }
 
 .node-priority {
-  font-size: 11px;
-  border-radius: 999px;
-  padding: 1px 7px;
+  padding: var(--chip-padding-y) calc(var(--chip-padding-x) - 1px);
   border: 1px solid #ffddab;
   background: #fff6e7;
   color: #9c6517;
@@ -2224,24 +2236,18 @@ ul {
 }
 
 .node-owner {
-  font-size: 11px;
   color: #63789e;
   border: 1px solid #dbe6fb;
-  border-radius: 999px;
-  padding: 1px 7px;
+  padding: var(--chip-padding-y) calc(var(--chip-padding-x) - 1px);
   background: #f7faff;
 }
 
 .doc-label {
-  display: inline-flex;
-  align-items: center;
   border: 1px solid #ffd5e7;
   background: #fff1f8;
   color: #a64e7a;
-  border-radius: 999px;
-  padding: 1px 7px;
-  font-size: 11px;
-  line-height: 1.4;
+  padding: var(--chip-padding-y) calc(var(--chip-padding-x) - 1px);
+  line-height: var(--chip-line-height);
 }
 
 li p {
@@ -2649,8 +2655,7 @@ label {
 
 .pick-tag {
   font-size: 10px;
-  border-radius: 999px;
-  padding: 1px 6px;
+  padding: 1px 7px;
   border: 1px solid #c8daf9;
   background: #edf4ff;
   color: #325a99;
@@ -3368,9 +3373,7 @@ button.small {
   border: 1px solid #d6e4fb;
   background: #f4f8ff;
   color: #4f668f;
-  border-radius: 999px;
-  font-size: 11px;
-  padding: 2px 8px;
+  padding: var(--chip-padding-y) var(--chip-padding-x);
 }
 
 .perm-chip.owner {
@@ -3501,8 +3504,7 @@ button.small {
 .child-status {
   font-style: normal;
   font-size: 10px;
-  border-radius: 999px;
-  padding: 1px 6px;
+  padding: 1px 7px;
   border: 1px solid #c8daf9;
   background: #edf4ff;
   color: #325a99;
@@ -3530,8 +3532,7 @@ button.small {
 .child-due {
   font-style: normal;
   font-size: 10px;
-  border-radius: 999px;
-  padding: 1px 6px;
+  padding: 1px 7px;
   border: 1px solid #d9e4fb;
   background: #f5f9ff;
   color: #4f6691;
@@ -3555,9 +3556,7 @@ button.small {
 }
 
 .read-status {
-  font-size: 11px;
-  border-radius: 999px;
-  padding: 2px 8px;
+  padding: var(--chip-padding-y) var(--chip-padding-x);
   border: 1px solid var(--status-draft-border);
   background: var(--status-draft-bg);
   color: var(--status-draft-text);
@@ -3582,9 +3581,7 @@ button.small {
 }
 
 .read-visibility {
-  font-size: 11px;
-  border-radius: 999px;
-  padding: 2px 8px;
+  padding: var(--chip-padding-y) var(--chip-padding-x);
   border: 1px solid #9bd8bf;
   background: #ebfff5;
   color: #1a7f54;
