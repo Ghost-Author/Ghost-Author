@@ -49,9 +49,9 @@
       />
       <ul v-show="historyOpen" :class="{ compact: compactMode }">
         <li v-for="item in filteredVersions" :key="item.id">
-          <div>
-            <strong>v{{ item.versionNo }}</strong>
-            <p>{{ formatTime(item.createdAt) }}</p>
+          <div class="version-meta">
+            <strong class="version-no">v{{ item.versionNo }}</strong>
+            <p class="version-time">{{ formatTime(item.createdAt) }}</p>
             <div class="version-picked">
               <span v-if="diffFrom === item.versionNo" class="pick-tag left">左侧</span>
               <span v-if="diffTo === item.versionNo" class="pick-tag right">右侧</span>
@@ -60,7 +60,7 @@
           <div class="version-actions">
             <button class="secondary" :class="{ selected: diffFrom === item.versionNo }" @click="$emit('pick-left', item.versionNo)">左侧</button>
             <button class="secondary" :class="{ selected: diffTo === item.versionNo }" @click="$emit('pick-right', item.versionNo)">右侧</button>
-            <button @click="$emit('restore', item.versionNo)">回滚</button>
+            <button class="version-restore" @click="$emit('restore', item.versionNo)">回滚</button>
           </div>
         </li>
         <li v-if="filteredVersions.length === 0" class="version-empty">没有匹配版本</li>
