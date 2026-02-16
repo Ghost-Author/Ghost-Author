@@ -253,6 +253,10 @@
           <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="batchPinSelected">批量置顶</button>
           <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="batchUnpinSelected">批量取消置顶</button>
           <button class="danger small" :disabled="selectedTemplateCount === 0" @click="batchDeleteSelected">批量删除</button>
+          <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="exportSelectedTemplatesAsJson">导出已选 JSON</button>
+          <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="exportSelectedTemplatesAsMarkdown">导出已选 MD</button>
+          <button class="secondary small" @click="exportFilteredTemplatesAsJson">导出当前 JSON</button>
+          <button class="secondary small" @click="exportFilteredTemplatesAsMarkdown">导出当前 MD</button>
           <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="clearTemplateSelection">清空选择</button>
         </div>
         <div v-if="templates.length === 0" class="comment-empty">还没有模板，请先新增。</div>
@@ -2330,6 +2334,91 @@ function batchDeleteSelected() {
   })
   clearTemplateSelection()
   emit('notify', { type: 'success', message: `已删除 ${ids.length} 个模板` })
+}
+
+function resolveSelectedTemplates() {
+  const selected = new Set(selectedTemplateIds.value.map((id) => Number(id)))
+  return props.templates.filter((tpl) => selected.has(Number(tpl.id)))
+}
+
+function downloadTextFile(filename, content, mime = 'text/plain;charset=utf-8') {
+  if (typeof window === 'undefined') {
+    return
+  }
+  const blob = new Blob([content], { type: mime })
+  const url = window.URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.style.display = 'none'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+function formatTemplateMarkdown(items) {
+  return items.map((tpl) => {
+    const name = String(tpl.name || '未命名模板')
+    const desc = String(tpl.description || '')
+    const content = String(tpl.content || '')
+    const sections = [`# ${name}`]
+    if (desc) {
+      sections.push(`> ${desc}`)
+    }
+    sections.push('```markdown')
+    sections.push(content)
+    sections.push('```')
+    return sections.join('\n')
+  }).join('\n\n---\n\n')
+}
+
+function exportSelectedTemplatesAsJson() {
+  const items = resolveSelectedTemplates()
+  if (!items.length) {
+    return
+  }
+  const payload = items.map((tpl) => ({
+    id: tpl.id,
+    name: tpl.name || '',
+    description: tpl.description || '',
+    content: tpl.content || ''
+  }))
+  downloadTextFile('templates-selected.json', JSON.stringify(payload, null, 2), 'application/json;charset=utf-8')
+  emit('notify', { type: 'success', message: `已导出 ${items.length} 个已选模板（JSON）` })
+}
+
+function exportSelectedTemplatesAsMarkdown() {
+  const items = resolveSelectedTemplates()
+  if (!items.length) {
+    return
+  }
+  downloadTextFile('templates-selected.md', formatTemplateMarkdown(items), 'text/markdown;charset=utf-8')
+  emit('notify', { type: 'success', message: `已导出 ${items.length} 个已选模板（Markdown）` })
+}
+
+function exportFilteredTemplatesAsJson() {
+  const items = filteredTemplates.value
+  if (!items.length) {
+    return
+  }
+  const payload = items.map((tpl) => ({
+    id: tpl.id,
+    name: tpl.name || '',
+    description: tpl.description || '',
+    content: tpl.content || ''
+  }))
+  downloadTextFile('templates-filtered.json', JSON.stringify(payload, null, 2), 'application/json;charset=utf-8')
+  emit('notify', { type: 'success', message: `已导出 ${items.length} 个当前模板（JSON）` })
+}
+
+function exportFilteredTemplatesAsMarkdown() {
+  const items = filteredTemplates.value
+  if (!items.length) {
+    return
+  }
+  downloadTextFile('templates-filtered.md', formatTemplateMarkdown(items), 'text/markdown;charset=utf-8')
+  emit('notify', { type: 'success', message: `已导出 ${items.length} 个当前模板（Markdown）` })
 }
 
 function normalizeTemplateUsage(parsed) {
