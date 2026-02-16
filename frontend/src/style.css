@@ -2306,6 +2306,14 @@ li p {
   flex-wrap: wrap;
 }
 
+.template-center-head-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .template-center-count {
   border: 1px solid #d4e1fb;
   border-radius: 999px;
@@ -2313,6 +2321,25 @@ li p {
   color: #5f769f;
   font-size: 11px;
   padding: 2px 8px;
+}
+
+.template-sort-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.template-sort-chip {
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+}
+
+.template-sort-chip.active {
+  border-color: #f3b7ce;
+  background: linear-gradient(145deg, #fff2f8, #ffe9f2);
+  box-shadow: 0 5px 12px #d47aa22a;
+  color: #a75279;
 }
 
 .template-filter {
@@ -4971,6 +4998,10 @@ button.small {
 
   .template-filter {
     grid-template-columns: 1fr;
+  }
+
+  .template-center-head-right {
+    justify-content: flex-start;
   }
 
   .template-smart-row {

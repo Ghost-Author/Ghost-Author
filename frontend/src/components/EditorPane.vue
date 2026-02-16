@@ -135,7 +135,32 @@
       <div class="template-center" v-if="canManageTemplates && templateCenterOpen">
         <div class="template-center-head">
           <h4>模板中心</h4>
-          <span class="template-center-count">共 {{ templates.length }} 个 · 当前 {{ filteredTemplates.length }} 个</span>
+          <div class="template-center-head-right">
+            <div class="template-sort-mode">
+              <button
+                class="secondary small template-sort-chip"
+                :class="{ active: templateSortMode === 'SMART' }"
+                @click="templateSortMode = 'SMART'"
+              >
+                智能
+              </button>
+              <button
+                class="secondary small template-sort-chip"
+                :class="{ active: templateSortMode === 'NAME' }"
+                @click="templateSortMode = 'NAME'"
+              >
+                名称
+              </button>
+              <button
+                class="secondary small template-sort-chip"
+                :class="{ active: templateSortMode === 'LATEST' }"
+                @click="templateSortMode = 'LATEST'"
+              >
+                最新
+              </button>
+            </div>
+            <span class="template-center-count">共 {{ templates.length }} 个 · 当前 {{ filteredTemplates.length }} 个</span>
+          </div>
         </div>
         <div class="template-filter">
           <input
@@ -857,6 +882,7 @@ const OUTLINE_BATCH_SEPARATOR_KEY = 'ga-outline-batch-separator'
 const OUTLINE_BATCH_LEVEL_KEY = 'ga-outline-batch-level'
 const TEMPLATE_USAGE_KEY = 'ga-template-usage'
 const TEMPLATE_PINNED_KEY = 'ga-template-pinned'
+const TEMPLATE_SORT_MODE_KEY = 'ga-template-sort-mode'
 
 const model = computed(() => props.doc)
 const lastSavedSignature = ref(buildDocSignature(props.doc))
@@ -877,6 +903,7 @@ const templateQuery = ref('')
 const templatePreviewId = ref(null)
 const templateUsage = ref(loadTemplateUsage())
 const templatePinnedIds = ref(loadTemplatePinnedIds())
+const templateSortMode = ref(loadTemplateSortMode())
 const templateCategoryOpen = ref({
   GENERAL: true,
   PROJECT: true,
@@ -1081,13 +1108,14 @@ const editTemplate = ref({
 const canCreateTemplate = computed(() => {
   return !!newTemplate.value.name.trim() && !!newTemplate.value.content.trim()
 })
-const quickChildTemplates = computed(() => props.templates.slice(0, 3))
+const quickChildTemplates = computed(() => sortTemplatesForCenter(props.templates).slice(0, 3))
 const filteredTemplates = computed(() => {
   const q = templateQuery.value.trim().toLowerCase()
+  const source = sortTemplatesForCenter(props.templates)
   if (!q) {
-    return props.templates
+    return source
   }
-  return props.templates.filter((tpl) => {
+  return source.filter((tpl) => {
     const name = String(tpl.name || '').toLowerCase()
     const desc = String(tpl.description || '').toLowerCase()
     const content = String(tpl.content || '').toLowerCase()
@@ -1110,7 +1138,7 @@ const filteredTemplateGroups = computed(() => {
     list.push(tpl)
   })
   return templateCategoryDefs
-    .map((def) => ({ ...def, items: sortTemplatesByPinned(bucket.get(def.key) || []) }))
+    .map((def) => ({ ...def, items: sortTemplatesForCenter(bucket.get(def.key) || []) }))
     .filter((group) => group.items.length > 0)
 })
 const pinnedTemplateItems = computed(() => {
@@ -1334,6 +1362,9 @@ watch(readCardCollapsed, (state) => {
 
 watch(readWidthMode, (mode) => {
   persistReadWidthMode(mode)
+})
+watch(templateSortMode, (mode) => {
+  persistTemplateSortMode(mode)
 })
 
 watch(outlineDefaultAction, (value) => {
@@ -1973,6 +2004,27 @@ function persistOutlineBatchWithLevel(value) {
   window.localStorage.setItem(OUTLINE_BATCH_LEVEL_KEY, value ? '1' : '0')
 }
 
+function normalizeTemplateSortMode(value) {
+  if (value === 'NAME' || value === 'LATEST' || value === 'SMART') {
+    return value
+  }
+  return 'SMART'
+}
+
+function loadTemplateSortMode() {
+  if (typeof window === 'undefined') {
+    return 'SMART'
+  }
+  return normalizeTemplateSortMode(window.localStorage.getItem(TEMPLATE_SORT_MODE_KEY))
+}
+
+function persistTemplateSortMode(mode) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(TEMPLATE_SORT_MODE_KEY, normalizeTemplateSortMode(mode))
+}
+
 function normalizeTemplatePinnedIds(value) {
   const source = Array.isArray(value) ? value : []
   const unique = []
@@ -2029,13 +2081,35 @@ function toggleTemplatePinned(id) {
   persistTemplatePinnedIds(templatePinnedIds.value)
 }
 
-function sortTemplatesByPinned(items) {
+function sortTemplatesForCenter(items) {
   const list = Array.isArray(items) ? [...items] : []
+  const mode = normalizeTemplateSortMode(templateSortMode.value)
+  const recentIds = Array.isArray(templateUsage.value?.recentIds) ? templateUsage.value.recentIds : []
+  const recentIndexMap = new Map(recentIds.map((id, index) => [Number(id), index]))
+  const counts = templateUsage.value?.counts && typeof templateUsage.value.counts === 'object'
+    ? templateUsage.value.counts
+    : {}
   return list.sort((a, b) => {
     const aPinned = isTemplatePinned(a?.id) ? 1 : 0
     const bPinned = isTemplatePinned(b?.id) ? 1 : 0
     if (aPinned !== bPinned) {
       return bPinned - aPinned
+    }
+    if (mode === 'NAME') {
+      return String(a?.name || '').localeCompare(String(b?.name || ''), 'zh-Hans-CN')
+    }
+    if (mode === 'LATEST') {
+      return Number(b?.id || 0) - Number(a?.id || 0)
+    }
+    const aCount = Number(counts[String(a?.id)] || 0)
+    const bCount = Number(counts[String(b?.id)] || 0)
+    if (aCount !== bCount) {
+      return bCount - aCount
+    }
+    const aRecent = recentIndexMap.has(Number(a?.id)) ? recentIndexMap.get(Number(a?.id)) : Number.MAX_SAFE_INTEGER
+    const bRecent = recentIndexMap.has(Number(b?.id)) ? recentIndexMap.get(Number(b?.id)) : Number.MAX_SAFE_INTEGER
+    if (aRecent !== bRecent) {
+      return aRecent - bRecent
     }
     return String(a?.name || '').localeCompare(String(b?.name || ''), 'zh-Hans-CN')
   })
