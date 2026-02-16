@@ -248,12 +248,20 @@ body {
 .topbar-right button.secondary.tiny {
   min-height: 30px;
   padding: 0 12px;
+  min-width: 66px;
+  font-weight: 800;
+  letter-spacing: 0.1px;
 }
 
-.topbar-right button.secondary.tiny.active {
+.topbar-right button.secondary.tiny.active,
+.header-actions .secondary.tiny.active,
+.version-head-actions .secondary.tiny.active,
+.quick-zone-actions .secondary.tiny.active,
+.tree-nav-tools .secondary.tiny.active {
   border-color: #9db7ee;
-  background: #edf4ff;
+  background: linear-gradient(140deg, #f0f5ff, #e7efff);
   color: #446593;
+  box-shadow: 0 5px 12px #6f92cc2a;
 }
 
 .topbar-user {
@@ -783,15 +791,14 @@ body {
 .version-head-actions button,
 .tree-nav-tools button,
 .quick-zones-tools button {
-  min-height: 30px;
+  min-height: 31px;
   border-radius: var(--btn-radius);
   white-space: nowrap;
+  font-weight: 800;
 }
 
-.header-actions .secondary.tiny.active {
-  border: 1px solid #9db7ee;
-  background: #edf4ff;
-  color: #446593;
+.header-actions > button {
+  min-width: 62px;
 }
 
 .batch-count {
@@ -1205,8 +1212,6 @@ button.tiny {
 
 .quick-zone-actions .secondary.tiny.active {
   border-color: #9db7ee;
-  background: #edf4ff;
-  color: #446593;
 }
 
 .quick-list li {
@@ -1311,8 +1316,6 @@ button.tiny {
 
 .tree-nav-tools .secondary.tiny.active {
   border-color: #9db7ee;
-  background: #edf4ff;
-  color: #446593;
 }
 
 .tree-nav-body {
@@ -2210,8 +2213,10 @@ label {
 
 .version-head-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .version-history ul.compact li {
