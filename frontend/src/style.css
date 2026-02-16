@@ -28,6 +28,18 @@
   --text-title: #2f4f83;
   --text-body: #3f557c;
   --text-muted-2: #6f84a8;
+  --status-pub-border: #92d5b7;
+  --status-pub-bg: #ecfff5;
+  --status-pub-text: #1f7b56;
+  --status-draft-border: #e6c7d4;
+  --status-draft-bg: #fff3f8;
+  --status-draft-text: #9f4b71;
+  --status-arch-border: #c8d2e0;
+  --status-arch-bg: #f4f6fa;
+  --status-arch-text: #50607b;
+  --accent-warn-border: #ffd6a3;
+  --accent-warn-bg: #fff7eb;
+  --accent-warn-text: #96600f;
 }
 
 * {
@@ -702,21 +714,21 @@ body {
 }
 
 .context-chip.status.published {
-  border-color: #9bd8bf;
-  background: #ebfff5;
-  color: #1a7f54;
+  border-color: var(--status-pub-border);
+  background: var(--status-pub-bg);
+  color: var(--status-pub-text);
 }
 
 .context-chip.status.draft {
-  border-color: #edcfda;
-  background: #fff2f7;
-  color: #a84f77;
+  border-color: var(--status-draft-border);
+  background: var(--status-draft-bg);
+  color: var(--status-draft-text);
 }
 
 .context-chip.status.archived {
-  border-color: #cdd5e2;
-  background: #f2f4f8;
-  color: #4e5f7a;
+  border-color: var(--status-arch-border);
+  background: var(--status-arch-bg);
+  color: var(--status-arch-text);
 }
 
 .page-action-bar {
@@ -783,21 +795,21 @@ body {
 }
 
 .page-status-pill.published {
-  border-color: #9bd8bf;
-  background: #ebfff5;
-  color: #1a7f54;
+  border-color: var(--status-pub-border);
+  background: var(--status-pub-bg);
+  color: var(--status-pub-text);
 }
 
 .page-status-pill.draft {
-  border-color: #edcfda;
-  background: #fff2f7;
-  color: #a84f77;
+  border-color: var(--status-draft-border);
+  background: var(--status-draft-bg);
+  color: var(--status-draft-text);
 }
 
 .page-status-pill.archived {
-  border-color: #cdd5e2;
-  background: #f2f4f8;
-  color: #4e5f7a;
+  border-color: var(--status-arch-border);
+  background: var(--status-arch-bg);
+  color: var(--status-arch-text);
 }
 
 .header-actions {
@@ -849,19 +861,19 @@ body {
 }
 
 .save-state-pill {
-  border: 1px solid #b9ddc4;
+  border: 1px solid var(--status-pub-border);
   border-radius: 999px;
-  background: #edfff3;
-  color: #1d7a4f;
+  background: var(--status-pub-bg);
+  color: var(--status-pub-text);
   font-size: 11px;
   font-weight: 700;
   padding: 2px 8px;
 }
 
 .save-state-pill.dirty {
-  border-color: #ffd7a0;
-  background: #fff7ea;
-  color: #9a600c;
+  border-color: var(--accent-warn-border);
+  background: var(--accent-warn-bg);
+  color: var(--accent-warn-text);
 }
 
 .page-dirty-tip {
@@ -874,9 +886,9 @@ body {
 }
 
 .page-dirty-tip.dirty {
-  border-color: #ffd7a0;
-  background: #fff7ea;
-  color: #9a600c;
+  border-color: var(--accent-warn-border);
+  background: var(--accent-warn-bg);
+  color: var(--accent-warn-text);
 }
 
 .page-action-shortcuts {
@@ -890,10 +902,10 @@ body {
 
 .page-leave-tip {
   font-size: 11px;
-  color: #9a600c;
-  border: 1px solid #ffd7a0;
+  color: var(--accent-warn-text);
+  border: 1px solid var(--accent-warn-border);
   border-radius: 999px;
-  background: #fff7ea;
+  background: var(--accent-warn-bg);
   padding: 3px 8px;
 }
 
@@ -1887,9 +1899,9 @@ ul {
 }
 
 .node-visibility.space {
-  border-color: #9bd8bf;
-  background: #ebfff5;
-  color: #1a7f54;
+  border-color: var(--status-pub-border);
+  background: var(--status-pub-bg);
+  color: var(--status-pub-text);
 }
 
 .node-perm {
@@ -1957,21 +1969,21 @@ ul {
 }
 
 .node-status.published {
-  border-color: #9bd8bf;
-  background: #ebfff5;
-  color: #1a7f54;
+  border-color: var(--status-pub-border);
+  background: var(--status-pub-bg);
+  color: var(--status-pub-text);
 }
 
 .node-status.draft {
-  border-color: #edcfda;
-  background: #fff2f7;
-  color: #a84f77;
+  border-color: var(--status-draft-border);
+  background: var(--status-draft-bg);
+  color: var(--status-draft-text);
 }
 
 .node-status.archived {
-  border-color: #cdd5e2;
-  background: #f2f4f8;
-  color: #4e5f7a;
+  border-color: var(--status-arch-border);
+  background: var(--status-arch-bg);
+  color: var(--status-arch-text);
 }
 
 .node-priority {
@@ -3191,21 +3203,21 @@ button.small {
 }
 
 .child-status.published {
-  border-color: #9bd8bf;
-  background: #ebfff5;
-  color: #1a7f54;
+  border-color: var(--status-pub-border);
+  background: var(--status-pub-bg);
+  color: var(--status-pub-text);
 }
 
 .child-status.draft {
-  border-color: #edcfda;
-  background: #fff2f7;
-  color: #a84f77;
+  border-color: var(--status-draft-border);
+  background: var(--status-draft-bg);
+  color: var(--status-draft-text);
 }
 
 .child-status.archived {
-  border-color: #cdd5e2;
-  background: #f2f4f8;
-  color: #4e5f7a;
+  border-color: var(--status-arch-border);
+  background: var(--status-arch-bg);
+  color: var(--status-arch-text);
 }
 
 .child-priority,
@@ -3240,27 +3252,27 @@ button.small {
   font-size: 11px;
   border-radius: 999px;
   padding: 2px 8px;
-  border: 1px solid #edcfda;
-  background: #fff2f7;
-  color: #a84f77;
+  border: 1px solid var(--status-draft-border);
+  background: var(--status-draft-bg);
+  color: var(--status-draft-text);
 }
 
 .read-status.published {
-  border-color: #9bd8bf;
-  background: #ebfff5;
-  color: #1a7f54;
+  border-color: var(--status-pub-border);
+  background: var(--status-pub-bg);
+  color: var(--status-pub-text);
 }
 
 .read-status.draft {
-  border-color: #edcfda;
-  background: #fff2f7;
-  color: #a84f77;
+  border-color: var(--status-draft-border);
+  background: var(--status-draft-bg);
+  color: var(--status-draft-text);
 }
 
 .read-status.archived {
-  border-color: #cdd5e2;
-  background: #f2f4f8;
-  color: #4e5f7a;
+  border-color: var(--status-arch-border);
+  background: var(--status-arch-bg);
+  color: var(--status-arch-text);
 }
 
 .read-visibility {
@@ -3386,13 +3398,13 @@ button.small {
 }
 
 .home-card.overdue {
-  border-color: #ffd2d2;
-  background: #fff8f8;
+  border-color: #f3c1c8;
+  background: linear-gradient(165deg, #fff8fa, #fff2f5);
 }
 
 .home-card.today {
-  border-color: #ffe0bb;
-  background: #fffaf1;
+  border-color: #f4d3a7;
+  background: linear-gradient(165deg, #fffbf4, #fff5e9);
 }
 
 .home-card.assignee {
@@ -3401,8 +3413,8 @@ button.small {
 
 .home-card.my-todo {
   margin-top: 2px;
-  border-color: #bfe0ff;
-  background: #f4faff;
+  border-color: #bad5ff;
+  background: linear-gradient(165deg, #f5faff, #edf5ff);
 }
 
 .my-todo-head {
