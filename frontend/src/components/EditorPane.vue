@@ -144,6 +144,45 @@
           />
           <button class="secondary small" :disabled="!templateQuery" @click="templateQuery = ''">清空</button>
         </div>
+        <div class="template-smart-panel" v-if="recentTemplateItems.length || recommendedTemplateItems.length">
+          <div class="template-smart-head">
+            <strong>快捷套用</strong>
+            <button
+              class="secondary small template-smart-clear"
+              v-if="recentTemplateItems.length || recommendedTemplateItems.length"
+              @click="clearTemplateUsage"
+            >
+              清空历史
+            </button>
+          </div>
+          <div class="template-smart-row" v-if="recentTemplateItems.length">
+            <span>最近套用</span>
+            <div class="template-smart-items">
+              <button
+                v-for="tpl in recentTemplateItems"
+                :key="`recent-${tpl.id}`"
+                class="secondary small template-pill"
+                @click="applyTemplateById(tpl.id)"
+              >
+                {{ tpl.name || '未命名模板' }}
+              </button>
+            </div>
+          </div>
+          <div class="template-smart-row" v-if="recommendedTemplateItems.length">
+            <span>常用推荐</span>
+            <div class="template-smart-items">
+              <button
+                v-for="entry in recommendedTemplateItems"
+                :key="`rec-${entry.item.id}`"
+                class="secondary small template-pill"
+                @click="applyTemplateById(entry.item.id)"
+              >
+                {{ entry.item.name || '未命名模板' }}
+                <small>×{{ entry.count }}</small>
+              </button>
+            </div>
+          </div>
+        </div>
         <div class="template-preview-card" v-if="templatePreview">
           <div class="template-preview-head">
             <strong>{{ templatePreview.name || '未命名模板' }}</strong>
@@ -793,6 +832,7 @@ const OUTLINE_DEFAULT_ACTION_KEY = 'ga-outline-default-action'
 const OUTLINE_BATCH_FORMAT_KEY = 'ga-outline-batch-format'
 const OUTLINE_BATCH_SEPARATOR_KEY = 'ga-outline-batch-separator'
 const OUTLINE_BATCH_LEVEL_KEY = 'ga-outline-batch-level'
+const TEMPLATE_USAGE_KEY = 'ga-template-usage'
 
 const model = computed(() => props.doc)
 const lastSavedSignature = ref(buildDocSignature(props.doc))
@@ -811,6 +851,7 @@ const selectedTemplate = ref('')
 const templateCenterOpen = ref(false)
 const templateQuery = ref('')
 const templatePreviewId = ref(null)
+const templateUsage = ref(loadTemplateUsage())
 const templateCategoryOpen = ref({
   GENERAL: true,
   PROJECT: true,
@@ -1047,6 +1088,34 @@ const filteredTemplateGroups = computed(() => {
     .map((def) => ({ ...def, items: bucket.get(def.key) || [] }))
     .filter((group) => group.items.length > 0)
 })
+const recentTemplateItems = computed(() => {
+  const ids = Array.isArray(templateUsage.value?.recentIds) ? templateUsage.value.recentIds : []
+  if (!ids.length) {
+    return []
+  }
+  const byId = new Map(props.templates.map((tpl) => [Number(tpl.id), tpl]))
+  const result = []
+  ids.forEach((id) => {
+    const item = byId.get(Number(id))
+    if (item) {
+      result.push(item)
+    }
+  })
+  return result.slice(0, 6)
+})
+const recommendedTemplateItems = computed(() => {
+  const counts = templateUsage.value?.counts && typeof templateUsage.value.counts === 'object'
+    ? templateUsage.value.counts
+    : {}
+  const source = props.templates
+    .map((tpl) => ({
+      item: tpl,
+      count: Number(counts[String(tpl.id)] || 0)
+    }))
+    .filter((entry) => entry.count > 0)
+    .sort((a, b) => b.count - a.count)
+  return source.slice(0, 6)
+})
 const templatePreview = computed(() => {
   if (!templatePreviewId.value) {
     return null
@@ -1146,6 +1215,39 @@ watch(filteredTemplateGroups, (groups) => {
   })
   templateCategoryOpen.value = next
 })
+
+watch(
+  () => props.templates,
+  (items) => {
+    const ids = new Set((items || []).map((tpl) => Number(tpl.id)))
+    const recent = Array.isArray(templateUsage.value?.recentIds)
+      ? templateUsage.value.recentIds.filter((id) => ids.has(Number(id)))
+      : []
+    const rawCounts = templateUsage.value?.counts && typeof templateUsage.value.counts === 'object'
+      ? templateUsage.value.counts
+      : {}
+    const nextCounts = {}
+    Object.entries(rawCounts).forEach(([id, value]) => {
+      const numericId = Number(id)
+      const count = Number(value)
+      if (!ids.has(numericId) || !Number.isFinite(count) || count <= 0) {
+        return
+      }
+      nextCounts[String(numericId)] = count
+    })
+    if (
+      recent.length !== (templateUsage.value?.recentIds?.length || 0)
+      || Object.keys(nextCounts).length !== Object.keys(rawCounts).length
+    ) {
+      templateUsage.value = {
+        recentIds: recent,
+        counts: nextCounts
+      }
+      persistTemplateUsage(templateUsage.value)
+    }
+  },
+  { deep: true }
+)
 
 watch(
   () => props.childPages,
@@ -1819,6 +1921,84 @@ function persistOutlineBatchWithLevel(value) {
   window.localStorage.setItem(OUTLINE_BATCH_LEVEL_KEY, value ? '1' : '0')
 }
 
+function normalizeTemplateUsage(parsed) {
+  const source = parsed && typeof parsed === 'object' ? parsed : {}
+  const rawRecent = Array.isArray(source.recentIds) ? source.recentIds : []
+  const rawCounts = source.counts && typeof source.counts === 'object' ? source.counts : {}
+  const uniqueRecent = []
+  rawRecent.forEach((id) => {
+    const numericId = Number(id)
+    if (!Number.isFinite(numericId) || numericId <= 0 || uniqueRecent.includes(numericId)) {
+      return
+    }
+    uniqueRecent.push(numericId)
+  })
+  const counts = {}
+  Object.entries(rawCounts).forEach(([id, value]) => {
+    const numericId = Number(id)
+    const numericCount = Number(value)
+    if (!Number.isFinite(numericId) || numericId <= 0 || !Number.isFinite(numericCount) || numericCount <= 0) {
+      return
+    }
+    counts[String(numericId)] = Math.floor(numericCount)
+  })
+  return {
+    recentIds: uniqueRecent.slice(0, 20),
+    counts
+  }
+}
+
+function loadTemplateUsage() {
+  if (typeof window === 'undefined') {
+    return { recentIds: [], counts: {} }
+  }
+  try {
+    const raw = window.localStorage.getItem(TEMPLATE_USAGE_KEY)
+    if (!raw) {
+      return { recentIds: [], counts: {} }
+    }
+    return normalizeTemplateUsage(JSON.parse(raw))
+  } catch {
+    return { recentIds: [], counts: {} }
+  }
+}
+
+function persistTemplateUsage(state) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  try {
+    window.localStorage.setItem(TEMPLATE_USAGE_KEY, JSON.stringify(normalizeTemplateUsage(state)))
+  } catch {
+    // ignore persistence failures
+  }
+}
+
+function recordTemplateUsage(templateId) {
+  const id = Number(templateId)
+  if (!Number.isFinite(id) || id <= 0) {
+    return
+  }
+  const normalized = normalizeTemplateUsage(templateUsage.value)
+  const nextRecent = [id, ...normalized.recentIds.filter((item) => Number(item) !== id)].slice(0, 20)
+  const nextCounts = { ...normalized.counts }
+  const key = String(id)
+  nextCounts[key] = Number(nextCounts[key] || 0) + 1
+  templateUsage.value = {
+    recentIds: nextRecent,
+    counts: nextCounts
+  }
+  persistTemplateUsage(templateUsage.value)
+}
+
+function clearTemplateUsage() {
+  templateUsage.value = {
+    recentIds: [],
+    counts: {}
+  }
+  persistTemplateUsage(templateUsage.value)
+}
+
 function loadChildOpenState(docId) {
   if (typeof window === 'undefined' || !docId) {
     return {}
@@ -2460,6 +2640,7 @@ function applyTemplate() {
     return
   }
   model.value.content = item.content
+  recordTemplateUsage(id)
 }
 
 function applyTemplateById(id) {
@@ -2469,6 +2650,7 @@ function applyTemplateById(id) {
   }
   model.value.content = item.content
   selectedTemplate.value = String(id)
+  recordTemplateUsage(id)
 }
 
 function toggleTemplatePreview(id) {
