@@ -2465,6 +2465,24 @@ li p {
   min-height: 80px;
 }
 
+.template-batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  border: 1px dashed #d9e4fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px;
+  margin: 8px 0;
+}
+
+.template-batch-bar span {
+  font-size: 11px;
+  color: #60779f;
+  padding: 0 4px;
+}
+
 .template-list {
   margin-top: 8px;
 }
@@ -2518,6 +2536,17 @@ li p {
   margin: 4px 0;
   color: #617597;
   font-size: 12px;
+}
+
+.template-list li strong {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.template-select-box {
+  transform: translateY(1px);
 }
 
 .template-item-pin-tag {

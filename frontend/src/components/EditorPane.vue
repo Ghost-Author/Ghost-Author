@@ -245,6 +245,16 @@
           <textarea v-model="newTemplate.content" placeholder="模板内容（Markdown）" />
           <button class="secondary small" :disabled="!canCreateTemplate" @click="createTemplate">新增模板</button>
         </div>
+        <div class="template-batch-bar" v-if="filteredTemplates.length">
+          <button class="secondary small" @click="toggleSelectAllFiltered">
+            {{ selectedAllFiltered ? '取消全选当前结果' : '全选当前结果' }}
+          </button>
+          <span>已选 {{ selectedTemplateCount }} 项</span>
+          <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="batchPinSelected">批量置顶</button>
+          <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="batchUnpinSelected">批量取消置顶</button>
+          <button class="danger small" :disabled="selectedTemplateCount === 0" @click="batchDeleteSelected">批量删除</button>
+          <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="clearTemplateSelection">清空选择</button>
+        </div>
         <div v-if="templates.length === 0" class="comment-empty">还没有模板，请先新增。</div>
         <div v-else-if="filteredTemplates.length === 0" class="comment-empty">没有匹配模板，请调整关键词。</div>
         <div v-else class="template-group-list">
@@ -266,6 +276,12 @@
                 </template>
                 <template v-else>
                   <strong>
+                    <input
+                      type="checkbox"
+                      class="template-select-box"
+                      :checked="isTemplateSelected(tpl.id)"
+                      @change="toggleTemplateSelected(tpl.id)"
+                    />
                     <span v-if="isTemplatePinned(tpl.id)" class="template-item-pin-tag">置顶</span>
                     <span v-html="templateNameHtml(tpl)"></span>
                   </strong>
@@ -929,6 +945,7 @@ const templateUsage = ref(loadTemplateUsage())
 const templatePinnedIds = ref(loadTemplatePinnedIds())
 const templateSortMode = ref(loadTemplateSortMode())
 const templateManualOrderIds = ref(loadTemplateManualOrderIds())
+const selectedTemplateIds = ref([])
 const templateCategoryOpen = ref({
   GENERAL: true,
   PROJECT: true,
@@ -1166,6 +1183,13 @@ const filteredTemplateGroups = computed(() => {
     .map((def) => ({ ...def, items: sortTemplatesForCenter(bucket.get(def.key) || []) }))
     .filter((group) => group.items.length > 0)
 })
+const selectedTemplateCount = computed(() => selectedTemplateIds.value.length)
+const selectedAllFiltered = computed(() => {
+  if (!filteredTemplates.value.length) {
+    return false
+  }
+  return filteredTemplates.value.every((tpl) => selectedTemplateIds.value.includes(Number(tpl.id)))
+})
 const pinnedTemplateItems = computed(() => {
   const ids = Array.isArray(templatePinnedIds.value) ? templatePinnedIds.value : []
   if (!ids.length) {
@@ -1364,6 +1388,10 @@ watch(
         counts: nextCounts
       }
       persistTemplateUsage(templateUsage.value)
+    }
+    const selected = selectedTemplateIds.value.filter((id) => ids.has(Number(id)))
+    if (selected.length !== selectedTemplateIds.value.length) {
+      selectedTemplateIds.value = selected
     }
   },
   { deep: true }
@@ -2231,6 +2259,77 @@ function moveTemplateInGroup(groupItems, index, delta) {
   ;[order[currentOrderIndex], order[targetOrderIndex]] = [order[targetOrderIndex], order[currentOrderIndex]]
   templateManualOrderIds.value = order
   persistTemplateManualOrderIds(templateManualOrderIds.value)
+}
+
+function isTemplateSelected(id) {
+  return selectedTemplateIds.value.includes(Number(id))
+}
+
+function toggleTemplateSelected(id) {
+  const numericId = Number(id)
+  if (!Number.isFinite(numericId) || numericId <= 0) {
+    return
+  }
+  if (isTemplateSelected(numericId)) {
+    selectedTemplateIds.value = selectedTemplateIds.value.filter((item) => Number(item) !== numericId)
+    return
+  }
+  selectedTemplateIds.value = [...selectedTemplateIds.value, numericId]
+}
+
+function clearTemplateSelection() {
+  selectedTemplateIds.value = []
+}
+
+function toggleSelectAllFiltered() {
+  const ids = filteredTemplates.value.map((tpl) => Number(tpl.id))
+  if (!ids.length) {
+    return
+  }
+  if (selectedAllFiltered.value) {
+    selectedTemplateIds.value = selectedTemplateIds.value.filter((id) => !ids.includes(Number(id)))
+    return
+  }
+  const merged = [...selectedTemplateIds.value]
+  ids.forEach((id) => {
+    if (!merged.includes(id)) {
+      merged.push(id)
+    }
+  })
+  selectedTemplateIds.value = merged
+}
+
+function batchPinSelected() {
+  if (!selectedTemplateIds.value.length) {
+    return
+  }
+  const merged = normalizeTemplatePinnedIds([
+    ...selectedTemplateIds.value,
+    ...templatePinnedIds.value
+  ])
+  templatePinnedIds.value = merged
+  persistTemplatePinnedIds(templatePinnedIds.value)
+}
+
+function batchUnpinSelected() {
+  if (!selectedTemplateIds.value.length) {
+    return
+  }
+  const selected = new Set(selectedTemplateIds.value.map((id) => Number(id)))
+  templatePinnedIds.value = templatePinnedIds.value.filter((id) => !selected.has(Number(id)))
+  persistTemplatePinnedIds(templatePinnedIds.value)
+}
+
+function batchDeleteSelected() {
+  if (!selectedTemplateIds.value.length) {
+    return
+  }
+  const ids = [...selectedTemplateIds.value]
+  ids.forEach((id) => {
+    emit('delete-template', id)
+  })
+  clearTemplateSelection()
+  emit('notify', { type: 'success', message: `已删除 ${ids.length} 个模板` })
 }
 
 function normalizeTemplateUsage(parsed) {
