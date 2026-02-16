@@ -2851,6 +2851,7 @@ async function onTemplateImportFile(event) {
       emit('notify', { type: 'error', message: '未识别到可导入模板' })
       return
     }
+    const mode = normalizeTemplateImportConflictMode(templateImportConflictMode.value)
     const existingByName = new Map()
     props.templates.forEach((tpl) => {
       const key = normalizeTemplateNameKey(tpl?.name || '')
@@ -2860,56 +2861,88 @@ async function onTemplateImportFile(event) {
       existingByName.set(key, tpl)
     })
     const reservedNames = new Set(props.templates.map((tpl) => normalizeTemplateNameKey(tpl?.name || '')).filter(Boolean))
+    const createPlans = []
+    const createPlanByKey = new Map()
+    const overwritePlansById = new Map()
     const pendingTags = pendingTemplateTagsByName.value && typeof pendingTemplateTagsByName.value === 'object'
       ? { ...pendingTemplateTagsByName.value }
       : {}
-    let created = 0
-    let overwritten = 0
     let skipped = 0
     items.forEach((item) => {
       let name = String(item.name || '').trim()
       const content = String(item.content || '').trimEnd()
-      const itemTags = normalizeTemplateTags(item.tags)
+      const itemTags = Array.isArray(item.tags) ? normalizeTemplateTags(item.tags) : null
       if (!name || !content) {
         skipped += 1
         return
       }
-      const key = normalizeTemplateNameKey(name)
+      const description = String(item.description || '').trim()
+      let key = normalizeTemplateNameKey(name)
       const conflict = key ? existingByName.get(key) : null
-      const mode = normalizeTemplateImportConflictMode(templateImportConflictMode.value)
-      if (conflict && mode === 'SKIP') {
-        skipped += 1
-        return
+
+      if (mode === 'SKIP') {
+        if (conflict || (key && createPlanByKey.has(key))) {
+          skipped += 1
+          return
+        }
       }
-      if (conflict && mode === 'OVERWRITE') {
-        emit('update-template', {
-          id: conflict.id,
-          name,
-          description: String(item.description || '').trim(),
-          content
-        })
-        setTemplateTags(conflict.id, itemTags)
-        overwritten += 1
-        return
+
+      if (mode === 'OVERWRITE') {
+        if (conflict) {
+          overwritePlansById.set(Number(conflict.id), {
+            id: conflict.id,
+            name,
+            description,
+            content,
+            tags: itemTags
+          })
+          return
+        }
+        if (key && createPlanByKey.has(key)) {
+          const index = createPlanByKey.get(key)
+          createPlans[index] = { name, description, content, tags: itemTags }
+          return
+        }
       }
-      if (conflict && mode === 'RENAME') {
+
+      if (mode === 'RENAME' && (conflict || (key && createPlanByKey.has(key)))) {
         name = buildImportedTemplateName(name, reservedNames)
+        key = normalizeTemplateNameKey(name)
       }
-      const nextKey = normalizeTemplateNameKey(name)
-      if (nextKey) {
-        reservedNames.add(nextKey)
+
+      if (key) {
+        reservedNames.add(key)
       }
-      emit('create-template', {
-        name,
-        description: String(item.description || '').trim(),
-        content
+      createPlans.push({ name, description, content, tags: itemTags })
+      if (key) {
+        createPlanByKey.set(key, createPlans.length - 1)
+      }
+    })
+    overwritePlansById.forEach((plan) => {
+      emit('update-template', {
+        id: plan.id,
+        name: plan.name,
+        description: plan.description,
+        content: plan.content
       })
-      if (itemTags.length) {
-        pendingTags[normalizeTemplateNameKey(name)] = itemTags
+      if (Array.isArray(plan.tags)) {
+        setTemplateTags(plan.id, plan.tags)
       }
-      created += 1
+    })
+    createPlans.forEach((plan) => {
+      emit('create-template', {
+        name: plan.name,
+        description: plan.description,
+        content: plan.content
+      })
+      const key = normalizeTemplateNameKey(plan.name)
+      if (key && Array.isArray(plan.tags) && plan.tags.length) {
+        pendingTags[key] = plan.tags
+      }
     })
     pendingTemplateTagsByName.value = pendingTags
+    const created = createPlans.length
+    const overwritten = overwritePlansById.size
     if (!created && !overwritten) {
       emit('notify', { type: 'error', message: '导入失败：模板名称或内容为空' })
       return
@@ -2984,7 +3017,9 @@ function parseTemplateJsonImport(text) {
       name: String(item.name || ''),
       description: String(item.description || ''),
       content: String(item.content || ''),
-      tags: normalizeTemplateTags(item.tags)
+      tags: Object.prototype.hasOwnProperty.call(item, 'tags')
+        ? normalizeTemplateTags(item.tags)
+        : null
     }))
 }
 
@@ -3002,7 +3037,7 @@ function parseTemplateMarkdownBlock(block, index) {
   let cursor = 0
   let name = `导入模板 ${index + 1}`
   let description = ''
-  let tags = []
+  let tags = null
   if (lines[cursor]?.startsWith('# ')) {
     name = lines[cursor].slice(2).trim() || name
     cursor += 1
