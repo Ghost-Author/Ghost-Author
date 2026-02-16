@@ -144,7 +144,7 @@
           />
           <button class="secondary small" :disabled="!templateQuery" @click="templateQuery = ''">清空</button>
         </div>
-        <div class="template-smart-panel" v-if="recentTemplateItems.length || recommendedTemplateItems.length">
+        <div class="template-smart-panel" v-if="pinnedTemplateItems.length || recentTemplateItems.length || recommendedTemplateItems.length">
           <div class="template-smart-head">
             <strong>快捷套用</strong>
             <button
@@ -154,6 +154,19 @@
             >
               清空历史
             </button>
+          </div>
+          <div class="template-smart-row" v-if="pinnedTemplateItems.length">
+            <span>置顶模板</span>
+            <div class="template-smart-items">
+              <button
+                v-for="tpl in pinnedTemplateItems"
+                :key="`pin-${tpl.id}`"
+                class="secondary small template-pill"
+                @click="applyTemplateById(tpl.id)"
+              >
+                {{ tpl.name || '未命名模板' }}
+              </button>
+            </div>
           </div>
           <div class="template-smart-row" v-if="recentTemplateItems.length">
             <span>最近套用</span>
@@ -220,11 +233,21 @@
                   </div>
                 </template>
                 <template v-else>
-                  <strong v-html="templateNameHtml(tpl)"></strong>
+                  <strong>
+                    <span v-if="isTemplatePinned(tpl.id)" class="template-item-pin-tag">置顶</span>
+                    <span v-html="templateNameHtml(tpl)"></span>
+                  </strong>
                   <p v-html="templateDescHtml(tpl)"></p>
                   <p class="template-snippet" v-if="templateQuery" v-html="templateSnippetHtml(tpl)"></p>
                   <div class="template-item-actions">
                     <button class="secondary small" @click="applyTemplateById(tpl.id)">套用</button>
+                    <button
+                      class="secondary small template-pin-btn"
+                      :class="{ active: isTemplatePinned(tpl.id) }"
+                      @click="toggleTemplatePinned(tpl.id)"
+                    >
+                      {{ isTemplatePinned(tpl.id) ? '取消置顶' : '置顶' }}
+                    </button>
                     <button class="secondary small" @click="toggleTemplatePreview(tpl.id)">
                       {{ templatePreviewId === tpl.id ? '收起预览' : '预览' }}
                     </button>
@@ -833,6 +856,7 @@ const OUTLINE_BATCH_FORMAT_KEY = 'ga-outline-batch-format'
 const OUTLINE_BATCH_SEPARATOR_KEY = 'ga-outline-batch-separator'
 const OUTLINE_BATCH_LEVEL_KEY = 'ga-outline-batch-level'
 const TEMPLATE_USAGE_KEY = 'ga-template-usage'
+const TEMPLATE_PINNED_KEY = 'ga-template-pinned'
 
 const model = computed(() => props.doc)
 const lastSavedSignature = ref(buildDocSignature(props.doc))
@@ -852,6 +876,7 @@ const templateCenterOpen = ref(false)
 const templateQuery = ref('')
 const templatePreviewId = ref(null)
 const templateUsage = ref(loadTemplateUsage())
+const templatePinnedIds = ref(loadTemplatePinnedIds())
 const templateCategoryOpen = ref({
   GENERAL: true,
   PROJECT: true,
@@ -1085,8 +1110,23 @@ const filteredTemplateGroups = computed(() => {
     list.push(tpl)
   })
   return templateCategoryDefs
-    .map((def) => ({ ...def, items: bucket.get(def.key) || [] }))
+    .map((def) => ({ ...def, items: sortTemplatesByPinned(bucket.get(def.key) || []) }))
     .filter((group) => group.items.length > 0)
+})
+const pinnedTemplateItems = computed(() => {
+  const ids = Array.isArray(templatePinnedIds.value) ? templatePinnedIds.value : []
+  if (!ids.length) {
+    return []
+  }
+  const byId = new Map(props.templates.map((tpl) => [Number(tpl.id), tpl]))
+  const result = []
+  ids.forEach((id) => {
+    const item = byId.get(Number(id))
+    if (item) {
+      result.push(item)
+    }
+  })
+  return result.slice(0, 8)
 })
 const recentTemplateItems = computed(() => {
   const ids = Array.isArray(templateUsage.value?.recentIds) ? templateUsage.value.recentIds : []
@@ -1096,6 +1136,9 @@ const recentTemplateItems = computed(() => {
   const byId = new Map(props.templates.map((tpl) => [Number(tpl.id), tpl]))
   const result = []
   ids.forEach((id) => {
+    if (pinnedTemplateItems.value.some((tpl) => Number(tpl.id) === Number(id))) {
+      return
+    }
     const item = byId.get(Number(id))
     if (item) {
       result.push(item)
@@ -1220,6 +1263,9 @@ watch(
   () => props.templates,
   (items) => {
     const ids = new Set((items || []).map((tpl) => Number(tpl.id)))
+    const pinned = Array.isArray(templatePinnedIds.value)
+      ? templatePinnedIds.value.filter((id) => ids.has(Number(id)))
+      : []
     const recent = Array.isArray(templateUsage.value?.recentIds)
       ? templateUsage.value.recentIds.filter((id) => ids.has(Number(id)))
       : []
@@ -1235,6 +1281,12 @@ watch(
       }
       nextCounts[String(numericId)] = count
     })
+    if (
+      pinned.length !== templatePinnedIds.value.length
+    ) {
+      templatePinnedIds.value = pinned
+      persistTemplatePinnedIds(templatePinnedIds.value)
+    }
     if (
       recent.length !== (templateUsage.value?.recentIds?.length || 0)
       || Object.keys(nextCounts).length !== Object.keys(rawCounts).length
@@ -1919,6 +1971,74 @@ function persistOutlineBatchWithLevel(value) {
     return
   }
   window.localStorage.setItem(OUTLINE_BATCH_LEVEL_KEY, value ? '1' : '0')
+}
+
+function normalizeTemplatePinnedIds(value) {
+  const source = Array.isArray(value) ? value : []
+  const unique = []
+  source.forEach((id) => {
+    const numericId = Number(id)
+    if (!Number.isFinite(numericId) || numericId <= 0 || unique.includes(numericId)) {
+      return
+    }
+    unique.push(numericId)
+  })
+  return unique.slice(0, 40)
+}
+
+function loadTemplatePinnedIds() {
+  if (typeof window === 'undefined') {
+    return []
+  }
+  try {
+    const raw = window.localStorage.getItem(TEMPLATE_PINNED_KEY)
+    if (!raw) {
+      return []
+    }
+    return normalizeTemplatePinnedIds(JSON.parse(raw))
+  } catch {
+    return []
+  }
+}
+
+function persistTemplatePinnedIds(ids) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  try {
+    window.localStorage.setItem(TEMPLATE_PINNED_KEY, JSON.stringify(normalizeTemplatePinnedIds(ids)))
+  } catch {
+    // ignore persistence failures
+  }
+}
+
+function isTemplatePinned(id) {
+  return templatePinnedIds.value.some((item) => Number(item) === Number(id))
+}
+
+function toggleTemplatePinned(id) {
+  const numericId = Number(id)
+  if (!Number.isFinite(numericId) || numericId <= 0) {
+    return
+  }
+  const current = normalizeTemplatePinnedIds(templatePinnedIds.value)
+  const exists = current.includes(numericId)
+  templatePinnedIds.value = exists
+    ? current.filter((item) => item !== numericId)
+    : [numericId, ...current]
+  persistTemplatePinnedIds(templatePinnedIds.value)
+}
+
+function sortTemplatesByPinned(items) {
+  const list = Array.isArray(items) ? [...items] : []
+  return list.sort((a, b) => {
+    const aPinned = isTemplatePinned(a?.id) ? 1 : 0
+    const bPinned = isTemplatePinned(b?.id) ? 1 : 0
+    if (aPinned !== bPinned) {
+      return bPinned - aPinned
+    }
+    return String(a?.name || '').localeCompare(String(b?.name || ''), 'zh-Hans-CN')
+  })
 }
 
 function normalizeTemplateUsage(parsed) {

@@ -2493,6 +2493,22 @@ li p {
   font-size: 12px;
 }
 
+.template-item-pin-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 18px;
+  padding: 0 7px;
+  margin-right: 6px;
+  border: 1px solid #ffc7d8;
+  border-radius: 999px;
+  background: linear-gradient(145deg, #fff4f8, #ffeaf2);
+  color: #b05b7e;
+  font-size: 10px;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
 .template-snippet {
   border: 1px dashed #d5e3fb;
   border-radius: 8px;
@@ -2514,6 +2530,13 @@ li p {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.template-pin-btn.active {
+  border-color: #f2afca;
+  background: linear-gradient(140deg, #fff0f6, #ffe7f0);
+  box-shadow: 0 5px 12px #e58daf2e;
+  color: #9f496f;
 }
 
 label {
