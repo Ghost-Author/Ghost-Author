@@ -4453,9 +4453,14 @@ button.small {
 
 .bulk-result-empty {
   text-align: center;
-  color: #8ea2c2;
-  border-style: dashed;
-  background: #f8fbff;
+  color: #7f96bc;
+  border: 1px dashed #cfdff9;
+  border-radius: 10px;
+  background: linear-gradient(165deg, #fbfdff, #f3f8ff);
+  padding: 10px 12px;
+  min-height: 42px;
+  display: grid;
+  place-items: center;
 }
 
 .quick-list .quick-empty,
@@ -4465,12 +4470,17 @@ button.small {
 .comment-empty,
 .home-empty,
 .command-empty {
-  border: 1px dashed #d4e2fb;
-  border-radius: 10px;
-  background: #f8fbff;
-  color: #8fa2c2;
-  padding: 8px 10px;
+  border: 1px dashed #cfdef9;
+  border-radius: 12px;
+  background: linear-gradient(165deg, #fcfeff, #f3f8ff);
+  color: #7f97bd;
+  padding: 10px 12px;
   text-align: center;
+  line-height: 1.4;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 1px #ecf3ff;
 }
 
 .quick-list .quick-empty::before,
@@ -4480,8 +4490,18 @@ button.small {
 .comment-empty::before,
 .home-empty::before,
 .command-empty::before {
-  content: "◌ ";
-  color: #97b1dd;
+  content: "✦";
+  color: #8eabda;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  border: 1px solid #cfe0fb;
+  border-radius: 999px;
+  background: #f5f9ff;
+  font-size: 10px;
+  line-height: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
