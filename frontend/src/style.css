@@ -785,21 +785,22 @@ body {
 
 .page-action-bar {
   margin-bottom: 10px;
-  border: 1px solid #d8e3fb;
+  border: 1px solid var(--line-soft);
   border-radius: 12px;
-  background: #ffffffeb;
-  padding: 8px;
+  background: linear-gradient(165deg, #ffffff, #f8fbff);
+  padding: 10px;
+  box-shadow: 0 5px 12px #1f4d930f;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .page-action-left,
 .page-action-right {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -830,6 +831,39 @@ body {
   border-color: #ffd87a;
   background: #fff7df;
   color: #9a6a07;
+}
+
+.page-save-btn {
+  min-width: 78px;
+  font-weight: 800;
+  letter-spacing: 0.15px;
+  border-color: #4a89e8;
+  background: linear-gradient(145deg, #6eaefc, #4f90ee);
+  box-shadow: 0 6px 14px #3f74c834;
+}
+
+.page-publish-btn {
+  border-color: #98d8b8;
+  background: linear-gradient(145deg, #f2fff8, #e8fff2);
+  color: #237951;
+  box-shadow: 0 4px 10px #2b91601f;
+}
+
+.page-publish-btn:hover {
+  border-color: #83cdab;
+  background: linear-gradient(145deg, #effff6, #e1fcea);
+}
+
+.page-archive-btn {
+  border-color: #e2c9d4;
+  background: linear-gradient(145deg, #fff6fa, #fff0f6);
+  color: #955274;
+  box-shadow: 0 4px 10px #bd5b7d1f;
+}
+
+.page-archive-btn:hover {
+  border-color: #dcb8c7;
+  background: linear-gradient(145deg, #fff2f8, #ffeaf2);
 }
 
 .page-action-more {
@@ -945,10 +979,10 @@ body {
 
 .page-action-shortcuts {
   font-size: 11px;
-  color: #7185ab;
-  border: 1px dashed #d3e1fb;
+  color: #6f84a8;
+  border: 1px dashed #cdddf9;
   border-radius: 999px;
-  background: #f7faff;
+  background: #f8fbff;
   padding: 3px 8px;
 }
 
