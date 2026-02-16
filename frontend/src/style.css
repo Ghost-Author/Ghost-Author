@@ -1817,6 +1817,7 @@ ul {
   border-left-width: 4px;
   padding-left: var(--node-indent, 12px);
   overflow: visible;
+  border-radius: 10px;
   transition: transform 0.12s ease, border-color 0.14s ease, box-shadow 0.14s ease, background 0.16s ease;
 }
 
@@ -1876,6 +1877,21 @@ ul {
   color: #2f5e95;
 }
 
+.tree-node.ancestor {
+  border-left-color: #9fbef4;
+  background: linear-gradient(180deg, #f8fbff, #f2f7ff);
+  box-shadow: inset 0 0 0 1px #e5eeff;
+}
+
+.tree-node.ancestor::before,
+.tree-node.ancestor::after {
+  border-color: #b7caf0;
+}
+
+.tree-node.ancestor .node-title-main strong {
+  color: #315b98;
+}
+
 .tree-node:focus-visible {
   outline: 2px solid #76a6ff;
   outline-offset: 1px;
@@ -1883,12 +1899,48 @@ ul {
 }
 
 .tree-node.active {
-  transform: translateY(-1px);
+  transform: translateY(var(--lift-y));
+  border-left-color: #4b86e9;
+  background: linear-gradient(180deg, #f1f7ff, #e8f1ff);
+  box-shadow: inset 0 0 0 1px #d5e5ff, 0 0 0 2px #deebff, 0 8px 18px #1f4d9314;
+}
+
+.tree-node.active::before,
+.tree-node.active::after {
+  border-color: #94b4ea;
+}
+
+.tree-node.active .node-title-main strong {
+  color: #234f92;
+}
+
+.tree-node.active .node-type-dot {
+  border-color: #6f9ef6;
+  background: #eaf2ff;
+  box-shadow: 0 0 0 2px #dce9ff;
 }
 
 .tree-node.ancestor:hover {
-  border-color: #9abcf7;
-  box-shadow: 0 4px 12px #1f4d930f;
+  border-left-color: #86acee;
+  box-shadow: inset 0 0 0 1px #d9e8ff, 0 6px 14px #1f4d9312;
+}
+
+.tree-node:not(.active):hover {
+  border-left-color: #8cb0f1;
+  box-shadow: inset 0 0 0 1px #deebff, 0 5px 12px #1f4d9310;
+}
+
+.tree-node.active .node-expand-btn,
+.tree-node.active .node-more-btn {
+  border-color: #a9c5f6;
+  background: #edf4ff;
+  color: #355d98;
+}
+
+.tree-node.ancestor .node-expand-btn,
+.tree-node.ancestor .node-more-btn {
+  border-color: #c3d6fa;
+  background: #f4f8ff;
 }
 
 .fav-toggle {
