@@ -2382,6 +2382,43 @@ li p {
   margin-top: 8px;
 }
 
+.template-group-list {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.template-group {
+  border: 1px solid #dbe6fb;
+  border-radius: 10px;
+  background: #f9fbff;
+  padding: 8px;
+}
+
+.template-group-head {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #d1e0fb;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #f7fbff, #eef5ff);
+  box-shadow: 0 3px 9px #5f7cab12;
+  color: #3f6196;
+  min-height: 32px;
+  padding: 0 10px;
+  margin-bottom: 8px;
+}
+
+.template-group-head strong {
+  font-size: 12px;
+}
+
+.template-group-head span {
+  font-size: 11px;
+  color: #6d84aa;
+}
+
 .template-list li {
   border: 1px solid #e1e9fc;
   border-radius: 10px;

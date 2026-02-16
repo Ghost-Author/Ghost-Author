@@ -161,34 +161,42 @@
           <textarea v-model="newTemplate.content" placeholder="模板内容（Markdown）" />
           <button class="secondary small" :disabled="!canCreateTemplate" @click="createTemplate">新增模板</button>
         </div>
-        <ul class="template-list">
-          <li v-for="tpl in filteredTemplates" :key="tpl.id">
-            <template v-if="editingTemplateId === tpl.id">
-              <input v-model="editTemplate.name" />
-              <input v-model="editTemplate.description" />
-              <textarea v-model="editTemplate.content" />
-              <div class="template-item-actions">
-                <button class="secondary small" @click="saveEditTemplate">保存</button>
-                <button class="secondary small" @click="cancelEditTemplate">取消</button>
-              </div>
-            </template>
-            <template v-else>
-              <strong v-html="templateNameHtml(tpl)"></strong>
-              <p v-html="templateDescHtml(tpl)"></p>
-              <p class="template-snippet" v-if="templateQuery" v-html="templateSnippetHtml(tpl)"></p>
-              <div class="template-item-actions">
-                <button class="secondary small" @click="applyTemplateById(tpl.id)">套用</button>
-                <button class="secondary small" @click="toggleTemplatePreview(tpl.id)">
-                  {{ templatePreviewId === tpl.id ? '收起预览' : '预览' }}
-                </button>
-                <button class="secondary small" @click="startEditTemplate(tpl)">编辑</button>
-                <button class="danger small" @click="$emit('delete-template', tpl.id)">删除</button>
-              </div>
-            </template>
-          </li>
-          <li v-if="templates.length === 0" class="comment-empty">还没有模板，请先新增。</li>
-          <li v-else-if="filteredTemplates.length === 0" class="comment-empty">没有匹配模板，请调整关键词。</li>
-        </ul>
+        <div v-if="templates.length === 0" class="comment-empty">还没有模板，请先新增。</div>
+        <div v-else-if="filteredTemplates.length === 0" class="comment-empty">没有匹配模板，请调整关键词。</div>
+        <div v-else class="template-group-list">
+          <section class="template-group" v-for="group in filteredTemplateGroups" :key="group.key">
+            <button class="template-group-head" @click="toggleTemplateCategory(group.key)">
+              <strong>{{ group.label }}</strong>
+              <span>{{ group.items.length }} 个 {{ templateCategoryOpen[group.key] ? '▾' : '▸' }}</span>
+            </button>
+            <ul class="template-list" v-show="templateCategoryOpen[group.key]">
+              <li v-for="tpl in group.items" :key="tpl.id">
+                <template v-if="editingTemplateId === tpl.id">
+                  <input v-model="editTemplate.name" />
+                  <input v-model="editTemplate.description" />
+                  <textarea v-model="editTemplate.content" />
+                  <div class="template-item-actions">
+                    <button class="secondary small" @click="saveEditTemplate">保存</button>
+                    <button class="secondary small" @click="cancelEditTemplate">取消</button>
+                  </div>
+                </template>
+                <template v-else>
+                  <strong v-html="templateNameHtml(tpl)"></strong>
+                  <p v-html="templateDescHtml(tpl)"></p>
+                  <p class="template-snippet" v-if="templateQuery" v-html="templateSnippetHtml(tpl)"></p>
+                  <div class="template-item-actions">
+                    <button class="secondary small" @click="applyTemplateById(tpl.id)">套用</button>
+                    <button class="secondary small" @click="toggleTemplatePreview(tpl.id)">
+                      {{ templatePreviewId === tpl.id ? '收起预览' : '预览' }}
+                    </button>
+                    <button class="secondary small" @click="startEditTemplate(tpl)">编辑</button>
+                    <button class="danger small" @click="$emit('delete-template', tpl.id)">删除</button>
+                  </div>
+                </template>
+              </li>
+            </ul>
+          </section>
+        </div>
       </div>
 
       <div class="meta-section">
@@ -803,6 +811,14 @@ const selectedTemplate = ref('')
 const templateCenterOpen = ref(false)
 const templateQuery = ref('')
 const templatePreviewId = ref(null)
+const templateCategoryOpen = ref({
+  GENERAL: true,
+  PROJECT: true,
+  MEETING: true,
+  PRODUCT: true,
+  TECH: true,
+  OTHER: true
+})
 const editingTemplateId = ref(null)
 const actionMenuOpen = ref(false)
 const actionMenuRef = ref(null)
@@ -1012,6 +1028,25 @@ const filteredTemplates = computed(() => {
     return name.includes(q) || desc.includes(q) || content.includes(q)
   })
 })
+const templateCategoryDefs = [
+  { key: 'GENERAL', label: '通用模板' },
+  { key: 'PROJECT', label: '项目模板' },
+  { key: 'MEETING', label: '会议模板' },
+  { key: 'PRODUCT', label: '产品模板' },
+  { key: 'TECH', label: '技术模板' },
+  { key: 'OTHER', label: '其他模板' }
+]
+const filteredTemplateGroups = computed(() => {
+  const bucket = new Map(templateCategoryDefs.map((item) => [item.key, []]))
+  filteredTemplates.value.forEach((tpl) => {
+    const key = classifyTemplateCategory(tpl)
+    const list = bucket.get(key) || bucket.get('OTHER')
+    list.push(tpl)
+  })
+  return templateCategoryDefs
+    .map((def) => ({ ...def, items: bucket.get(def.key) || [] }))
+    .filter((group) => group.items.length > 0)
+})
 const templatePreview = computed(() => {
   if (!templatePreviewId.value) {
     return null
@@ -1100,6 +1135,16 @@ watch(filteredTemplates, (items) => {
   if (!items.some((tpl) => tpl.id === templatePreviewId.value)) {
     templatePreviewId.value = null
   }
+})
+
+watch(filteredTemplateGroups, (groups) => {
+  const next = { ...templateCategoryOpen.value }
+  groups.forEach((group) => {
+    if (!(group.key in next)) {
+      next[group.key] = true
+    }
+  })
+  templateCategoryOpen.value = next
 })
 
 watch(
@@ -2430,6 +2475,30 @@ function toggleTemplatePreview(id) {
   templatePreviewId.value = templatePreviewId.value === id ? null : id
 }
 
+function toggleTemplateCategory(key) {
+  templateCategoryOpen.value[key] = !templateCategoryOpen.value[key]
+}
+
+function classifyTemplateCategory(template) {
+  const text = `${template?.name || ''} ${template?.description || ''}`.toLowerCase()
+  if (/(会议|meeting|纪要|复盘|周会|评审)/.test(text)) {
+    return 'MEETING'
+  }
+  if (/(项目|project|计划|里程碑|排期|迭代)/.test(text)) {
+    return 'PROJECT'
+  }
+  if (/(产品|prd|需求|roadmap|路线图|用户故事)/.test(text)) {
+    return 'PRODUCT'
+  }
+  if (/(技术|tech|架构|api|设计文档|接口|部署|运维|故障)/.test(text)) {
+    return 'TECH'
+  }
+  if (/(通用|general|标准|模板|sop|规范)/.test(text)) {
+    return 'GENERAL'
+  }
+  return 'OTHER'
+}
+
 function escapeHtml(value) {
   return String(value || '')
     .replaceAll('&', '&amp;')
@@ -2494,6 +2563,8 @@ function createTemplate() {
 }
 
 function startEditTemplate(template) {
+  const category = classifyTemplateCategory(template)
+  templateCategoryOpen.value[category] = true
   editingTemplateId.value = template.id
   editTemplate.value = {
     id: template.id,
