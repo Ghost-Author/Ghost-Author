@@ -566,21 +566,43 @@ body {
   margin-bottom: 6px;
 }
 
+.doc-list-scroll:not(.compact) .doc-items li {
+  padding: 12px 12px;
+  margin-bottom: 9px;
+}
+
 .doc-list-scroll.compact .node-title-row {
   gap: 6px;
+}
+
+.doc-list-scroll:not(.compact) .node-title-row {
+  gap: 10px;
 }
 
 .doc-list-scroll.compact .node-title-main {
   gap: 4px;
 }
 
+.doc-list-scroll:not(.compact) .node-title-main {
+  gap: 8px;
+}
+
 .doc-list-scroll.compact .node-title-main strong {
   font-size: 12px;
+}
+
+.doc-list-scroll:not(.compact) .node-title-main strong {
+  font-size: 14px;
 }
 
 .doc-list-scroll.compact .node-meta-row {
   margin-top: 2px;
   gap: 5px;
+}
+
+.doc-list-scroll:not(.compact) .node-meta-row {
+  margin-top: 6px;
+  gap: 10px;
 }
 
 .doc-list-scroll.compact .node-slug,
@@ -600,8 +622,25 @@ body {
 }
 
 .doc-list-scroll.compact .tree-node p {
-  margin: 2px 0 0;
+  display: none;
+}
+
+.tree-node p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #6f84a8;
+}
+
+.doc-list-scroll.compact .quick-list li {
+  padding: 6px 7px;
+  margin-bottom: 3px;
   font-size: 11px;
+}
+
+.doc-list-scroll:not(.compact) .quick-list li {
+  padding: 8px 10px;
+  margin-bottom: 5px;
 }
 
 .editor-pane,
@@ -2359,8 +2398,17 @@ label {
   margin-bottom: 6px;
 }
 
+.version-history ul:not(.compact) li {
+  padding: 12px 12px;
+  margin-bottom: 9px;
+}
+
 .version-history ul.compact li strong {
   font-size: 12px;
+}
+
+.version-history ul:not(.compact) li strong {
+  font-size: 13px;
 }
 
 .version-history ul.compact li p {
@@ -2368,13 +2416,28 @@ label {
   font-size: 11px;
 }
 
+.version-history ul:not(.compact) li p {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
 .version-history ul.compact .version-actions {
   gap: 4px;
+}
+
+.version-history ul:not(.compact) .version-actions {
+  gap: 7px;
 }
 
 .version-history ul.compact .version-actions button {
   padding: 3px 7px;
   font-size: 11px;
+}
+
+.version-history ul:not(.compact) .version-actions button {
+  min-height: 31px;
+  padding: 0 10px;
+  font-size: 12px;
 }
 
 .version-actions {
