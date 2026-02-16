@@ -158,6 +158,13 @@
               >
                 最新
               </button>
+              <button
+                class="secondary small template-sort-chip"
+                :class="{ active: templateSortMode === 'MANUAL' }"
+                @click="templateSortMode = 'MANUAL'"
+              >
+                手动
+              </button>
             </div>
             <span class="template-center-count">共 {{ templates.length }} 个 · 当前 {{ filteredTemplates.length }} 个</span>
           </div>
@@ -247,7 +254,7 @@
               <span>{{ group.items.length }} 个 {{ templateCategoryOpen[group.key] ? '▾' : '▸' }}</span>
             </button>
             <ul class="template-list" v-show="templateCategoryOpen[group.key]">
-              <li v-for="tpl in group.items" :key="tpl.id">
+              <li v-for="(tpl, index) in group.items" :key="tpl.id">
                 <template v-if="editingTemplateId === tpl.id">
                   <input v-model="editTemplate.name" />
                   <input v-model="editTemplate.description" />
@@ -272,6 +279,22 @@
                       @click="toggleTemplatePinned(tpl.id)"
                     >
                       {{ isTemplatePinned(tpl.id) ? '取消置顶' : '置顶' }}
+                    </button>
+                    <button
+                      v-if="templateSortMode === 'MANUAL'"
+                      class="secondary tiny template-move-btn"
+                      :disabled="!canMoveTemplateInGroup(index, -1)"
+                      @click="moveTemplateInGroup(group.items, index, -1)"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      v-if="templateSortMode === 'MANUAL'"
+                      class="secondary tiny template-move-btn"
+                      :disabled="!canMoveTemplateInGroup(index, 1, group.items.length)"
+                      @click="moveTemplateInGroup(group.items, index, 1)"
+                    >
+                      ↓
                     </button>
                     <button class="secondary small" @click="toggleTemplatePreview(tpl.id)">
                       {{ templatePreviewId === tpl.id ? '收起预览' : '预览' }}
@@ -883,6 +906,7 @@ const OUTLINE_BATCH_LEVEL_KEY = 'ga-outline-batch-level'
 const TEMPLATE_USAGE_KEY = 'ga-template-usage'
 const TEMPLATE_PINNED_KEY = 'ga-template-pinned'
 const TEMPLATE_SORT_MODE_KEY = 'ga-template-sort-mode'
+const TEMPLATE_MANUAL_ORDER_KEY = 'ga-template-manual-order'
 
 const model = computed(() => props.doc)
 const lastSavedSignature = ref(buildDocSignature(props.doc))
@@ -904,6 +928,7 @@ const templatePreviewId = ref(null)
 const templateUsage = ref(loadTemplateUsage())
 const templatePinnedIds = ref(loadTemplatePinnedIds())
 const templateSortMode = ref(loadTemplateSortMode())
+const templateManualOrderIds = ref(loadTemplateManualOrderIds())
 const templateCategoryOpen = ref({
   GENERAL: true,
   PROJECT: true,
@@ -1291,6 +1316,14 @@ watch(
   () => props.templates,
   (items) => {
     const ids = new Set((items || []).map((tpl) => Number(tpl.id)))
+    const manualOrder = normalizeTemplateManualOrderIds(templateManualOrderIds.value)
+      .filter((id) => ids.has(Number(id)))
+    ;(items || []).forEach((tpl) => {
+      const id = Number(tpl.id)
+      if (!manualOrder.includes(id)) {
+        manualOrder.push(id)
+      }
+    })
     const pinned = Array.isArray(templatePinnedIds.value)
       ? templatePinnedIds.value.filter((id) => ids.has(Number(id)))
       : []
@@ -1309,6 +1342,13 @@ watch(
       }
       nextCounts[String(numericId)] = count
     })
+    if (
+      manualOrder.length !== templateManualOrderIds.value.length
+      || manualOrder.some((id, index) => Number(templateManualOrderIds.value[index]) !== id)
+    ) {
+      templateManualOrderIds.value = manualOrder
+      persistTemplateManualOrderIds(templateManualOrderIds.value)
+    }
     if (
       pinned.length !== templatePinnedIds.value.length
     ) {
@@ -2005,7 +2045,7 @@ function persistOutlineBatchWithLevel(value) {
 }
 
 function normalizeTemplateSortMode(value) {
-  if (value === 'NAME' || value === 'LATEST' || value === 'SMART') {
+  if (value === 'NAME' || value === 'LATEST' || value === 'SMART' || value === 'MANUAL') {
     return value
   }
   return 'SMART'
@@ -2023,6 +2063,45 @@ function persistTemplateSortMode(mode) {
     return
   }
   window.localStorage.setItem(TEMPLATE_SORT_MODE_KEY, normalizeTemplateSortMode(mode))
+}
+
+function normalizeTemplateManualOrderIds(value) {
+  const source = Array.isArray(value) ? value : []
+  const unique = []
+  source.forEach((id) => {
+    const numericId = Number(id)
+    if (!Number.isFinite(numericId) || numericId <= 0 || unique.includes(numericId)) {
+      return
+    }
+    unique.push(numericId)
+  })
+  return unique.slice(0, 400)
+}
+
+function loadTemplateManualOrderIds() {
+  if (typeof window === 'undefined') {
+    return []
+  }
+  try {
+    const raw = window.localStorage.getItem(TEMPLATE_MANUAL_ORDER_KEY)
+    if (!raw) {
+      return []
+    }
+    return normalizeTemplateManualOrderIds(JSON.parse(raw))
+  } catch {
+    return []
+  }
+}
+
+function persistTemplateManualOrderIds(ids) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  try {
+    window.localStorage.setItem(TEMPLATE_MANUAL_ORDER_KEY, JSON.stringify(normalizeTemplateManualOrderIds(ids)))
+  } catch {
+    // ignore persistence failures
+  }
 }
 
 function normalizeTemplatePinnedIds(value) {
@@ -2089,11 +2168,21 @@ function sortTemplatesForCenter(items) {
   const counts = templateUsage.value?.counts && typeof templateUsage.value.counts === 'object'
     ? templateUsage.value.counts
     : {}
+  const manualIds = normalizeTemplateManualOrderIds(templateManualOrderIds.value)
+  const manualIndexMap = new Map(manualIds.map((id, index) => [Number(id), index]))
   return list.sort((a, b) => {
     const aPinned = isTemplatePinned(a?.id) ? 1 : 0
     const bPinned = isTemplatePinned(b?.id) ? 1 : 0
     if (aPinned !== bPinned) {
       return bPinned - aPinned
+    }
+    if (mode === 'MANUAL') {
+      const aIndex = manualIndexMap.has(Number(a?.id)) ? manualIndexMap.get(Number(a?.id)) : Number.MAX_SAFE_INTEGER
+      const bIndex = manualIndexMap.has(Number(b?.id)) ? manualIndexMap.get(Number(b?.id)) : Number.MAX_SAFE_INTEGER
+      if (aIndex !== bIndex) {
+        return aIndex - bIndex
+      }
+      return String(a?.name || '').localeCompare(String(b?.name || ''), 'zh-Hans-CN')
     }
     if (mode === 'NAME') {
       return String(a?.name || '').localeCompare(String(b?.name || ''), 'zh-Hans-CN')
@@ -2113,6 +2202,35 @@ function sortTemplatesForCenter(items) {
     }
     return String(a?.name || '').localeCompare(String(b?.name || ''), 'zh-Hans-CN')
   })
+}
+
+function canMoveTemplateInGroup(index, delta, total = Number.MAX_SAFE_INTEGER) {
+  const target = index + delta
+  return target >= 0 && target < total
+}
+
+function moveTemplateInGroup(groupItems, index, delta) {
+  const source = Array.isArray(groupItems) ? groupItems : []
+  const target = index + delta
+  if (!canMoveTemplateInGroup(index, delta, source.length)) {
+    return
+  }
+  const currentItem = source[index]
+  const targetItem = source[target]
+  if (!currentItem?.id || !targetItem?.id) {
+    return
+  }
+  const order = normalizeTemplateManualOrderIds(templateManualOrderIds.value)
+  const currentId = Number(currentItem.id)
+  const targetId = Number(targetItem.id)
+  const currentOrderIndex = order.indexOf(currentId)
+  const targetOrderIndex = order.indexOf(targetId)
+  if (currentOrderIndex < 0 || targetOrderIndex < 0) {
+    return
+  }
+  ;[order[currentOrderIndex], order[targetOrderIndex]] = [order[targetOrderIndex], order[currentOrderIndex]]
+  templateManualOrderIds.value = order
+  persistTemplateManualOrderIds(templateManualOrderIds.value)
 }
 
 function normalizeTemplateUsage(parsed) {
