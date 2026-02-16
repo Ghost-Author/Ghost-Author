@@ -769,7 +769,13 @@ body {
 .child-due,
 .read-status,
 .read-visibility,
-.command-scope-chip {
+.command-scope-chip,
+.command-inline-scope,
+.command-inline-tag,
+.command-help-chip,
+.command-history-pin,
+.command-history-alias,
+.command-history-clear {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3918,22 +3924,16 @@ button.small {
 
 .command-inline-scope {
   border: 1px solid #cfe0fb;
-  border-radius: 999px;
   background: #edf5ff;
   color: #3f669b;
-  font-size: 11px;
-  line-height: 1.2;
-  padding: 2px 8px;
+  padding: var(--chip-padding-y) var(--chip-padding-x);
 }
 
 .command-inline-tag {
   border: 1px solid #d5e3fb;
-  border-radius: 999px;
   background: #f4f8ff;
   color: #4f6f9f;
-  font-size: 11px;
-  line-height: 1.2;
-  padding: 2px 8px;
+  padding: var(--chip-padding-y) var(--chip-padding-x);
 }
 
 .command-help-row {
@@ -3950,12 +3950,9 @@ button.small {
 
 .command-help-chip {
   border: 1px dashed #d1e1fb;
-  border-radius: 999px;
   background: #f8fbff;
   color: #607ba8;
-  font-size: 11px;
-  line-height: 1.2;
-  padding: 3px 9px;
+  padding: calc(var(--chip-padding-y) + 1px) calc(var(--chip-padding-x) + 1px);
   cursor: pointer;
   transition: transform 0.12s ease, border-color 0.14s ease, background 0.16s ease, color 0.14s ease;
 }
@@ -4062,12 +4059,10 @@ button.small {
 
 .command-history-pin {
   border: 1px solid #d2e1fb;
-  border-radius: 999px;
   background: #f8fbff;
   color: #6481ae;
-  font-size: 11px;
-  line-height: 1;
-  padding: 4px 8px;
+  line-height: var(--chip-line-height);
+  padding: calc(var(--chip-padding-y) + 1px) var(--chip-padding-x);
   cursor: pointer;
   min-height: 0;
   box-shadow: none;
@@ -4083,12 +4078,10 @@ button.small {
 
 .command-history-alias {
   border: 1px solid #d2e1fb;
-  border-radius: 999px;
   background: #f8fbff;
   color: #6481ae;
-  font-size: 11px;
-  line-height: 1;
-  padding: 4px 8px;
+  line-height: var(--chip-line-height);
+  padding: calc(var(--chip-padding-y) + 1px) var(--chip-padding-x);
   cursor: pointer;
   min-height: 0;
   box-shadow: none;
@@ -4104,13 +4097,11 @@ button.small {
 
 .command-history-clear {
   border: 1px solid #cfe0fb;
-  border-radius: 999px;
   background: linear-gradient(145deg, #f9fcff, #eef5ff);
   color: #5e7cab;
-  font-size: 11px;
-  line-height: 1.2;
+  line-height: var(--chip-line-height);
   min-height: 26px;
-  padding: 0 10px;
+  padding: 0 calc(var(--chip-padding-x) + 2px);
   cursor: pointer;
   box-shadow: 0 2px 7px #5f7cab12;
 }
@@ -4123,12 +4114,9 @@ button.small {
 
 .command-scope-chip {
   border: 1px solid #d5e3fb;
-  border-radius: 999px;
   background: #f7fbff;
   color: #617ba6;
-  font-size: 11px;
-  padding: 3px 9px;
-  line-height: 1.2;
+  padding: calc(var(--chip-padding-y) + 1px) calc(var(--chip-padding-x) + 1px);
   cursor: pointer;
   transition: transform 0.12s ease, border-color 0.14s ease, background 0.16s ease, color 0.14s ease;
 }
