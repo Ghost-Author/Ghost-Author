@@ -2354,6 +2354,14 @@ li p {
   margin: 0;
 }
 
+.template-tag-filter {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
 .template-smart-panel {
   border: 1px dashed #d5e1fb;
   border-radius: 12px;
@@ -2483,6 +2491,12 @@ li p {
   padding: 0 4px;
 }
 
+.template-batch-bar input {
+  margin: 0;
+  min-height: 28px;
+  width: 180px;
+}
+
 .template-import-mode-chip.active {
   border-color: #f3b7ce;
   background: linear-gradient(145deg, #fff2f8, #ffe9f2);
@@ -2547,6 +2561,31 @@ li p {
   margin: 4px 0;
   color: #617597;
   font-size: 12px;
+}
+
+.template-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 6px;
+}
+
+.template-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.template-tag-chip .secondary.tiny.active {
+  border-color: #f3b7ce;
+  background: linear-gradient(145deg, #fff2f8, #ffe9f2);
+  box-shadow: 0 5px 12px #d47aa22a;
+  color: #a75279;
+}
+
+.template-tag-remove {
+  min-width: 24px;
+  padding: 0;
 }
 
 .template-list li strong {
@@ -5043,6 +5082,14 @@ button.small {
 
   .template-filter {
     grid-template-columns: 1fr;
+  }
+
+  .template-tag-filter {
+    grid-template-columns: 1fr;
+  }
+
+  .template-batch-bar input {
+    width: 100%;
   }
 
   .template-center-head-right {

@@ -176,6 +176,13 @@
           />
           <button class="secondary small" :disabled="!templateQuery" @click="templateQuery = ''">清空</button>
         </div>
+        <div class="template-tag-filter" v-if="availableTemplateTags.length">
+          <select v-model="templateTagFilter">
+            <option value="">全部标签</option>
+            <option v-for="tag in availableTemplateTags" :key="tag" :value="tag">{{ tag }}</option>
+          </select>
+          <button class="secondary small" :disabled="!templateTagFilter" @click="templateTagFilter = ''">清空标签</button>
+        </div>
         <div class="template-smart-panel" v-if="pinnedTemplateItems.length || recentTemplateItems.length || recommendedTemplateItems.length">
           <div class="template-smart-head">
             <strong>快捷套用</strong>
@@ -282,6 +289,9 @@
           </button>
           <button class="secondary small" @click="openTemplateImportPicker('JSON')">导入 JSON</button>
           <button class="secondary small" @click="openTemplateImportPicker('MARKDOWN')">导入 MD</button>
+          <input v-model.trim="templateBatchTagInput" placeholder="批量标签（如：会议）" />
+          <button class="secondary small" :disabled="!selectedTemplateCount || !templateBatchTagInput.trim()" @click="batchAddTagToSelected">批量打标签</button>
+          <button class="secondary small" :disabled="!selectedTemplateCount || !templateBatchTagInput.trim()" @click="batchRemoveTagFromSelected">批量移除标签</button>
           <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="clearTemplateSelection">清空选择</button>
         </div>
         <input
@@ -322,6 +332,18 @@
                     <span v-html="templateNameHtml(tpl)"></span>
                   </strong>
                   <p v-html="templateDescHtml(tpl)"></p>
+                  <div class="template-tags" v-if="getTemplateTags(tpl.id).length">
+                    <span
+                      class="template-tag-chip"
+                      v-for="tag in getTemplateTags(tpl.id)"
+                      :key="`${tpl.id}-${tag}`"
+                    >
+                      <button class="secondary tiny" :class="{ active: templateTagFilter === tag }" @click="templateTagFilter = tag">
+                        #{{ tag }}
+                      </button>
+                      <button class="secondary tiny template-tag-remove" @click="removeTagFromTemplate(tpl.id, tag)">×</button>
+                    </span>
+                  </div>
                   <p class="template-snippet" v-if="templateQuery" v-html="templateSnippetHtml(tpl)"></p>
                   <div class="template-item-actions">
                     <button class="secondary small" @click="applyTemplateById(tpl.id)">套用</button>
@@ -959,6 +981,7 @@ const TEMPLATE_USAGE_KEY = 'ga-template-usage'
 const TEMPLATE_PINNED_KEY = 'ga-template-pinned'
 const TEMPLATE_SORT_MODE_KEY = 'ga-template-sort-mode'
 const TEMPLATE_MANUAL_ORDER_KEY = 'ga-template-manual-order'
+const TEMPLATE_TAGS_KEY = 'ga-template-tags'
 
 const model = computed(() => props.doc)
 const lastSavedSignature = ref(buildDocSignature(props.doc))
@@ -974,6 +997,8 @@ const fileInput = ref(null)
 const templateImportInput = ref(null)
 const templateImportFormat = ref('JSON')
 const templateImportConflictMode = ref('RENAME')
+const templateTagFilter = ref('')
+const templateBatchTagInput = ref('')
 const readPreviewRef = ref(null)
 const titleInputRef = ref(null)
 const selectedTemplate = ref('')
@@ -984,6 +1009,8 @@ const templateUsage = ref(loadTemplateUsage())
 const templatePinnedIds = ref(loadTemplatePinnedIds())
 const templateSortMode = ref(loadTemplateSortMode())
 const templateManualOrderIds = ref(loadTemplateManualOrderIds())
+const templateTagMap = ref(loadTemplateTagMap())
+const pendingTemplateTagsByName = ref({})
 const selectedTemplateIds = ref([])
 const templateCategoryOpen = ref({
   GENERAL: true,
@@ -1193,15 +1220,30 @@ const quickChildTemplates = computed(() => sortTemplatesForCenter(props.template
 const filteredTemplates = computed(() => {
   const q = templateQuery.value.trim().toLowerCase()
   const source = sortTemplatesForCenter(props.templates)
-  if (!q) {
-    return source
-  }
   return source.filter((tpl) => {
+    const tags = getTemplateTags(tpl.id)
+    if (templateTagFilter.value && !tags.includes(templateTagFilter.value)) {
+      return false
+    }
+    if (!q) {
+      return true
+    }
     const name = String(tpl.name || '').toLowerCase()
     const desc = String(tpl.description || '').toLowerCase()
     const content = String(tpl.content || '').toLowerCase()
     return name.includes(q) || desc.includes(q) || content.includes(q)
   })
+})
+const availableTemplateTags = computed(() => {
+  const set = new Set()
+  props.templates.forEach((tpl) => {
+    getTemplateTags(tpl.id).forEach((tag) => {
+      if (tag) {
+        set.add(tag)
+      }
+    })
+  })
+  return Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
 })
 const templateCategoryDefs = [
   { key: 'GENERAL', label: '通用模板' },
@@ -1379,6 +1421,35 @@ watch(
   () => props.templates,
   (items) => {
     const ids = new Set((items || []).map((tpl) => Number(tpl.id)))
+    const pending = pendingTemplateTagsByName.value && typeof pendingTemplateTagsByName.value === 'object'
+      ? { ...pendingTemplateTagsByName.value }
+      : {}
+    let pendingChanged = false
+    ;(items || []).forEach((tpl) => {
+      const key = normalizeTemplateNameKey(tpl?.name || '')
+      const tags = key ? normalizeTemplateTags(pending[key]) : []
+      if (!key || !tags.length) {
+        return
+      }
+      setTemplateTags(tpl.id, tags)
+      delete pending[key]
+      pendingChanged = true
+    })
+    if (pendingChanged) {
+      pendingTemplateTagsByName.value = pending
+    }
+    const rawTagMap = templateTagMap.value && typeof templateTagMap.value === 'object' ? templateTagMap.value : {}
+    const nextTagMap = {}
+    Object.entries(rawTagMap).forEach(([id, tags]) => {
+      const numericId = Number(id)
+      if (!ids.has(numericId)) {
+        return
+      }
+      const safeTags = normalizeTemplateTags(tags)
+      if (safeTags.length) {
+        nextTagMap[String(numericId)] = safeTags
+      }
+    })
     const manualOrder = normalizeTemplateManualOrderIds(templateManualOrderIds.value)
       .filter((id) => ids.has(Number(id)))
     ;(items || []).forEach((tpl) => {
@@ -1406,6 +1477,13 @@ watch(
       nextCounts[String(numericId)] = count
     })
     if (
+      Object.keys(nextTagMap).length !== Object.keys(rawTagMap).length
+      || Object.entries(nextTagMap).some(([id, tags]) => JSON.stringify(tags) !== JSON.stringify(rawTagMap[id] || []))
+    ) {
+      templateTagMap.value = nextTagMap
+      persistTemplateTagMap(templateTagMap.value)
+    }
+    if (
       manualOrder.length !== templateManualOrderIds.value.length
       || manualOrder.some((id, index) => Number(templateManualOrderIds.value[index]) !== id)
     ) {
@@ -1431,6 +1509,9 @@ watch(
     const selected = selectedTemplateIds.value.filter((id) => ids.has(Number(id)))
     if (selected.length !== selectedTemplateIds.value.length) {
       selectedTemplateIds.value = selected
+    }
+    if (templateTagFilter.value && !availableTemplateTags.value.includes(templateTagFilter.value)) {
+      templateTagFilter.value = ''
     }
   },
   { deep: true }
@@ -2401,6 +2482,136 @@ function dedupeFilteredTemplatesByName() {
   emit('notify', { type: 'success', message: `已去重，删除 ${deleteIds.length} 个同名模板` })
 }
 
+function normalizeTemplateTagLabel(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ')
+}
+
+function normalizeTemplateTags(tags) {
+  const source = Array.isArray(tags) ? tags : []
+  const unique = []
+  source.forEach((item) => {
+    const tag = normalizeTemplateTagLabel(item)
+    if (!tag || unique.includes(tag)) {
+      return
+    }
+    unique.push(tag)
+  })
+  return unique.slice(0, 30)
+}
+
+function normalizeTemplateTagMap(value) {
+  const source = value && typeof value === 'object' ? value : {}
+  const next = {}
+  Object.entries(source).forEach(([id, tags]) => {
+    const numericId = Number(id)
+    if (!Number.isFinite(numericId) || numericId <= 0) {
+      return
+    }
+    const safeTags = normalizeTemplateTags(tags)
+    if (safeTags.length) {
+      next[String(numericId)] = safeTags
+    }
+  })
+  return next
+}
+
+function loadTemplateTagMap() {
+  if (typeof window === 'undefined') {
+    return {}
+  }
+  try {
+    const raw = window.localStorage.getItem(TEMPLATE_TAGS_KEY)
+    if (!raw) {
+      return {}
+    }
+    return normalizeTemplateTagMap(JSON.parse(raw))
+  } catch {
+    return {}
+  }
+}
+
+function persistTemplateTagMap(map) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  try {
+    window.localStorage.setItem(TEMPLATE_TAGS_KEY, JSON.stringify(normalizeTemplateTagMap(map)))
+  } catch {
+    // ignore persistence failures
+  }
+}
+
+function getTemplateTags(id) {
+  const key = String(Number(id))
+  return normalizeTemplateTags(templateTagMap.value?.[key] || [])
+}
+
+function setTemplateTags(id, tags) {
+  const key = String(Number(id))
+  const next = { ...(templateTagMap.value || {}) }
+  const safeTags = normalizeTemplateTags(tags)
+  if (!safeTags.length) {
+    delete next[key]
+  } else {
+    next[key] = safeTags
+  }
+  templateTagMap.value = next
+  persistTemplateTagMap(templateTagMap.value)
+}
+
+function addTagToTemplate(id, tagValue) {
+  const tag = normalizeTemplateTagLabel(tagValue)
+  if (!tag) {
+    return false
+  }
+  const tags = getTemplateTags(id)
+  if (tags.includes(tag)) {
+    return false
+  }
+  setTemplateTags(id, [...tags, tag])
+  return true
+}
+
+function removeTagFromTemplate(id, tagValue) {
+  const tag = normalizeTemplateTagLabel(tagValue)
+  if (!tag) {
+    return
+  }
+  const next = getTemplateTags(id).filter((item) => item !== tag)
+  setTemplateTags(id, next)
+}
+
+function batchAddTagToSelected() {
+  const tag = normalizeTemplateTagLabel(templateBatchTagInput.value)
+  if (!tag || !selectedTemplateIds.value.length) {
+    return
+  }
+  let changed = 0
+  selectedTemplateIds.value.forEach((id) => {
+    if (addTagToTemplate(id, tag)) {
+      changed += 1
+    }
+  })
+  emit('notify', { type: 'success', message: `已给 ${changed} 个模板添加标签 #${tag}` })
+}
+
+function batchRemoveTagFromSelected() {
+  const tag = normalizeTemplateTagLabel(templateBatchTagInput.value)
+  if (!tag || !selectedTemplateIds.value.length) {
+    return
+  }
+  let changed = 0
+  selectedTemplateIds.value.forEach((id) => {
+    const tags = getTemplateTags(id)
+    if (!tags.includes(tag)) {
+      return
+    }
+    setTemplateTags(id, tags.filter((item) => item !== tag))
+    changed += 1
+  })
+  emit('notify', { type: 'success', message: `已从 ${changed} 个模板移除标签 #${tag}` })
+}
+
 function resolveSelectedTemplates() {
   const selected = new Set(selectedTemplateIds.value.map((id) => Number(id)))
   return props.templates.filter((tpl) => selected.has(Number(tpl.id)))
@@ -2427,9 +2638,13 @@ function formatTemplateMarkdown(items) {
     const name = String(tpl.name || '未命名模板')
     const desc = String(tpl.description || '')
     const content = String(tpl.content || '')
+    const tags = getTemplateTags(tpl.id)
     const sections = [`# ${name}`]
     if (desc) {
       sections.push(`> ${desc}`)
+    }
+    if (tags.length) {
+      sections.push(`> tags: ${tags.join(', ')}`)
     }
     sections.push('```markdown')
     sections.push(content)
@@ -2447,7 +2662,8 @@ function exportSelectedTemplatesAsJson() {
     id: tpl.id,
     name: tpl.name || '',
     description: tpl.description || '',
-    content: tpl.content || ''
+    content: tpl.content || '',
+    tags: getTemplateTags(tpl.id)
   }))
   downloadTextFile('templates-selected.json', JSON.stringify(payload, null, 2), 'application/json;charset=utf-8')
   emit('notify', { type: 'success', message: `已导出 ${items.length} 个已选模板（JSON）` })
@@ -2471,7 +2687,8 @@ function exportFilteredTemplatesAsJson() {
     id: tpl.id,
     name: tpl.name || '',
     description: tpl.description || '',
-    content: tpl.content || ''
+    content: tpl.content || '',
+    tags: getTemplateTags(tpl.id)
   }))
   downloadTextFile('templates-filtered.json', JSON.stringify(payload, null, 2), 'application/json;charset=utf-8')
   emit('notify', { type: 'success', message: `已导出 ${items.length} 个当前模板（JSON）` })
@@ -2519,12 +2736,16 @@ async function onTemplateImportFile(event) {
       existingByName.set(key, tpl)
     })
     const reservedNames = new Set(props.templates.map((tpl) => normalizeTemplateNameKey(tpl?.name || '')).filter(Boolean))
+    const pendingTags = pendingTemplateTagsByName.value && typeof pendingTemplateTagsByName.value === 'object'
+      ? { ...pendingTemplateTagsByName.value }
+      : {}
     let created = 0
     let overwritten = 0
     let skipped = 0
     items.forEach((item) => {
       let name = String(item.name || '').trim()
       const content = String(item.content || '').trimEnd()
+      const itemTags = normalizeTemplateTags(item.tags)
       if (!name || !content) {
         skipped += 1
         return
@@ -2543,6 +2764,7 @@ async function onTemplateImportFile(event) {
           description: String(item.description || '').trim(),
           content
         })
+        setTemplateTags(conflict.id, itemTags)
         overwritten += 1
         return
       }
@@ -2558,8 +2780,12 @@ async function onTemplateImportFile(event) {
         description: String(item.description || '').trim(),
         content
       })
+      if (itemTags.length) {
+        pendingTags[normalizeTemplateNameKey(name)] = itemTags
+      }
       created += 1
     })
+    pendingTemplateTagsByName.value = pendingTags
     if (!created && !overwritten) {
       emit('notify', { type: 'error', message: '导入失败：模板名称或内容为空' })
       return
@@ -2633,7 +2859,8 @@ function parseTemplateJsonImport(text) {
     .map((item) => ({
       name: String(item.name || ''),
       description: String(item.description || ''),
-      content: String(item.content || '')
+      content: String(item.content || ''),
+      tags: normalizeTemplateTags(item.tags)
     }))
 }
 
@@ -2651,12 +2878,21 @@ function parseTemplateMarkdownBlock(block, index) {
   let cursor = 0
   let name = `导入模板 ${index + 1}`
   let description = ''
+  let tags = []
   if (lines[cursor]?.startsWith('# ')) {
     name = lines[cursor].slice(2).trim() || name
     cursor += 1
   }
   if (lines[cursor]?.startsWith('> ')) {
     description = lines[cursor].slice(2).trim()
+    cursor += 1
+  }
+  if (lines[cursor]?.startsWith('> tags:')) {
+    tags = lines[cursor]
+      .slice(7)
+      .split(',')
+      .map((item) => normalizeTemplateTagLabel(item))
+      .filter(Boolean)
     cursor += 1
   }
   const bodyLines = lines.slice(cursor)
@@ -2674,7 +2910,7 @@ function parseTemplateMarkdownBlock(block, index) {
   if (!name.trim() && !content.trim()) {
     return null
   }
-  return { name, description, content }
+  return { name, description, content, tags }
 }
 
 function normalizeTemplateUsage(parsed) {
