@@ -253,6 +253,7 @@
           <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="batchPinSelected">批量置顶</button>
           <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="batchUnpinSelected">批量取消置顶</button>
           <button class="danger small" :disabled="selectedTemplateCount === 0" @click="batchDeleteSelected">批量删除</button>
+          <button class="secondary small" @click="dedupeFilteredTemplatesByName">同名去重</button>
           <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="exportSelectedTemplatesAsJson">导出已选 JSON</button>
           <button class="secondary small" :disabled="selectedTemplateCount === 0" @click="exportSelectedTemplatesAsMarkdown">导出已选 MD</button>
           <button class="secondary small" @click="exportFilteredTemplatesAsJson">导出当前 JSON</button>
@@ -2368,6 +2369,36 @@ function batchDeleteSelected() {
   })
   clearTemplateSelection()
   emit('notify', { type: 'success', message: `已删除 ${ids.length} 个模板` })
+}
+
+function dedupeFilteredTemplatesByName() {
+  const list = filteredTemplates.value
+  if (!list.length) {
+    return
+  }
+  const seen = new Set()
+  const deleteIds = []
+  list.forEach((tpl) => {
+    const key = normalizeTemplateNameKey(tpl?.name || '')
+    if (!key) {
+      return
+    }
+    if (seen.has(key)) {
+      deleteIds.push(Number(tpl.id))
+      return
+    }
+    seen.add(key)
+  })
+  if (!deleteIds.length) {
+    emit('notify', { type: 'success', message: '当前结果没有同名模板' })
+    return
+  }
+  deleteIds.forEach((id) => {
+    emit('delete-template', id)
+  })
+  const removed = new Set(deleteIds.map((id) => Number(id)))
+  selectedTemplateIds.value = selectedTemplateIds.value.filter((id) => !removed.has(Number(id)))
+  emit('notify', { type: 'success', message: `已去重，删除 ${deleteIds.length} 个同名模板` })
 }
 
 function resolveSelectedTemplates() {
