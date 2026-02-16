@@ -175,6 +175,10 @@ body {
   color: #4f6790;
   font-weight: 600;
   padding: 0;
+  min-height: 0;
+  display: inline;
+  vertical-align: baseline;
+  white-space: nowrap;
   border-radius: 0;
 }
 
@@ -387,7 +391,8 @@ body {
 
 .user-admin-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .shortcut-hint {
@@ -2098,7 +2103,8 @@ label {
 
 .action-group.more .secondary.active {
   border-color: #9db7ee;
-  background: #edf4ff;
+  background: linear-gradient(140deg, #f0f5ff, #e7efff);
+  box-shadow: 0 5px 12px #6f92cc2a;
 }
 
 .action-menu {
@@ -3698,46 +3704,58 @@ button.small {
 }
 
 .command-history-pin {
-  border: none;
-  border-left: 1px solid #d8e5fc;
-  background: transparent;
-  color: #6f86ac;
-  font-size: 12px;
+  border: 1px solid #d2e1fb;
+  border-radius: 999px;
+  background: #f8fbff;
+  color: #6481ae;
+  font-size: 11px;
   line-height: 1;
-  padding: 3px 6px 4px;
+  padding: 4px 8px;
   cursor: pointer;
+  min-height: 0;
+  box-shadow: none;
+  transition: transform 0.14s ease, border-color 0.14s ease, background 0.16s ease, color 0.14s ease;
 }
 
 .command-history-pin:hover {
+  border-color: #aac1f2;
   background: #eef5ff;
   color: #4f6f9f;
+  transform: translateY(-1px);
 }
 
 .command-history-alias {
-  border: none;
-  border-left: 1px solid #d8e5fc;
-  background: transparent;
-  color: #6f86ac;
+  border: 1px solid #d2e1fb;
+  border-radius: 999px;
+  background: #f8fbff;
+  color: #6481ae;
   font-size: 11px;
   line-height: 1;
-  padding: 3px 6px 4px;
+  padding: 4px 8px;
   cursor: pointer;
+  min-height: 0;
+  box-shadow: none;
+  transition: transform 0.14s ease, border-color 0.14s ease, background 0.16s ease, color 0.14s ease;
 }
 
 .command-history-alias:hover {
+  border-color: #aac1f2;
   background: #eef5ff;
   color: #4f6f9f;
+  transform: translateY(-1px);
 }
 
 .command-history-clear {
-  border: 1px dashed #d1e1fb;
+  border: 1px solid #cfe0fb;
   border-radius: 999px;
-  background: #f8fbff;
-  color: #6781ab;
+  background: linear-gradient(145deg, #f9fcff, #eef5ff);
+  color: #5e7cab;
   font-size: 11px;
   line-height: 1.2;
-  padding: 3px 9px;
+  min-height: 26px;
+  padding: 0 10px;
   cursor: pointer;
+  box-shadow: 0 2px 7px #5f7cab12;
 }
 
 .command-history-clear:hover {
@@ -4034,23 +4052,11 @@ button.small {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .confirm-actions button {
-  transition: transform 0.12s ease, box-shadow 0.14s ease, filter 0.14s ease, border-color 0.14s ease, background 0.16s ease;
-}
-
-.confirm-actions button:hover {
-  transform: translateY(-1px);
-}
-
-.confirm-actions button:active {
-  transform: scale(0.98);
-}
-
-.confirm-actions button:focus-visible {
-  outline: 2px solid #7ca6f6;
-  outline-offset: 1px;
+  min-width: 88px;
 }
 
 .bulk-result-panel {
