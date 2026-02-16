@@ -201,6 +201,20 @@
             <button class="danger small" :disabled="!templateManageSourceTag" @click="deleteTemplateTagEverywhere">删除标签</button>
           </div>
         </div>
+        <div class="template-tag-stats" v-if="templateTagStats.length">
+          <strong>标签统计</strong>
+          <div class="template-tag-stats-list">
+            <button
+              v-for="item in templateTagStats"
+              :key="`tag-stat-${item.tag}`"
+              class="secondary tiny"
+              :class="{ active: templateTagFilter === item.tag }"
+              @click="templateTagFilter = templateTagFilter === item.tag ? '' : item.tag"
+            >
+              #{{ item.tag }} ({{ item.count }})
+            </button>
+          </div>
+        </div>
         <div class="template-smart-panel" v-if="pinnedTemplateItems.length || recentTemplateItems.length || recommendedTemplateItems.length">
           <div class="template-smart-head">
             <strong>快捷套用</strong>
@@ -1264,6 +1278,22 @@ const availableTemplateTags = computed(() => {
     })
   })
   return Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
+})
+const templateTagStats = computed(() => {
+  const map = new Map()
+  props.templates.forEach((tpl) => {
+    getTemplateTags(tpl.id).forEach((tag) => {
+      map.set(tag, Number(map.get(tag) || 0) + 1)
+    })
+  })
+  return Array.from(map.entries())
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => {
+      if (b.count !== a.count) {
+        return b.count - a.count
+      }
+      return a.tag.localeCompare(b.tag, 'zh-Hans-CN')
+    })
 })
 const canRenameTemplateTag = computed(() => {
   const source = normalizeTemplateTagLabel(templateManageSourceTag.value)

@@ -2395,6 +2395,27 @@ li p {
   flex-wrap: wrap;
 }
 
+.template-tag-stats {
+  border: 1px dashed #d8e4fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px;
+  margin-bottom: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.template-tag-stats strong {
+  color: #4a638f;
+  font-size: 12px;
+}
+
+.template-tag-stats-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .template-smart-panel {
   border: 1px dashed #d5e1fb;
   border-radius: 12px;
