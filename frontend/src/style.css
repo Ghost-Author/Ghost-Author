@@ -4573,6 +4573,7 @@ button.small {
   .space-home {
     height: auto;
     max-height: none;
+    padding: 12px;
   }
 
   .home-stats {
@@ -4618,6 +4619,11 @@ button.small {
     align-items: stretch;
   }
 
+  .page-action-left,
+  .page-action-right {
+    width: 100%;
+  }
+
   .page-action-right {
     justify-content: flex-end;
   }
@@ -4633,6 +4639,16 @@ button.small {
   .action-group.more {
     margin-left: 0;
     align-self: flex-end;
+  }
+
+  .version-history li {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .version-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 
@@ -4674,6 +4690,22 @@ button.small {
 
   .topbar-right {
     justify-content: stretch;
+    gap: 6px;
+  }
+
+  .topbar-user,
+  .topbar-badge {
+    display: inline-flex;
+    align-items: center;
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .topbar-right button.secondary.tiny {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
+    padding: 0 8px;
   }
 
   .user-input {
@@ -4696,6 +4728,37 @@ button.small {
 
   .bulk-result-columns {
     grid-template-columns: 1fr;
+  }
+
+  .home-stats,
+  .home-sections {
+    grid-template-columns: 1fr;
+  }
+
+  .page-action-left,
+  .page-action-right {
+    gap: 6px;
+  }
+
+  .page-action-left button,
+  .page-action-right button,
+  .version-actions button {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
+  }
+
+  .page-action-right .page-status-pill,
+  .page-action-right .page-dirty-tip {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .doc-list,
+  .editor-pane,
+  .version-history,
+  .space-home {
+    padding: 10px;
   }
 
   .shortcut-help-grid {
