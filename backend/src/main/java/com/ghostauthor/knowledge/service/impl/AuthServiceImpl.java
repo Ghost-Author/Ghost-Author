@@ -73,7 +73,13 @@ public class AuthServiceImpl implements AuthService {
         long ttlHours = rememberMe ? Math.max(1, rememberTokenTtlHours) : Math.max(1, tokenTtlHours);
         long expiresAt = Instant.now().plusSeconds(ttlHours * 3600).toEpochMilli();
         sessions.put(token, new Session(cleanUser, user.getRole(), expiresAt));
-        return new AuthLoginResponse(token, cleanUser, user.getRole(), expiresAt);
+        return new AuthLoginResponse(
+                token,
+                cleanUser,
+                user.getRole(),
+                Boolean.TRUE.equals(user.getMustChangePassword()),
+                expiresAt
+        );
     }
 
     @Override
@@ -98,6 +104,28 @@ public class AuthServiceImpl implements AuthService {
             return;
         }
         sessions.remove(token.trim());
+    }
+
+    @Override
+    public void changePassword(String username, String currentPassword, String newPassword) {
+        bootstrapUsersIfNeeded();
+
+        String cleanUser = username == null ? "" : username.trim();
+        if (cleanUser.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "未登录用户");
+        }
+        AuthUserEntity user = authUserRepository.findByUsername(cleanUser).orElse(null);
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "用户不存在");
+        }
+        if (!passwordMatches(currentPassword, user.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "当前密码不正确");
+        }
+        validatePasswordStrength(newPassword);
+        user.setPassword(encodeForStorage(newPassword));
+        user.setMustChangePassword(false);
+        authUserRepository.save(user);
+        failedAttempts.remove(cleanUser);
     }
 
     @Override
@@ -139,7 +167,11 @@ public class AuthServiceImpl implements AuthService {
         target.setUsername(cleanUser);
         target.setRole(cleanRole);
         if (!providedPassword.isEmpty()) {
-            target.setPassword(providedPassword);
+            validatePasswordStrength(providedPassword);
+            target.setPassword(encodeForStorage(providedPassword));
+            target.setMustChangePassword(true);
+        } else if (target.getMustChangePassword() == null) {
+            target.setMustChangePassword(false);
         }
         authUserRepository.save(target);
         return new AuthUserResponse(cleanUser, cleanRole);
@@ -179,6 +211,7 @@ public class AuthServiceImpl implements AuthService {
                 entity.setUsername(item.username);
                 entity.setPassword(item.password);
                 entity.setRole(item.role);
+                entity.setMustChangePassword(false);
                 authUserRepository.save(entity);
             });
         }
@@ -190,6 +223,9 @@ public class AuthServiceImpl implements AuthService {
                 first.setPassword("admin123");
             }
             first.setRole(ROLE_ADMIN);
+            if (first.getMustChangePassword() == null) {
+                first.setMustChangePassword(false);
+            }
             authUserRepository.save(first);
         }
         usersBootstrapped = true;
@@ -288,6 +324,32 @@ public class AuthServiceImpl implements AuthService {
             return passwordEncoder.matches(rawPassword, configured);
         }
         return configured.equals(rawPassword);
+    }
+
+    private String encodeForStorage(String password) {
+        String raw = password == null ? "" : password.trim();
+        if (raw.startsWith(BCRYPT_PREFIX) || raw.startsWith("$2a$") || raw.startsWith("$2b$") || raw.startsWith("$2y$")) {
+            return raw;
+        }
+        return BCRYPT_PREFIX + passwordEncoder.encode(raw);
+    }
+
+    private void validatePasswordStrength(String password) {
+        String raw = password == null ? "" : password.trim();
+        if (raw.isEmpty()) {
+            return;
+        }
+        if (raw.startsWith(BCRYPT_PREFIX) || raw.startsWith("$2a$") || raw.startsWith("$2b$") || raw.startsWith("$2y$")) {
+            return;
+        }
+        if (raw.length() < 8) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "密码长度至少 8 位");
+        }
+        boolean hasLetter = raw.chars().anyMatch(Character::isLetter);
+        boolean hasDigit = raw.chars().anyMatch(Character::isDigit);
+        if (!hasLetter || !hasDigit) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "密码需同时包含字母和数字");
+        }
     }
 
     private String normalizeRole(String raw) {

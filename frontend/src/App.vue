@@ -43,7 +43,16 @@
       <div class="topbar-right">
         <span class="topbar-user">当前用户：{{ currentUser }}</span>
         <span class="topbar-user role">角色：{{ currentUserRole }}</span>
-        <span class="shortcut-hint">⌘/Ctrl+K 搜索 · ⌘/Ctrl+S 保存 · Alt+1/2/3/4/5/6</span>
+        <span class="shortcut-hint">⌘/Ctrl+K 搜索 · ⌘/Ctrl+S 保存 · Alt+0/1/2/3/4/5/6/7/8/9</span>
+        <button
+          class="topbar-user tree-focus"
+          :class="{ on: treeFocusPathEnabled }"
+          type="button"
+          title="点击切换页面树路径聚焦（Alt+0）"
+          @click="toggleTreeFocusPathFromTopbar"
+        >
+          路径聚焦：{{ treeFocusPathEnabled ? '开' : '关' }}
+        </button>
         <button class="secondary tiny" @click="openHome">空间首页</button>
         <button class="secondary tiny" @click="toggleRightPanel">
           {{ rightPanelOpen ? '收起右栏' : '展开右栏' }}
@@ -51,6 +60,7 @@
         <button class="secondary tiny" :class="{ active: focusMode }" @click="toggleFocusMode">
           {{ focusMode ? '退出专注' : '专注模式' }}
         </button>
+        <button class="secondary tiny" @click="openPasswordDialog">修改密码</button>
         <button v-if="canManageUsers" class="secondary tiny" @click="openUserAdmin">用户管理</button>
         <button class="secondary tiny" @click="logout">退出登录</button>
         <div class="topbar-badge">{{ visibleDocs.length }} pages</div>
@@ -74,17 +84,24 @@
         ref="docListRef"
         :docs="visibleDocs"
         :active-slug="activeSlug"
+        :pinned="pinned"
         :favorites="favorites"
         :recent="recent"
+        :recent-meta="recentMeta"
+        :auto-clean-recent-older="autoCleanRecentOlder"
         :current-user="currentUser"
         @create="createNewDoc"
         @search="searchDocs"
         @select="loadDoc"
         @toggle-favorite="toggleFavorite"
+        @toggle-pin="togglePinned"
         @move="moveDoc"
         @reorder="reorderDoc"
         @quick-action="handleDocQuickAction"
         @bulk-action="handleDocBulkAction"
+        @reorder-quick="handleQuickCollectionReorder"
+        @quick-collection-action="handleQuickCollectionAction"
+        @tree-focus-change="handleTreeFocusChange"
       />
       <div
         class="layout-splitter"
@@ -146,6 +163,7 @@
           @update-template="updateTemplate"
           @delete-template="deleteTemplate"
           @notify="handleEditorNotify"
+          @quick-filter-permission="handlePermissionQuickFilter"
         />
       </div>
 
@@ -264,7 +282,7 @@
         </div>
         <div class="user-admin-form">
           <input v-model.trim="authUserForm.username" placeholder="用户名" />
-          <input v-model="authUserForm.password" placeholder="密码（留空则不改）" />
+          <input v-model="authUserForm.password" type="password" placeholder="密码（留空则不改）" />
           <select v-model="authUserForm.role">
             <option value="ADMIN">ADMIN</option>
             <option value="EDITOR">EDITOR</option>
@@ -290,6 +308,34 @@
         </div>
       </div>
     </div>
+
+    <div v-if="forcePwdDialog.open" class="confirm-overlay">
+      <div class="confirm-panel">
+        <h4>请先修改初始密码</h4>
+        <p>为了账号安全，首次登录或管理员重置密码后需要先修改密码。</p>
+        <input v-model="forcePwdDialog.newPassword" type="password" placeholder="新密码（至少8位，含字母+数字）" />
+        <input v-model="forcePwdDialog.confirmPassword" type="password" placeholder="确认新密码" />
+        <p v-if="forcePwdDialog.error" class="login-error">{{ forcePwdDialog.error }}</p>
+        <div class="confirm-actions">
+          <button :disabled="forcePwdDialog.saving" @click="submitForcePasswordChange">保存新密码</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="passwordDialog.open" class="confirm-overlay" @click.self="passwordDialog.open = false">
+      <div class="confirm-panel">
+        <h4>修改密码</h4>
+        <p>请输入当前密码和新密码。</p>
+        <input v-model="passwordDialog.currentPassword" type="password" placeholder="当前密码" />
+        <input v-model="passwordDialog.newPassword" type="password" placeholder="新密码（至少8位，含字母+数字）" />
+        <input v-model="passwordDialog.confirmPassword" type="password" placeholder="确认新密码" />
+        <p v-if="passwordDialog.error" class="login-error">{{ passwordDialog.error }}</p>
+        <div class="confirm-actions">
+          <button class="secondary" :disabled="passwordDialog.saving" @click="passwordDialog.open = false">取消</button>
+          <button :disabled="passwordDialog.saving" @click="submitPasswordChange">保存新密码</button>
+        </div>
+      </div>
+    </div>
     </template>
   </div>
 </template>
@@ -304,6 +350,9 @@ import VersionHistory from './components/VersionHistory.vue'
 
 const FAVORITES_KEY = 'ga-favorites'
 const RECENT_KEY = 'ga-recent'
+const RECENT_META_KEY = 'ga-recent-meta'
+const AUTO_CLEAN_RECENT_OLDER_KEY = 'ga-auto-clean-recent-older'
+const PINNED_KEY = 'ga-pinned'
 const CURRENT_USER_KEY = 'ga-current-user'
 const AUTH_SESSION_KEY = 'ga-auth-session'
 const RIGHT_PANEL_KEY = 'ga-right-panel-open'
@@ -331,6 +380,22 @@ const loggingOut = ref(false)
 const userAdminOpen = ref(false)
 const authUsers = ref([])
 const authUserLoading = ref(false)
+const forcePwdDialog = ref({
+  open: false,
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+  saving: false,
+  error: ''
+})
+const passwordDialog = ref({
+  open: false,
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+  saving: false,
+  error: ''
+})
 const authUserForm = ref({
   username: '',
   password: '',
@@ -375,6 +440,10 @@ const diffTo = ref(null)
 const diffText = ref('')
 const favorites = ref([])
 const recent = ref([])
+const recentMeta = ref({})
+const autoCleanRecentOlder = ref(false)
+const pinned = ref([])
+const treeFocusPathEnabled = ref(false)
 const rightPanelOpen = ref(loadRightPanelState())
 const leftPaneWidth = ref(loadLeftPaneWidth())
 const focusMode = ref(loadFocusModeState())
@@ -749,6 +818,19 @@ function handleEditorNotify(payload) {
     return
   }
   showToast(payload.message, payload.type || 'info')
+}
+
+function handlePermissionQuickFilter(mode) {
+  docListRef.value?.setPermissionFilter(mode)
+  showToast('已按权限筛选左侧页面', 'success')
+}
+
+function handleTreeFocusChange(enabled) {
+  treeFocusPathEnabled.value = !!enabled
+}
+
+function toggleTreeFocusPathFromTopbar() {
+  docListRef.value?.toggleTreeFocusPath()
 }
 
 function firstAccessibleSlug(slugs) {
@@ -1594,32 +1676,164 @@ function toggleFavorite(slug) {
   persistCollections()
 }
 
+function togglePinned(slug) {
+  if (!slug) {
+    return
+  }
+  if (pinned.value.includes(slug)) {
+    pinned.value = pinned.value.filter((s) => s !== slug)
+  } else {
+    pinned.value = [slug, ...pinned.value]
+  }
+  persistCollections()
+}
+
+function handleQuickCollectionReorder(payload) {
+  const type = String(payload?.type || '').toUpperCase()
+  const ordered = Array.isArray(payload?.slugs) ? payload.slugs : []
+  if (type !== 'FAVORITES' && type !== 'RECENT' && type !== 'PINNED') {
+    return
+  }
+  const current = type === 'FAVORITES'
+    ? favorites.value
+    : type === 'RECENT'
+      ? recent.value
+      : pinned.value
+  const uniqueOrdered = Array.from(new Set(ordered.filter((slug) => current.includes(slug))))
+  const remaining = current.filter((slug) => !uniqueOrdered.includes(slug))
+  const next = [...uniqueOrdered, ...remaining]
+  if (type === 'FAVORITES') {
+    favorites.value = next
+  } else if (type === 'RECENT') {
+    recent.value = next.slice(0, 12)
+  } else {
+    pinned.value = next
+  }
+  persistCollections()
+}
+
+function handleQuickCollectionAction(payload) {
+  const action = String(payload?.action || '').trim().toUpperCase()
+  const slugs = Array.isArray(payload?.slugs) ? payload.slugs : []
+  if (action === 'CLEAR_PINNED') {
+    pinned.value = []
+    persistCollections()
+    showToast('已清空固定页面', 'success')
+    return
+  }
+  if (action === 'CLEAR_FAVORITES') {
+    favorites.value = []
+    persistCollections()
+    showToast('已清空收藏', 'success')
+    return
+  }
+  if (action === 'CLEAR_RECENT_ALL') {
+    recent.value = []
+    recentMeta.value = {}
+    persistCollections()
+    showToast('已清空最近访问', 'success')
+    return
+  }
+  if (action === 'CLEAR_RECENT_OLDER') {
+    const drop = new Set(slugs)
+    recent.value = recent.value.filter((slug) => !drop.has(slug))
+    const nextMeta = {}
+    Object.entries(recentMeta.value || {}).forEach(([slug, time]) => {
+      if (!drop.has(slug)) {
+        nextMeta[slug] = Number(time) || 0
+      }
+    })
+    recentMeta.value = nextMeta
+    persistCollections()
+    showToast('已清理更早访问记录', 'success')
+    return
+  }
+  if (action === 'TOGGLE_AUTO_CLEAN_RECENT_OLDER') {
+    autoCleanRecentOlder.value = !autoCleanRecentOlder.value
+    if (autoCleanRecentOlder.value) {
+      cleanupRecentOlder(7)
+    }
+    persistCollections()
+    showToast(autoCleanRecentOlder.value ? '已开启自动清理更早记录' : '已关闭自动清理更早记录', 'success')
+  }
+}
+
+function cleanupRecentOlder(days = 7) {
+  const now = Date.now()
+  const threshold = now - days * 24 * 3600 * 1000
+  const drop = new Set(
+    recent.value.filter((slug) => {
+      const visitedAt = Number(recentMeta.value?.[slug] || 0)
+      return visitedAt <= 0 || visitedAt < threshold
+    })
+  )
+  if (drop.size === 0) {
+    return
+  }
+  recent.value = recent.value.filter((slug) => !drop.has(slug))
+  const nextMeta = {}
+  Object.entries(recentMeta.value || {}).forEach(([slug, time]) => {
+    if (!drop.has(slug)) {
+      nextMeta[slug] = Number(time) || 0
+    }
+  })
+  recentMeta.value = nextMeta
+}
+
 function touchRecent(slug) {
   recent.value = [slug, ...recent.value.filter((s) => s !== slug)].slice(0, 12)
+  recentMeta.value = {
+    ...recentMeta.value,
+    [slug]: Date.now()
+  }
+  if (autoCleanRecentOlder.value) {
+    cleanupRecentOlder(7)
+  }
   persistCollections()
 }
 
 function syncCollectionsWithDocs() {
   const allSlugs = new Set(visibleDocs.value.map((d) => d.slug))
+  pinned.value = pinned.value.filter((s) => allSlugs.has(s))
   favorites.value = favorites.value.filter((s) => allSlugs.has(s))
   recent.value = recent.value.filter((s) => allSlugs.has(s))
+  const nextRecentMeta = {}
+  Object.entries(recentMeta.value || {}).forEach(([slug, time]) => {
+    if (allSlugs.has(slug)) {
+      nextRecentMeta[slug] = Number(time) || 0
+    }
+  })
+  recentMeta.value = nextRecentMeta
   persistCollections()
 }
 
 function persistCollections() {
+  localStorage.setItem(PINNED_KEY, JSON.stringify(pinned.value))
   localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites.value))
   localStorage.setItem(RECENT_KEY, JSON.stringify(recent.value))
+  localStorage.setItem(RECENT_META_KEY, JSON.stringify(recentMeta.value || {}))
+  localStorage.setItem(AUTO_CLEAN_RECENT_OLDER_KEY, autoCleanRecentOlder.value ? '1' : '0')
   localStorage.setItem(CURRENT_USER_KEY, currentUser.value || 'admin')
 }
 
 function loadCollections() {
   try {
+    pinned.value = JSON.parse(localStorage.getItem(PINNED_KEY) || '[]')
     favorites.value = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]')
     recent.value = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]')
+    const parsedRecentMeta = JSON.parse(localStorage.getItem(RECENT_META_KEY) || '{}')
+    recentMeta.value = parsedRecentMeta && typeof parsedRecentMeta === 'object' ? parsedRecentMeta : {}
+    autoCleanRecentOlder.value = localStorage.getItem(AUTO_CLEAN_RECENT_OLDER_KEY) === '1'
+    if (autoCleanRecentOlder.value) {
+      cleanupRecentOlder(7)
+    }
     currentUser.value = localStorage.getItem(CURRENT_USER_KEY) || 'admin'
   } catch {
+    pinned.value = []
     favorites.value = []
     recent.value = []
+    recentMeta.value = {}
+    autoCleanRecentOlder.value = false
     currentUser.value = 'admin'
   }
 }
@@ -1691,6 +1905,7 @@ async function submitLogin() {
     })
     const authUser = (data?.username || username).trim()
     const authRole = String(data?.role || 'ADMIN').trim().toUpperCase() || 'ADMIN'
+    const mustChangePassword = Boolean(data?.mustChangePassword)
     const token = (data?.token || '').trim()
     const expiresAt = Number(data?.expiresAt || 0)
     if (!token || !authUser || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
@@ -1702,6 +1917,9 @@ async function submitLogin() {
     currentUserRole.value = authRole
     persistCollections()
     persistAuthSession(authUser, authRole, expiresAt)
+    if (mustChangePassword) {
+      openForcePasswordDialog(password)
+    }
   } catch {
     loginError.value = '用户名或密码错误'
     return
@@ -1712,6 +1930,101 @@ async function submitLogin() {
   await bootstrapWorkspace(pendingPageSlug.value)
   pendingPageSlug.value = ''
   showToast(`欢迎回来，${username}`, 'success')
+}
+
+function openForcePasswordDialog(currentPassword) {
+  forcePwdDialog.value = {
+    open: true,
+    currentPassword: currentPassword || '',
+    newPassword: '',
+    confirmPassword: '',
+    saving: false,
+    error: ''
+  }
+}
+
+function openPasswordDialog() {
+  passwordDialog.value = {
+    open: true,
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+    saving: false,
+    error: ''
+  }
+}
+
+async function submitForcePasswordChange() {
+  const next = String(forcePwdDialog.value.newPassword || '')
+  const confirm = String(forcePwdDialog.value.confirmPassword || '')
+  if (next.length < 8) {
+    forcePwdDialog.value.error = '密码长度至少 8 位'
+    return
+  }
+  const hasLetter = /[A-Za-z]/.test(next)
+  const hasDigit = /\d/.test(next)
+  if (!hasLetter || !hasDigit) {
+    forcePwdDialog.value.error = '密码需同时包含字母和数字'
+    return
+  }
+  if (next !== confirm) {
+    forcePwdDialog.value.error = '两次输入的密码不一致'
+    return
+  }
+
+  forcePwdDialog.value.saving = true
+  forcePwdDialog.value.error = ''
+  try {
+    await api.post('/auth/password/change', {
+      currentPassword: forcePwdDialog.value.currentPassword,
+      newPassword: next
+    })
+    forcePwdDialog.value.open = false
+    showToast('密码已更新', 'success')
+  } catch (error) {
+    const message = error?.response?.data?.message || '修改密码失败'
+    forcePwdDialog.value.error = message
+  } finally {
+    forcePwdDialog.value.saving = false
+  }
+}
+
+async function submitPasswordChange() {
+  const current = String(passwordDialog.value.currentPassword || '')
+  const next = String(passwordDialog.value.newPassword || '')
+  const confirm = String(passwordDialog.value.confirmPassword || '')
+  if (!current) {
+    passwordDialog.value.error = '请输入当前密码'
+    return
+  }
+  if (next.length < 8) {
+    passwordDialog.value.error = '密码长度至少 8 位'
+    return
+  }
+  const hasLetter = /[A-Za-z]/.test(next)
+  const hasDigit = /\d/.test(next)
+  if (!hasLetter || !hasDigit) {
+    passwordDialog.value.error = '密码需同时包含字母和数字'
+    return
+  }
+  if (next !== confirm) {
+    passwordDialog.value.error = '两次输入的密码不一致'
+    return
+  }
+  passwordDialog.value.saving = true
+  passwordDialog.value.error = ''
+  try {
+    await api.post('/auth/password/change', {
+      currentPassword: current,
+      newPassword: next
+    })
+    passwordDialog.value.open = false
+    showToast('密码已更新', 'success')
+  } catch (error) {
+    passwordDialog.value.error = error?.response?.data?.message || '修改密码失败'
+  } finally {
+    passwordDialog.value.saving = false
+  }
 }
 
 async function loadAuthUsers() {
@@ -1808,6 +2121,8 @@ function clearWorkspaceAfterLogout() {
   comments.value = []
   attachments.value = []
   templates.value = []
+  forcePwdDialog.value.open = false
+  passwordDialog.value.open = false
   openHome()
 }
 
@@ -1854,6 +2169,13 @@ function handleKeydown(event) {
     return
   }
 
+  const isToggleTreePathFocus = event.altKey && !event.ctrlKey && !event.metaKey && event.key === '0'
+  if (isToggleTreePathFocus) {
+    event.preventDefault()
+    docListRef.value?.toggleTreeFocusPath()
+    return
+  }
+
   const isExpandTree = event.altKey && !event.ctrlKey && !event.metaKey && event.key === '1'
   if (isExpandTree) {
     event.preventDefault()
@@ -1893,6 +2215,27 @@ function handleKeydown(event) {
   if (isExpandSidebarPanels) {
     event.preventDefault()
     docListRef.value?.expandSidebarPanels()
+    return
+  }
+
+  const isFocusPinnedSearch = event.altKey && !event.ctrlKey && !event.metaKey && event.key === '7'
+  if (isFocusPinnedSearch) {
+    event.preventDefault()
+    docListRef.value?.focusQuickSearch('PINNED')
+    return
+  }
+
+  const isFocusFavoritesSearch = event.altKey && !event.ctrlKey && !event.metaKey && event.key === '8'
+  if (isFocusFavoritesSearch) {
+    event.preventDefault()
+    docListRef.value?.focusQuickSearch('FAVORITES')
+    return
+  }
+
+  const isFocusRecentSearch = event.altKey && !event.ctrlKey && !event.metaKey && event.key === '9'
+  if (isFocusRecentSearch) {
+    event.preventDefault()
+    docListRef.value?.focusQuickSearch('RECENT')
     return
   }
 

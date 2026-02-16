@@ -124,6 +124,24 @@
           </button>
           </div>
 
+          <div class="permission-filters">
+          <button class="filter-btn" :class="{ active: permissionFilter === 'ALL' }" @click="permissionFilter = 'ALL'">
+            权限全部 {{ permissionCounts.ALL }}
+          </button>
+          <button class="filter-btn" :class="{ active: permissionFilter === 'OWNED' }" @click="permissionFilter = 'OWNED'">
+            我拥有 {{ permissionCounts.OWNED }}
+          </button>
+          <button class="filter-btn" :class="{ active: permissionFilter === 'EDITABLE' }" @click="permissionFilter = 'EDITABLE'">
+            我可编辑 {{ permissionCounts.EDITABLE }}
+          </button>
+          <button class="filter-btn" :class="{ active: permissionFilter === 'VIEWABLE' }" @click="permissionFilter = 'VIEWABLE'">
+            我可查看 {{ permissionCounts.VIEWABLE }}
+          </button>
+          <button class="filter-btn" :class="{ active: permissionFilter === 'SHARED' }" @click="permissionFilter = 'SHARED'">
+            共享给我 {{ permissionCounts.SHARED }}
+          </button>
+          </div>
+
           <div class="meta-filters">
           <select v-model="assigneeFilter">
             <option value="">负责人（全部）</option>
@@ -165,45 +183,156 @@
         </div>
 
         <div class="quick-zones">
-          <div class="quick-zone">
+          <div class="quick-zones-tools">
+            <button class="secondary tiny" @click="expandQuickZones">展开三组</button>
+            <button class="secondary tiny" @click="collapseQuickZones">收起三组</button>
+          </div>
+          <div class="quick-zone" :class="{ open: quickOpenPinned }">
+            <button class="quick-zone-head" @click="quickOpenPinned = !quickOpenPinned">
+              <div class="quick-zone-title">
+                <h4>📌 固定</h4>
+                <em>{{ pinnedDocs.length }}</em>
+              </div>
+              <div class="quick-zone-actions">
+                <button
+                  v-if="pinnedDocs.length > 0"
+                  class="secondary tiny"
+                  @click.stop="emitQuickCollectionAction('CLEAR_PINNED')"
+                >
+                  清空
+                </button>
+                <span>{{ quickOpenPinned ? '▾' : '▸' }}</span>
+              </div>
+            </button>
+            <div class="quick-zone-search" v-show="quickOpenPinned">
+              <input ref="pinnedSearchRef" v-model.trim="quickPinnedQuery" placeholder="搜索固定页面" />
+            </div>
+            <ul class="quick-list" v-show="quickOpenPinned">
+              <li
+                v-for="doc in pinnedDocsFiltered"
+                :key="`pin-${doc.slug}`"
+                :class="{
+                  active: activeSlug === doc.slug,
+                  dragging: quickDragType === 'PINNED' && quickDragSlug === doc.slug,
+                  'drop-target': quickDragType === 'PINNED' && quickDropSlug === doc.slug
+                }"
+                draggable="true"
+                @dragstart="onQuickDragStart('PINNED', doc.slug)"
+                @dragover.prevent="onQuickDragOver('PINNED', doc.slug)"
+                @drop.prevent="onQuickDrop('PINNED', doc.slug)"
+                @dragend="onQuickDragEnd"
+                @click="$emit('select', doc.slug)"
+              >
+                <span>{{ doc.title }}</span>
+              </li>
+              <li class="quick-empty" v-if="pinnedDocs.length === 0">还没有固定页面</li>
+              <li class="quick-empty" v-else-if="pinnedDocsFiltered.length === 0">没有匹配固定页面</li>
+            </ul>
+          </div>
+
+          <div class="quick-zone" :class="{ open: quickOpenFavorites }">
             <button class="quick-zone-head" @click="quickOpenFavorites = !quickOpenFavorites">
               <div class="quick-zone-title">
                 <h4>⭐ 收藏</h4>
                 <em>{{ favoriteDocs.length }}</em>
               </div>
-              <span>{{ quickOpenFavorites ? '▾' : '▸' }}</span>
+              <div class="quick-zone-actions">
+                <button
+                  v-if="favoriteDocs.length > 0"
+                  class="secondary tiny"
+                  @click.stop="emitQuickCollectionAction('CLEAR_FAVORITES')"
+                >
+                  清空
+                </button>
+                <span>{{ quickOpenFavorites ? '▾' : '▸' }}</span>
+              </div>
             </button>
+            <div class="quick-zone-search" v-show="quickOpenFavorites">
+              <input ref="favoritesSearchRef" v-model.trim="quickFavoritesQuery" placeholder="搜索收藏页面" />
+            </div>
             <ul class="quick-list" v-show="quickOpenFavorites">
               <li
-                v-for="doc in favoriteDocs"
+                v-for="doc in favoriteDocsFiltered"
                 :key="`fav-${doc.slug}`"
-                :class="{ active: activeSlug === doc.slug }"
+                :class="{
+                  active: activeSlug === doc.slug,
+                  dragging: quickDragType === 'FAVORITES' && quickDragSlug === doc.slug,
+                  'drop-target': quickDragType === 'FAVORITES' && quickDropSlug === doc.slug
+                }"
+                draggable="true"
+                @dragstart="onQuickDragStart('FAVORITES', doc.slug)"
+                @dragover.prevent="onQuickDragOver('FAVORITES', doc.slug)"
+                @drop.prevent="onQuickDrop('FAVORITES', doc.slug)"
+                @dragend="onQuickDragEnd"
                 @click="$emit('select', doc.slug)"
               >
                 <span>{{ doc.title }}</span>
               </li>
               <li class="quick-empty" v-if="favoriteDocs.length === 0">还没有收藏页面</li>
+              <li class="quick-empty" v-else-if="favoriteDocsFiltered.length === 0">没有匹配收藏页面</li>
             </ul>
           </div>
 
-          <div class="quick-zone">
+          <div class="quick-zone" :class="{ open: quickOpenRecent }">
             <button class="quick-zone-head" @click="quickOpenRecent = !quickOpenRecent">
               <div class="quick-zone-title">
                 <h4>🕘 最近访问</h4>
                 <em>{{ recentDocs.length }}</em>
               </div>
-              <span>{{ quickOpenRecent ? '▾' : '▸' }}</span>
+              <div class="quick-zone-actions">
+                <button
+                  class="secondary tiny"
+                  :class="{ active: autoCleanRecentOlder }"
+                  @click.stop="emitQuickCollectionAction('TOGGLE_AUTO_CLEAN_RECENT_OLDER')"
+                >
+                  自动清理更早 {{ autoCleanRecentOlder ? '开' : '关' }}
+                </button>
+                <button
+                  v-if="olderRecentSlugs.length > 0"
+                  class="secondary tiny"
+                  @click.stop="emitQuickCollectionAction('CLEAR_RECENT_OLDER', olderRecentSlugs)"
+                >
+                  清理更早
+                </button>
+                <button
+                  v-if="recentDocs.length > 0"
+                  class="secondary tiny"
+                  @click.stop="emitQuickCollectionAction('CLEAR_RECENT_ALL')"
+                >
+                  清空
+                </button>
+                <span>{{ quickOpenRecent ? '▾' : '▸' }}</span>
+              </div>
             </button>
+            <div class="quick-zone-search" v-show="quickOpenRecent">
+              <input ref="recentSearchRef" v-model.trim="quickRecentQuery" placeholder="搜索最近访问页面" />
+            </div>
             <ul class="quick-list" v-show="quickOpenRecent">
-              <li
-                v-for="doc in recentDocs"
-                :key="`recent-${doc.slug}`"
-                :class="{ active: activeSlug === doc.slug }"
-                @click="$emit('select', doc.slug)"
-              >
-                <span>{{ doc.title }}</span>
-              </li>
+              <template v-for="section in recentSectionsFiltered" :key="section.key">
+                <li class="quick-subhead">
+                  <span>{{ section.title }}</span>
+                  <em>{{ section.hint }}</em>
+                </li>
+                <li
+                  v-for="doc in section.items"
+                  :key="`recent-${doc.slug}`"
+                  :class="{
+                    active: activeSlug === doc.slug,
+                    dragging: quickDragType === 'RECENT' && quickDragSlug === doc.slug,
+                    'drop-target': quickDragType === 'RECENT' && quickDropSlug === doc.slug
+                  }"
+                  draggable="true"
+                  @dragstart="onQuickDragStart('RECENT', doc.slug)"
+                  @dragover.prevent="onQuickDragOver('RECENT', doc.slug)"
+                  @drop.prevent="onQuickDrop('RECENT', doc.slug)"
+                  @dragend="onQuickDragEnd"
+                  @click="$emit('select', doc.slug)"
+                >
+                  <span>{{ doc.title }}</span>
+                </li>
+              </template>
               <li class="quick-empty" v-if="recentDocs.length === 0">还没有访问记录</li>
+              <li class="quick-empty" v-else-if="recentSectionsFiltered.length === 0">没有匹配最近访问页面</li>
             </ul>
           </div>
         </div>
@@ -215,6 +344,11 @@
           <span>{{ treeOpen ? '▾' : '▸' }} 页面树</span>
           <em>{{ totalVisibleNodes }}</em>
         </button>
+        <div class="tree-nav-tools" v-show="treeOpen">
+          <button class="secondary tiny" :class="{ active: treeFocusPath }" @click="toggleTreeFocusPath">
+            {{ treeFocusPath ? '路径聚焦开' : '路径聚焦关' }}
+          </button>
+        </div>
         <div class="tree-nav-body" v-show="treeOpen">
           <div
             class="root-drop-zone"
@@ -322,8 +456,18 @@
                           <button class="node-menu-item" @click="emitQuickAction('TOGGLE_FAVORITE', node.slug)">
                             {{ favorites.includes(node.slug) ? '取消收藏' : '加入收藏' }}
                           </button>
+                          <button class="node-menu-item" @click="$emit('toggle-pin', node.slug)">
+                            {{ pinned.includes(node.slug) ? '取消固定' : '固定到侧栏' }}
+                          </button>
                         </div>
                       </div>
+                      <button
+                        class="pin-toggle"
+                        :class="{ active: pinned.includes(node.slug) }"
+                        @click.stop="$emit('toggle-pin', node.slug)"
+                      >
+                        {{ pinned.includes(node.slug) ? '📌' : '📍' }}
+                      </button>
                       <button
                         class="fav-toggle"
                         :class="{ active: favorites.includes(node.slug) }"
@@ -340,6 +484,9 @@
                       <span class="node-slug">{{ node.slug }}</span>
                       <span class="node-visibility" :class="(node.visibility || 'SPACE').toLowerCase()">
                         {{ node.visibility === 'PRIVATE' ? '私有' : '空间' }}
+                      </span>
+                      <span class="node-perm" :class="resolvePermissionClass(node)">
+                        {{ resolvePermissionLabel(node) }}
                       </span>
                       <span class="node-lock" :class="{ locked: !!node.locked }">
                         {{ node.locked ? '锁定' : '可编辑' }}
@@ -383,31 +530,34 @@ const DENSITY_KEY = 'ga-sidebar-density'
 const TREE_PANEL_KEY = 'ga-sidebar-tree-panel'
 const NODE_OPEN_KEY = 'ga-sidebar-open-nodes'
 const TREE_SCROLL_KEY = 'ga-sidebar-tree-scroll'
+const TREE_FOCUS_PATH_KEY = 'ga-sidebar-focus-path'
 
 function loadQuickPanelsState() {
   if (typeof window === 'undefined') {
-    return { favorites: true, recent: true }
+    return { pinned: true, favorites: true, recent: true }
   }
   try {
     const raw = window.localStorage.getItem(QUICK_PANEL_KEY)
     if (!raw) {
-      return { favorites: true, recent: true }
+      return { pinned: true, favorites: true, recent: true }
     }
     const parsed = JSON.parse(raw)
     return {
+      pinned: parsed.pinned !== false,
       favorites: parsed.favorites !== false,
       recent: parsed.recent !== false
     }
   } catch {
-    return { favorites: true, recent: true }
+    return { pinned: true, favorites: true, recent: true }
   }
 }
 
-function persistQuickPanelsState(favoritesOpen, recentOpen) {
+function persistQuickPanelsState(pinnedOpen, favoritesOpen, recentOpen) {
   if (typeof window === 'undefined') {
     return
   }
   window.localStorage.setItem(QUICK_PANEL_KEY, JSON.stringify({
+    pinned: pinnedOpen,
     favorites: favoritesOpen,
     recent: recentOpen
   }))
@@ -560,29 +710,55 @@ function persistTreeScrollPosition(top) {
   window.localStorage.setItem(TREE_SCROLL_KEY, String(next))
 }
 
+function loadTreeFocusPathState() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+  return window.localStorage.getItem(TREE_FOCUS_PATH_KEY) === '1'
+}
+
+function persistTreeFocusPathState(enabled) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(TREE_FOCUS_PATH_KEY, enabled ? '1' : '0')
+}
+
 const keyword = ref('')
 const opened = ref(loadGroupOpenState())
 const sectionOpened = ref(loadSectionOpenState())
 const statusFilter = ref('ALL')
 const visibilityFilter = ref('ALL')
 const priorityFilter = ref('ALL')
+const permissionFilter = ref('ALL')
 const assigneeFilter = ref('')
 const dueFilter = ref('ALL')
 const myTodoMode = ref(false)
 const filtersOpen = ref(loadFilterPanelState())
 const quickPanelsState = loadQuickPanelsState()
+const quickOpenPinned = ref(quickPanelsState.pinned)
 const quickOpenFavorites = ref(quickPanelsState.favorites)
 const quickOpenRecent = ref(quickPanelsState.recent)
 const draggingSlug = ref('')
 const dropTargetSlug = ref('')
 const dropTargetRoot = ref(false)
 const quickMenuSlug = ref('')
+const quickDragType = ref('')
+const quickDragSlug = ref('')
+const quickDropSlug = ref('')
+const quickPinnedQuery = ref('')
+const quickFavoritesQuery = ref('')
+const quickRecentQuery = ref('')
+const pinnedSearchRef = ref(null)
+const favoritesSearchRef = ref(null)
+const recentSearchRef = ref(null)
 const batchMode = ref(false)
 const selectedSlugs = ref([])
 const selectedOnlyMode = ref(false)
 const compactMode = ref(loadCompactMode())
 const batchQuickOpen = ref(false)
 const treeOpen = ref(loadTreePanelState())
+const treeFocusPath = ref(loadTreeFocusPathState())
 const nodeOpened = ref(loadNodeOpenState())
 const treeScrollRef = ref(null)
 
@@ -599,9 +775,21 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
+  pinned: {
+    type: Array,
+    default: () => []
+  },
   recent: {
     type: Array,
     default: () => []
+  },
+  recentMeta: {
+    type: Object,
+    default: () => ({})
+  },
+  autoCleanRecentOlder: {
+    type: Boolean,
+    default: false
   },
   currentUser: {
     type: String,
@@ -609,10 +797,10 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['search', 'toggle-favorite', 'move', 'reorder', 'quick-action', 'bulk-action'])
+const emit = defineEmits(['search', 'toggle-favorite', 'toggle-pin', 'move', 'reorder', 'quick-action', 'bulk-action', 'reorder-quick', 'quick-collection-action', 'tree-focus-change'])
 
-watch([quickOpenFavorites, quickOpenRecent], ([favoritesOpen, recentOpen]) => {
-  persistQuickPanelsState(favoritesOpen, recentOpen)
+watch([quickOpenPinned, quickOpenFavorites, quickOpenRecent], ([pinnedOpen, favoritesOpen, recentOpen]) => {
+  persistQuickPanelsState(pinnedOpen, favoritesOpen, recentOpen)
 })
 
 watch(filtersOpen, (open) => {
@@ -635,11 +823,17 @@ watch(treeOpen, (open) => {
   persistTreePanelState(open)
 })
 
+watch(treeFocusPath, (enabled) => {
+  persistTreeFocusPathState(enabled)
+  emit('tree-focus-change', enabled)
+})
+
 watch(nodeOpened, (state) => {
   persistNodeOpenState(state)
 }, { deep: true })
 
 onMounted(() => {
+  emit('tree-focus-change', treeFocusPath.value)
   const node = treeScrollRef.value
   if (!node) {
     return
@@ -675,6 +869,7 @@ const statusFilteredDocs = computed(() => {
 const propertyFilteredDocs = computed(() => {
   const selectedSet = new Set(selectedSlugs.value)
   return statusFilteredDocs.value.filter((doc) => {
+    const permissionPass = matchPermissionFilter(doc)
     const priorityPass = priorityFilter.value === 'ALL' || (doc.priority || 'MEDIUM') === priorityFilter.value
     const assigneePass = !assigneeFilter.value || (doc.assignee || '') === assigneeFilter.value
     let duePass = true
@@ -685,7 +880,7 @@ const propertyFilteredDocs = computed(() => {
     }
     const todoPass = !myTodoMode.value || ((doc.assignee || '') === assigneeFilter.value && (doc.status || 'DRAFT') !== 'ARCHIVED')
     const selectedPass = !selectedOnlyMode.value || selectedSet.has(doc.slug)
-    return priorityPass && assigneePass && duePass && todoPass && selectedPass
+    return permissionPass && priorityPass && assigneePass && duePass && todoPass && selectedPass
   })
 })
 
@@ -716,6 +911,16 @@ const visibilityCounts = computed(() => {
     ALL: props.docs.length,
     SPACE: space,
     PRIVATE: privateCount
+  }
+})
+
+const permissionCounts = computed(() => {
+  return {
+    ALL: props.docs.length,
+    OWNED: props.docs.filter((doc) => isOwnedByMe(doc)).length,
+    EDITABLE: props.docs.filter((doc) => canEditMe(doc)).length,
+    VIEWABLE: props.docs.filter((doc) => canViewMe(doc)).length,
+    SHARED: props.docs.filter((doc) => isSharedWithMe(doc)).length
   }
 })
 
@@ -805,24 +1010,7 @@ watch(() => props.activeSlug, async (slug) => {
   if (!slug) {
     return
   }
-  const bySlug = new Map(props.docs.map((doc) => [doc.slug, doc]))
-  let cursor = bySlug.get(slug)
-  const visited = new Set()
-  while (cursor && cursor.parentSlug && !visited.has(cursor.parentSlug)) {
-    visited.add(cursor.parentSlug)
-    nodeOpened.value = {
-      ...nodeOpened.value,
-      [cursor.parentSlug]: true
-    }
-    cursor = bySlug.get(cursor.parentSlug)
-  }
-  visibilitySections.value.forEach((section) => {
-    section.groups.forEach((group) => {
-      if (group.items.some((item) => item.slug === slug)) {
-        opened.value[group.id] = true
-      }
-    })
-  })
+  applyPathFocusState(slug)
   await nextTick()
   const node = document.querySelector(`[data-node-slug="${slug}"]`)
   if (node && typeof node.scrollIntoView === 'function') {
@@ -885,9 +1073,71 @@ function buildGroups(sourceDocs, sectionKey) {
     .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'))
 }
 
+function applyPathFocusState(slug) {
+  const bySlug = new Map(props.docs.map((doc) => [doc.slug, doc]))
+  const ancestors = new Set()
+  let cursor = bySlug.get(slug)
+  const visited = new Set()
+  while (cursor && cursor.parentSlug && !visited.has(cursor.parentSlug)) {
+    visited.add(cursor.parentSlug)
+    ancestors.add(cursor.parentSlug)
+    cursor = bySlug.get(cursor.parentSlug)
+  }
+
+  if (treeFocusPath.value) {
+    const parentSlugs = new Set(
+      props.docs
+        .map((doc) => (doc.parentSlug || '').trim())
+        .filter((item) => item.length > 0)
+    )
+    const nextNodes = {}
+    parentSlugs.forEach((parent) => {
+      nextNodes[parent] = ancestors.has(parent)
+    })
+    nodeOpened.value = nextNodes
+
+    const nextSections = {}
+    const nextGroups = {}
+    visibilitySections.value.forEach((section) => {
+      const sectionContains = section.groups.some((group) => group.items.some((item) => item.slug === slug))
+      nextSections[section.key] = sectionContains
+      section.groups.forEach((group) => {
+        nextGroups[group.id] = sectionContains && group.items.some((item) => item.slug === slug)
+      })
+    })
+    sectionOpened.value = nextSections
+    opened.value = nextGroups
+    return
+  }
+
+  if (ancestors.size > 0) {
+    const nextNodes = { ...nodeOpened.value }
+    ancestors.forEach((item) => {
+      nextNodes[item] = true
+    })
+    nodeOpened.value = nextNodes
+  }
+  const nextGroups = { ...opened.value }
+  visibilitySections.value.forEach((section) => {
+    section.groups.forEach((group) => {
+      if (group.items.some((item) => item.slug === slug)) {
+        nextGroups[group.id] = true
+      }
+    })
+  })
+  opened.value = nextGroups
+}
+
 const favoriteDocs = computed(() => {
   const bySlug = new Map(props.docs.map((d) => [d.slug, d]))
   return props.favorites
+    .map((slug) => bySlug.get(slug))
+    .filter(Boolean)
+})
+
+const pinnedDocs = computed(() => {
+  const bySlug = new Map(props.docs.map((d) => [d.slug, d]))
+  return props.pinned
     .map((slug) => bySlug.get(slug))
     .filter(Boolean)
 })
@@ -897,6 +1147,69 @@ const recentDocs = computed(() => {
   return props.recent
     .map((slug) => bySlug.get(slug))
     .filter(Boolean)
+})
+
+function matchesQuickQuery(doc, rawQuery) {
+  const query = String(rawQuery || '').trim().toLowerCase()
+  if (!query) {
+    return true
+  }
+  const title = String(doc?.title || '').toLowerCase()
+  const slug = String(doc?.slug || '').toLowerCase()
+  return title.includes(query) || slug.includes(query)
+}
+
+const pinnedDocsFiltered = computed(() => pinnedDocs.value.filter((doc) => matchesQuickQuery(doc, quickPinnedQuery.value)))
+const favoriteDocsFiltered = computed(() => favoriteDocs.value.filter((doc) => matchesQuickQuery(doc, quickFavoritesQuery.value)))
+
+const recentSections = computed(() => {
+  if (!recentDocs.value.length) {
+    return []
+  }
+  const now = Date.now()
+  const dayMs = 24 * 3600 * 1000
+  const buckets = {
+    today: [],
+    week: [],
+    older: []
+  }
+  recentDocs.value.forEach((doc) => {
+    const visitAt = Number(props.recentMeta?.[doc.slug] || 0)
+    const diff = now - visitAt
+    if (visitAt > 0 && diff < dayMs) {
+      buckets.today.push(doc)
+    } else if (visitAt > 0 && diff < dayMs * 7) {
+      buckets.week.push(doc)
+    } else {
+      buckets.older.push(doc)
+    }
+  })
+  return [
+    { key: 'today', title: `今天 (${buckets.today.length})`, hint: '24 小时内访问', items: buckets.today },
+    { key: 'week', title: `近 7 天 (${buckets.week.length})`, hint: '1-7 天内访问', items: buckets.week },
+    { key: 'older', title: `更早 (${buckets.older.length})`, hint: '超过 7 天', items: buckets.older }
+  ].filter((section) => section.items.length > 0)
+})
+
+const recentSectionsFiltered = computed(() => {
+  const query = quickRecentQuery.value
+  if (!query) {
+    return recentSections.value
+  }
+  return recentSections.value
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((doc) => matchesQuickQuery(doc, query))
+    }))
+    .filter((section) => section.items.length > 0)
+})
+
+const olderRecentSlugs = computed(() => {
+  const older = recentSections.value.find((section) => section.key === 'older')
+  if (!older) {
+    return []
+  }
+  return older.items.map((item) => item.slug)
 })
 
 function resolveGroup(slug) {
@@ -910,6 +1223,96 @@ function resolveGroup(slug) {
     return slug.split('-')[0]
   }
   return 'General'
+}
+
+function moveItem(list, fromIndex, toIndex) {
+  if (fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
+    return list
+  }
+  if (fromIndex === toIndex) {
+    return list
+  }
+  const next = list.slice()
+  const [item] = next.splice(fromIndex, 1)
+  next.splice(toIndex, 0, item)
+  return next
+}
+
+function onQuickDragStart(type, slug) {
+  quickDragType.value = type
+  quickDragSlug.value = slug
+  quickDropSlug.value = ''
+}
+
+function onQuickDragOver(type, slug) {
+  if (quickDragType.value !== type || !quickDragSlug.value || quickDragSlug.value === slug) {
+    return
+  }
+  quickDropSlug.value = slug
+}
+
+function onQuickDrop(type, targetSlug) {
+  if (quickDragType.value !== type || !quickDragSlug.value || quickDragSlug.value === targetSlug) {
+    onQuickDragEnd()
+    return
+  }
+  const source = type === 'FAVORITES'
+    ? favoriteDocs.value.map((item) => item.slug)
+    : type === 'RECENT'
+      ? recentDocs.value.map((item) => item.slug)
+      : pinnedDocs.value.map((item) => item.slug)
+  const from = source.indexOf(quickDragSlug.value)
+  const to = source.indexOf(targetSlug)
+  const ordered = moveItem(source, from, to)
+  emit('reorder-quick', { type, slugs: ordered })
+  onQuickDragEnd()
+}
+
+function onQuickDragEnd() {
+  quickDragType.value = ''
+  quickDragSlug.value = ''
+  quickDropSlug.value = ''
+}
+
+function emitQuickCollectionAction(action, slugs = []) {
+  emit('quick-collection-action', {
+    action,
+    slugs: Array.isArray(slugs) ? slugs : []
+  })
+}
+
+function expandQuickZones() {
+  quickOpenPinned.value = true
+  quickOpenFavorites.value = true
+  quickOpenRecent.value = true
+}
+
+function collapseQuickZones() {
+  quickOpenPinned.value = false
+  quickOpenFavorites.value = false
+  quickOpenRecent.value = false
+}
+
+async function focusQuickSearch(type) {
+  const mode = String(type || '').trim().toUpperCase()
+  if (mode === 'PINNED') {
+    quickOpenPinned.value = true
+    await nextTick()
+    pinnedSearchRef.value?.focus?.()
+    pinnedSearchRef.value?.select?.()
+    return
+  }
+  if (mode === 'FAVORITES') {
+    quickOpenFavorites.value = true
+    await nextTick()
+    favoritesSearchRef.value?.focus?.()
+    favoritesSearchRef.value?.select?.()
+    return
+  }
+  quickOpenRecent.value = true
+  await nextTick()
+  recentSearchRef.value?.focus?.()
+  recentSearchRef.value?.select?.()
 }
 
 function flattenTree(node, childrenByParent, depth) {
@@ -1226,6 +1629,14 @@ function clearMyTodoFilter() {
   myTodoMode.value = false
 }
 
+function setPermissionFilter(mode) {
+  const next = String(mode || 'ALL').trim().toUpperCase()
+  const allow = new Set(['ALL', 'OWNED', 'EDITABLE', 'VIEWABLE', 'SHARED'])
+  permissionFilter.value = allow.has(next) ? next : 'ALL'
+  filtersOpen.value = true
+  treeOpen.value = true
+}
+
 function toggleGroup(name) {
   opened.value[name] = !opened.value[name]
 }
@@ -1236,6 +1647,13 @@ function isSectionOpen(sectionKey) {
 
 function toggleSection(sectionKey) {
   sectionOpened.value[sectionKey] = !isSectionOpen(sectionKey)
+}
+
+function toggleTreeFocusPath() {
+  treeFocusPath.value = !treeFocusPath.value
+  if (treeFocusPath.value && props.activeSlug) {
+    applyPathFocusState(props.activeSlug)
+  }
 }
 
 function depthClass(depth) {
@@ -1260,6 +1678,120 @@ function priorityText(priority) {
     return '低优先'
   }
   return '中优先'
+}
+
+function normalizeUser(value) {
+  return (value || '').trim()
+}
+
+function normalizeMembers(list) {
+  if (!Array.isArray(list)) {
+    return []
+  }
+  return list.map((item) => normalizeUser(item)).filter((item) => item.length > 0)
+}
+
+function isOwnedByMe(doc) {
+  const me = normalizeUser(props.currentUser)
+  if (!me) {
+    return false
+  }
+  return normalizeUser(doc.owner) === me
+}
+
+function canEditMe(doc) {
+  const me = normalizeUser(props.currentUser)
+  if (!me) {
+    return false
+  }
+  const owner = normalizeUser(doc.owner)
+  const editors = normalizeMembers(doc.editors)
+  if (!owner && editors.length === 0) {
+    return true
+  }
+  return owner === me || editors.includes(me)
+}
+
+function canViewMe(doc) {
+  if (canEditMe(doc)) {
+    return true
+  }
+  if ((doc.visibility || 'SPACE') === 'SPACE') {
+    return true
+  }
+  const me = normalizeUser(props.currentUser)
+  if (!me) {
+    return false
+  }
+  const viewers = normalizeMembers(doc.viewers)
+  if (viewers.length === 0) {
+    return false
+  }
+  return viewers.includes(me)
+}
+
+function isSharedWithMe(doc) {
+  const me = normalizeUser(props.currentUser)
+  if (!me) {
+    return false
+  }
+  if (isOwnedByMe(doc)) {
+    return false
+  }
+  const editors = normalizeMembers(doc.editors)
+  const viewers = normalizeMembers(doc.viewers)
+  return editors.includes(me) || viewers.includes(me)
+}
+
+function matchPermissionFilter(doc) {
+  if (permissionFilter.value === 'ALL') {
+    return true
+  }
+  if (permissionFilter.value === 'OWNED') {
+    return isOwnedByMe(doc)
+  }
+  if (permissionFilter.value === 'EDITABLE') {
+    return canEditMe(doc)
+  }
+  if (permissionFilter.value === 'VIEWABLE') {
+    return canViewMe(doc)
+  }
+  if (permissionFilter.value === 'SHARED') {
+    return isSharedWithMe(doc)
+  }
+  return true
+}
+
+function resolvePermissionLabel(doc) {
+  if (isOwnedByMe(doc)) {
+    return '我拥有'
+  }
+  if (canEditMe(doc)) {
+    return '我可编辑'
+  }
+  if (isSharedWithMe(doc)) {
+    return '共享给我'
+  }
+  if (canViewMe(doc)) {
+    return '我可查看'
+  }
+  return '未知'
+}
+
+function resolvePermissionClass(doc) {
+  if (isOwnedByMe(doc)) {
+    return 'owned'
+  }
+  if (canEditMe(doc)) {
+    return 'editable'
+  }
+  if (isSharedWithMe(doc)) {
+    return 'shared'
+  }
+  if (canViewMe(doc)) {
+    return 'viewable'
+  }
+  return 'unknown'
 }
 
 function sortByOrder(a, b) {
@@ -1308,6 +1840,7 @@ function collapseAll() {
 }
 
 function expandSidebarPanels() {
+  quickOpenPinned.value = true
   filtersOpen.value = true
   quickOpenFavorites.value = true
   quickOpenRecent.value = true
@@ -1315,6 +1848,7 @@ function expandSidebarPanels() {
 }
 
 function collapseSidebarPanels() {
+  quickOpenPinned.value = false
   filtersOpen.value = false
   quickOpenFavorites.value = false
   quickOpenRecent.value = false
@@ -1388,6 +1922,9 @@ function onTreeScroll(event) {
 defineExpose({
   setMyTodoFilter,
   clearMyTodoFilter,
+  setPermissionFilter,
+  focusQuickSearch,
+  toggleTreeFocusPath,
   clearBatchSelection,
   expandAll,
   collapseAll,

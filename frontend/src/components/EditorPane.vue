@@ -24,6 +24,20 @@
       <span class="context-chip">负责人: {{ model.assignee || '-' }}</span>
       <span class="context-chip">截止: {{ model.dueDate || '-' }}</span>
     </div>
+    <div class="access-summary-bar" v-if="!isCreateMode">
+      <div class="access-summary-main">
+        <span class="access-pill owner">Owner: {{ model.owner || '-' }}</span>
+        <span class="access-pill">Editors: {{ editorsSummary }}</span>
+        <span class="access-pill">Viewers: {{ viewersSummary }}</span>
+        <span class="access-pill current">当前用户: {{ currentUser || '-' }}</span>
+      </div>
+      <div class="access-summary-actions">
+        <button class="secondary tiny" @click="copyPermissionSummary">复制权限摘要</button>
+        <button class="secondary tiny" @click="emit('quick-filter-permission', 'OWNED')">筛选我拥有</button>
+        <button class="secondary tiny" @click="emit('quick-filter-permission', 'EDITABLE')">筛选我可编辑</button>
+        <button class="secondary tiny" @click="emit('quick-filter-permission', 'SHARED')">筛选共享给我</button>
+      </div>
+    </div>
     <div class="page-action-bar" v-if="!isCreateMode">
       <div class="page-action-left">
         <button
@@ -460,6 +474,12 @@
                   <span class="perm-chip">负责人: {{ model.assignee || '-' }}</span>
                   <span class="perm-chip">截止: {{ model.dueDate || '-' }}</span>
                 </div>
+                <div class="perm-actions" v-if="readPermOpen">
+                  <button class="secondary tiny" @click="copyPermissionSummary">复制权限摘要</button>
+                  <button class="secondary tiny" @click="emit('quick-filter-permission', 'OWNED')">筛选我拥有</button>
+                  <button class="secondary tiny" @click="emit('quick-filter-permission', 'EDITABLE')">筛选我可编辑</button>
+                  <button class="secondary tiny" @click="emit('quick-filter-permission', 'SHARED')">筛选共享给我</button>
+                </div>
                 <div class="share-bar" v-if="model.shareEnabled && shareLink && readPermOpen">
                   <input :value="shareLink" readonly />
                   <button class="secondary small" @click="copyShareLink">复制链接</button>
@@ -717,7 +737,8 @@ const emit = defineEmits([
   'create-template',
   'update-template',
   'delete-template',
-  'notify'
+  'notify',
+  'quick-filter-permission'
 ])
 
 const toolbars = [
@@ -951,6 +972,14 @@ const canCreateTemplate = computed(() => {
   return !!newTemplate.value.name.trim() && !!newTemplate.value.content.trim()
 })
 const quickChildTemplates = computed(() => props.templates.slice(0, 3))
+const editorsSummary = computed(() => {
+  const list = Array.isArray(model.value.editors) ? model.value.editors.filter(Boolean) : []
+  return list.length ? list.join(', ') : '-'
+})
+const viewersSummary = computed(() => {
+  const list = Array.isArray(model.value.viewers) ? model.value.viewers.filter(Boolean) : []
+  return list.length ? list.join(', ') : '-'
+})
 
 watch(
   () => props.doc.id,
@@ -2276,6 +2305,21 @@ async function copyPageMarkdownLink() {
   try {
     await navigator.clipboard.writeText(markdown)
     emit('notify', { type: 'success', message: 'Markdown 链接已复制' })
+  } catch {
+    emit('notify', { type: 'error', message: '复制失败，请手动复制' })
+  }
+}
+
+async function copyPermissionSummary() {
+  const text = [
+    `Owner: ${model.value.owner || '-'}`,
+    `Editors: ${editorsSummary.value}`,
+    `Viewers: ${viewersSummary.value}`,
+    `Current User: ${props.currentUser || '-'}`
+  ].join('\n')
+  try {
+    await navigator.clipboard.writeText(text)
+    emit('notify', { type: 'success', message: '权限摘要已复制' })
   } catch {
     emit('notify', { type: 'error', message: '复制失败，请手动复制' })
   }

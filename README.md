@@ -146,6 +146,9 @@ backend 环境变量建议：
 5. 重启或重新部署后数据丢失  
 确认 backend 服务已挂载 Volume 到 `/app/data`（H2 数据库）和 `/app/storage/docs`（Markdown 文件）。未挂载时实例重建会丢数据。
 
+6. 后端日志出现 `Table "DOCUMENTS" not found` 并重启  
+请确保已部署最新代码版本（已修复初始化脚本在空库首启时的兼容问题），然后重新 Deploy 一次 backend。
+
 ## 本地开发
 
 ### 1) 启动 Elasticsearch（可选）
@@ -201,11 +204,25 @@ curl -X POST http://localhost:8080/api/auth/login \
   }'
 ```
 
+如果接口返回 `mustChangePassword=true`，表示该账号需要先改密再继续使用。
+
 ### 退出登录
 
 ```bash
 curl -X POST http://localhost:8080/api/auth/logout \
   -H "Authorization: Bearer <token>"
+```
+
+### 修改当前用户密码
+
+```bash
+curl -X POST http://localhost:8080/api/auth/password/change \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "currentPassword":"oldPass123",
+    "newPassword":"newPass123"
+  }'
 ```
 
 `AUTH_USERS` 的密码支持两种格式：
@@ -226,6 +243,8 @@ curl -X POST http://localhost:8080/api/auth/logout \
 - `VIEWER`：只读（后端拒绝写接口）
 
 管理员可在前端「用户管理」里在线增删改用户（写入后端数据库；挂载 `/app/data` 后重启可保留）。
+密码策略：至少 8 位，且需包含字母和数字（bcrypt 密文可直接配置/导入）。
+任意已登录用户可在右上角「修改密码」完成自主改密；首次登录/管理员重置后会触发强制改密弹窗。
 
 ### 管理用户（ADMIN）
 

@@ -29,6 +29,9 @@ public class AuthUserEntity {
     private String role;
 
     @Column(nullable = false)
+    private Boolean mustChangePassword;
+
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
@@ -39,6 +42,9 @@ public class AuthUserEntity {
         LocalDateTime now = LocalDateTime.now();
         createdAt = now;
         updatedAt = now;
+        if (mustChangePassword == null) {
+            mustChangePassword = false;
+        }
     }
 
     @PreUpdate
@@ -76,5 +82,13 @@ public class AuthUserEntity {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public Boolean getMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public void setMustChangePassword(Boolean mustChangePassword) {
+        this.mustChangePassword = mustChangePassword;
     }
 }

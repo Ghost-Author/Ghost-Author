@@ -2,6 +2,7 @@ package com.ghostauthor.knowledge.controller;
 
 import com.ghostauthor.knowledge.dto.AuthLoginRequest;
 import com.ghostauthor.knowledge.dto.AuthLoginResponse;
+import com.ghostauthor.knowledge.dto.AuthPasswordChangeRequest;
 import com.ghostauthor.knowledge.dto.AuthUserResponse;
 import com.ghostauthor.knowledge.dto.AuthUserUpsertRequest;
 import com.ghostauthor.knowledge.service.AuthService;
@@ -57,6 +58,14 @@ public class AuthController {
             return;
         }
         authService.logout(header.substring(7));
+    }
+
+    @PostMapping("/password/change")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changePassword(@Valid @RequestBody AuthPasswordChangeRequest request, HttpServletRequest httpRequest) {
+        Object userAttr = httpRequest.getAttribute("authUser");
+        String username = userAttr == null ? "" : String.valueOf(userAttr).trim();
+        authService.changePassword(username, request.currentPassword(), request.newPassword());
     }
 
     @GetMapping("/users")
