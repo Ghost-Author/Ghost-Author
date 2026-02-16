@@ -183,6 +183,24 @@
           </select>
           <button class="secondary small" :disabled="!templateTagFilter" @click="templateTagFilter = ''">清空标签</button>
         </div>
+        <div class="template-tag-manage" v-if="availableTemplateTags.length">
+          <div class="template-tag-manage-row">
+            <span>来源标签</span>
+            <select v-model="templateManageSourceTag">
+              <option value="">请选择</option>
+              <option v-for="tag in availableTemplateTags" :key="`source-${tag}`" :value="tag">{{ tag }}</option>
+            </select>
+          </div>
+          <div class="template-tag-manage-row">
+            <span>目标标签</span>
+            <input v-model.trim="templateManageTargetTag" placeholder="重命名/合并到此标签" />
+          </div>
+          <div class="template-tag-manage-actions">
+            <button class="secondary small" :disabled="!canRenameTemplateTag" @click="renameTemplateTag">重命名标签</button>
+            <button class="secondary small" :disabled="!canMergeTemplateTag" @click="mergeTemplateTag">合并标签</button>
+            <button class="danger small" :disabled="!templateManageSourceTag" @click="deleteTemplateTagEverywhere">删除标签</button>
+          </div>
+        </div>
         <div class="template-smart-panel" v-if="pinnedTemplateItems.length || recentTemplateItems.length || recommendedTemplateItems.length">
           <div class="template-smart-head">
             <strong>快捷套用</strong>
@@ -999,6 +1017,8 @@ const templateImportFormat = ref('JSON')
 const templateImportConflictMode = ref('RENAME')
 const templateTagFilter = ref('')
 const templateBatchTagInput = ref('')
+const templateManageSourceTag = ref('')
+const templateManageTargetTag = ref('')
 const readPreviewRef = ref(null)
 const titleInputRef = ref(null)
 const selectedTemplate = ref('')
@@ -1244,6 +1264,16 @@ const availableTemplateTags = computed(() => {
     })
   })
   return Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
+})
+const canRenameTemplateTag = computed(() => {
+  const source = normalizeTemplateTagLabel(templateManageSourceTag.value)
+  const target = normalizeTemplateTagLabel(templateManageTargetTag.value)
+  return !!source && !!target && source !== target
+})
+const canMergeTemplateTag = computed(() => {
+  const source = normalizeTemplateTagLabel(templateManageSourceTag.value)
+  const target = normalizeTemplateTagLabel(templateManageTargetTag.value)
+  return !!source && !!target && source !== target
 })
 const templateCategoryDefs = [
   { key: 'GENERAL', label: '通用模板' },
@@ -1512,6 +1542,9 @@ watch(
     }
     if (templateTagFilter.value && !availableTemplateTags.value.includes(templateTagFilter.value)) {
       templateTagFilter.value = ''
+    }
+    if (templateManageSourceTag.value && !availableTemplateTags.value.includes(templateManageSourceTag.value)) {
+      templateManageSourceTag.value = ''
     }
   },
   { deep: true }
@@ -2610,6 +2643,67 @@ function batchRemoveTagFromSelected() {
     changed += 1
   })
   emit('notify', { type: 'success', message: `已从 ${changed} 个模板移除标签 #${tag}` })
+}
+
+function renameTemplateTag() {
+  const source = normalizeTemplateTagLabel(templateManageSourceTag.value)
+  const target = normalizeTemplateTagLabel(templateManageTargetTag.value)
+  if (!source || !target || source === target) {
+    return
+  }
+  let changed = 0
+  props.templates.forEach((tpl) => {
+    const tags = getTemplateTags(tpl.id)
+    if (!tags.includes(source)) {
+      return
+    }
+    const next = normalizeTemplateTags(tags.map((tag) => (tag === source ? target : tag)))
+    setTemplateTags(tpl.id, next)
+    changed += 1
+  })
+  templateManageSourceTag.value = target
+  emit('notify', { type: 'success', message: `已重命名标签：${source} -> ${target}（影响 ${changed} 个模板）` })
+}
+
+function mergeTemplateTag() {
+  const source = normalizeTemplateTagLabel(templateManageSourceTag.value)
+  const target = normalizeTemplateTagLabel(templateManageTargetTag.value)
+  if (!source || !target || source === target) {
+    return
+  }
+  let changed = 0
+  props.templates.forEach((tpl) => {
+    const tags = getTemplateTags(tpl.id)
+    if (!tags.includes(source)) {
+      return
+    }
+    const replaced = normalizeTemplateTags(tags.map((tag) => (tag === source ? target : tag)))
+    setTemplateTags(tpl.id, replaced)
+    changed += 1
+  })
+  templateManageSourceTag.value = target
+  emit('notify', { type: 'success', message: `已合并标签：${source} -> ${target}（影响 ${changed} 个模板）` })
+}
+
+function deleteTemplateTagEverywhere() {
+  const source = normalizeTemplateTagLabel(templateManageSourceTag.value)
+  if (!source) {
+    return
+  }
+  let changed = 0
+  props.templates.forEach((tpl) => {
+    const tags = getTemplateTags(tpl.id)
+    if (!tags.includes(source)) {
+      return
+    }
+    setTemplateTags(tpl.id, tags.filter((tag) => tag !== source))
+    changed += 1
+  })
+  if (templateTagFilter.value === source) {
+    templateTagFilter.value = ''
+  }
+  templateManageSourceTag.value = ''
+  emit('notify', { type: 'success', message: `已删除标签：${source}（影响 ${changed} 个模板）` })
 }
 
 function resolveSelectedTemplates() {

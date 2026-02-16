@@ -2362,6 +2362,39 @@ li p {
   margin-bottom: 8px;
 }
 
+.template-tag-manage {
+  border: 1px dashed #d8e4fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.template-tag-manage-row {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.template-tag-manage-row span {
+  color: #6c7f9f;
+  font-size: 11px;
+}
+
+.template-tag-manage-row input,
+.template-tag-manage-row select {
+  margin: 0;
+}
+
+.template-tag-manage-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .template-smart-panel {
   border: 1px dashed #d5e1fb;
   border-radius: 12px;
@@ -5085,6 +5118,10 @@ button.small {
   }
 
   .template-tag-filter {
+    grid-template-columns: 1fr;
+  }
+
+  .template-tag-manage-row {
     grid-template-columns: 1fr;
   }
 
