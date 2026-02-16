@@ -18,6 +18,13 @@
   --btn-secondary-b: #ebf2ff;
   --btn-secondary-border: #c7d9fb;
   --btn-secondary-text: #4c6796;
+  --surface-1: #ffffffde;
+  --surface-2: #ffffff;
+  --surface-3: #f8fbff;
+  --line-soft: #d5e3fb;
+  --line-strong: #c1d5f8;
+  --shadow-soft: 0 6px 14px #1f4d930f;
+  --shadow-hover: 0 10px 22px #1f4d9318;
 }
 
 * {
@@ -589,35 +596,38 @@ body {
   position: sticky;
   top: 0;
   z-index: 6;
-  background: #ffffffde;
-  border: 1px solid #d8e3fb;
+  background: var(--surface-1);
+  border: 1px solid var(--line-soft);
   border-radius: 12px;
   padding: 8px 10px;
+  box-shadow: var(--shadow-soft);
   backdrop-filter: blur(6px);
 }
 
 .page-context-bar {
   margin-bottom: 10px;
-  border: 1px solid #d8e3fb;
+  border: 1px solid var(--line-soft);
   border-radius: 12px;
-  background: #f8fbff;
+  background: var(--surface-3);
   padding: 8px;
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  box-shadow: 0 3px 9px #1f4d930a;
 }
 
 .access-summary-bar {
   margin-bottom: 10px;
-  border: 1px solid #d8e3fb;
+  border: 1px solid var(--line-soft);
   border-radius: 12px;
-  background: #fffdf7;
+  background: linear-gradient(145deg, #fffef8, #f9fbff);
   padding: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  box-shadow: 0 3px 9px #1f4d930a;
 }
 
 .access-summary-main {
@@ -627,12 +637,13 @@ body {
 }
 
 .access-pill {
-  border: 1px solid #eadfbe;
+  border: 1px solid #e4d8b6;
   border-radius: 999px;
   background: #fff8e8;
   color: #7f6130;
   font-size: 11px;
-  padding: 2px 8px;
+  font-weight: 700;
+  padding: 3px 9px;
 }
 
 .access-pill.owner {
@@ -654,12 +665,13 @@ body {
 }
 
 .context-chip {
-  border: 1px solid #d4e1fb;
+  border: 1px solid #cfddf9;
   border-radius: 999px;
-  background: #fff;
+  background: linear-gradient(145deg, #ffffff, #f5f9ff);
   color: #4c6290;
   font-size: 11px;
-  padding: 2px 8px;
+  font-weight: 700;
+  padding: 3px 9px;
 }
 
 .context-link {
@@ -758,12 +770,13 @@ body {
 }
 
 .page-status-pill {
-  border: 1px solid #d4e1fb;
+  border: 1px solid #cfddf9;
   border-radius: 999px;
-  background: #fff;
+  background: linear-gradient(145deg, #ffffff, #f4f8ff);
   color: #4c6290;
   font-size: 11px;
-  padding: 3px 8px;
+  font-weight: 700;
+  padding: 3px 9px;
 }
 
 .page-status-pill.published {
@@ -1493,19 +1506,20 @@ ul {
 .doc-items li,
 .version-history li {
   padding: 10px;
-  border: 1px solid #d8e3fb;
+  border: 1px solid var(--line-soft);
   border-radius: 12px;
   margin-bottom: 8px;
   cursor: pointer;
-  background: #fff;
+  background: linear-gradient(165deg, var(--surface-2), var(--surface-3));
+  box-shadow: var(--shadow-soft);
   transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease, background 0.16s ease;
 }
 
 .doc-items li:hover,
 .version-history li:hover {
   transform: translateY(-1px) scale(1.003);
-  border-color: #a7bff0;
-  box-shadow: 0 4px 10px #1f4d9312;
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-hover);
 }
 
 .doc-items li:active {
@@ -1514,8 +1528,8 @@ ul {
 
 .doc-items li.active {
   border-color: var(--primary);
-  background: linear-gradient(180deg, #f2f7ff, var(--primary-soft));
-  box-shadow: 0 0 0 2px #d8e7ff;
+  background: linear-gradient(165deg, #f3f8ff, #e8f0ff);
+  box-shadow: 0 0 0 2px #d8e7ff, var(--shadow-soft);
 }
 
 .doc-items li.ancestor {
@@ -2138,11 +2152,12 @@ label {
 }
 
 .outline-panel {
-  border: 1px solid #d6e2fb;
-  background: #fff;
+  border: 1px solid var(--line-soft);
+  background: linear-gradient(170deg, #ffffff, #f8fbff);
   border-radius: 12px;
   padding: 8px;
   margin-bottom: 10px;
+  box-shadow: 0 4px 10px #1f4d930d;
 }
 
 .panel-fold-head {
@@ -2205,12 +2220,14 @@ label {
   font-size: 12px;
   color: #35517f;
   padding: 5px 4px;
-  border-radius: 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
   cursor: pointer;
   transition: transform 0.12s ease, background 0.16s ease, border-color 0.14s ease, box-shadow 0.14s ease;
 }
 
 .outline-list li:hover {
+  border-color: #d4e3fc;
   background: #f1f6ff;
   transform: translateY(-1px);
   box-shadow: 0 4px 10px #1f4d930f;
@@ -3277,7 +3294,7 @@ button.small {
 .space-home {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .space-home-head {
@@ -3299,17 +3316,18 @@ button.small {
 }
 
 .home-stats article {
-  border: 1px solid #d8e3fb;
+  border: 1px solid var(--line-soft);
   border-radius: 12px;
-  background: #fff;
+  background: linear-gradient(165deg, var(--surface-2), var(--surface-3));
   padding: 10px;
+  box-shadow: var(--shadow-soft);
   transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease, background 0.16s ease;
 }
 
 .home-stats article:hover {
   transform: translateY(-1px);
-  border-color: #bcd3fb;
-  box-shadow: 0 4px 10px #1f4d9312;
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-hover);
 }
 
 .home-stats article:active {
@@ -3334,16 +3352,18 @@ button.small {
 }
 
 .home-card {
-  border: 1px solid #d8e3fb;
+  border: 1px solid var(--line-soft);
   border-radius: 12px;
-  background: #fff;
+  background: linear-gradient(170deg, #ffffff, #f9fbff);
   padding: 10px;
+  box-shadow: var(--shadow-soft);
   transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease, background 0.16s ease;
 }
 
 .home-card:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 14px #1f4d9312;
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-hover);
 }
 
 .home-card.overdue {
@@ -3381,9 +3401,9 @@ button.small {
 }
 
 .home-card li {
-  border: 1px solid #e2eafc;
+  border: 1px solid #dce7fc;
   border-radius: 10px;
-  background: #f8fbff;
+  background: linear-gradient(160deg, #f9fbff, #f2f7ff);
   padding: 8px;
   margin-bottom: 6px;
   cursor: pointer;
@@ -3392,9 +3412,9 @@ button.small {
 
 .home-card li:hover {
   transform: translateY(-1px);
-  border-color: #aac1f2;
+  border-color: #bfd3fb;
   background: #ebf3ff;
-  box-shadow: 0 4px 10px #1f4d9312;
+  box-shadow: 0 6px 14px #1f4d9315;
 }
 
 .home-card li:active {
